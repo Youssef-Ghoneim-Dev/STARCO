@@ -7,7 +7,6 @@ import RenderPricingTable from '../components/pricing_table';
 import RenderWeightTable from '../components/weight_table';
 import { useContext } from "react";
 import ControlAllInputsContext from "../context/ControlAllInputsContext";
-import RenderPdfInformation from '../components/pdf_information';
 export default function Price_page() {
     const { piece,setpiece,th_table } = useContext(ControlAllInputsContext);
     return (
@@ -23,7 +22,6 @@ export default function Price_page() {
             <hr className='divider' />
             <RenderPricingTable />
             <hr className='divider' />
-            <RenderPdfInformation />
             <Footer />
         </div>
     );
