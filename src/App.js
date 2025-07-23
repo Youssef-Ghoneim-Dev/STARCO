@@ -46,20 +46,39 @@ function App() {
         });
     }
     let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
-        let initial = {};
-        for (let i = 0; i < piece.length; i++) {
-            initial[`width${i}`] = "";
-            initial[`length${i}`] = "";
-        }
-        let local_veruble = JSON.parse(localStorage.getItem('information'));
-        initial['sag_price'] = local_veruble.sag_price;
-        initial['paint_price'] = local_veruble.paint_price;
-        
-        for (const key in local_veruble) {
-            initial[key] = local_veruble[key];
-        }
-        return initial;
+    if (!localStorage.getItem('information')) {
+        localStorage.setItem('information', JSON.stringify({
+            sag_price: 43,
+            paint_price: 150,
+            مصنعية: 150,
+            كوالين: 80,  
+            مفصلات: 60,
+            نقل: 25,
+            مسامير: 10,
+            استرتش: 10,
+            نحاس: "",
+            فيبر: "",
+            ريكام: "",
+            فيوز: "",
+        }));
+    }
+
+    const local_veruble = JSON.parse(localStorage.getItem('information')) || {};
+    
+    let initial = {};
+    for (let i = 0; i < piece.length; i++) {
+        initial[`width${i}`] = "";
+        initial[`length${i}`] = "";
+    }
+
+    Object.assign(initial, local_veruble);
+
+    initial['sag_price'] = initial['sag_price'] || 0;
+    initial['paint_price'] = initial['paint_price'] || 0;
+
+    return initial;
     });
+
     useEffect(() => {
         price({ control_all_inputs, piece ,th_table });
     }, [control_all_inputs,piece ,th_table ]);
