@@ -1,0 +1,101 @@
+.button-div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 55px;
+  height: 50vh;
+}
+.btn_price {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #a1cada;
+  border: none;
+  border-radius: 20px;
+  padding: 0 65px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.btn_price:hover {
+  background-color: #355f7a;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+.btn_3d {
+  font-family: "Inder";
+  position: relative;
+  height: 74px;
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 0 103px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  text-align: center;
+}
+.btn_3d span {
+  display: block;
+  color: #949393;
+}
+.btn_3d:before {
+  content: "";
+  width: 430px;
+  height: 10px;
+  position: absolute;
+  left: 3px;
+  top: 45%;
+  border-radius: 10px;
+  transform: rotate(-8deg);
+  background-color: hsla(0, 0%, 100%, 0.25) !important;
+}
+.btn_3d:hover {
+  background-color: #440000;
+  transform: scale(1.05);
+}
+.btn_sign_in {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 180.5px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn_sign_in:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.buttonDiv {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 55px;
+  margin-top: 30px;
+}
+
+.add-field {
+  height: 50px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 100px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.5s ease-in-out;
+}
+.add-field:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}

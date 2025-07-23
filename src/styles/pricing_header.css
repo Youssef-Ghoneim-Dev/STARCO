@@ -1,0 +1,22 @@
+.pricing-header {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+}
+.pricing-title {
+  font-size: 35px;
+  color: #355f7a;
+  margin: 0;
+  font-family: "ArefRuqaa";
+  direction: rtl;
+}
+.pricing-inputs {
+  display: flex;
+  flex-flow: row-reverse wrap;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 50px;
+}

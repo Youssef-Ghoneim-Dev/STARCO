@@ -1,0 +1,64 @@
+export default function price({ control_all_inputs, th_table , piece }) {
+  const localData = JSON.parse(localStorage.getItem("information")); 
+  const Thickness = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
+  const Density = 7.85;
+  const melion = 1000000;
+  const length_input = [];
+  const width_input = [];
+  for (let i = 0; i < piece.length; i++) {
+    let length = parseFloat(control_all_inputs[`length${i}`]) || 0;
+    let width = parseFloat(control_all_inputs[`width${i}`]) || 0;
+    length_input.push(length);
+    width_input.push(width);
+  }
+  let totaladds =0;
+  for (let index = 0; index < th_table.length; index++) {
+    let adds = parseFloat(localData[th_table[index]]) || 0;
+    totaladds += adds
+  };
+  Thickness.forEach((thickness, index) => {
+    let totalWeight = 0;
+    for (let i = 0; i < length_input.length; i++) {
+      totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+    }
+    let weightElement = document.getElementById(`all_${thickness}_wheight`);
+    let sagPriceElement = document.getElementById(`all_${thickness}_sagprice_without`);
+    if (weightElement) weightElement.textContent = totalWeight.toFixed(2);
+    if (sagPriceElement) sagPriceElement.textContent = (totalWeight * localData.sag_price).toFixed(2);
+  });
+  Thickness.forEach((thickness, index) => {
+    let totalWeight = 0;
+    for (let i = 0; i < length_input.length; i++) {
+      totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+    }
+    let sagprice_withElement = document.getElementById(`all_${thickness}_sagprice_with`);
+    let sagprice_15_withElement = document.getElementById(`all_${thickness}_sagprice_with_15%`);
+    let sagprice_20_withElement = document.getElementById(`all_${thickness}_sagprice_with_20%`);
+    let sagprice_25_withElement = document.getElementById(`all_${thickness}_sagprice_with_25%`);
+    let sagprice_30_withElement = document.getElementById(`all_${thickness}_sagprice_with_30%`);
+    let sagprice_35_withElement = document.getElementById(`all_${thickness}_sagprice_with_35%`);
+    let sagprice_40_withElement = document.getElementById(`all_${thickness}_sagprice_with_40%`);
+    let sagprice_45_withElement = document.getElementById(`all_${thickness}_sagprice_with_45%`);
+    let sagprice_50_withElement = document.getElementById(`all_${thickness}_sagprice_with_50%`);
+    let sagprice_55_withElement = document.getElementById(`all_${thickness}_sagprice_with_55%`);
+    let sagprice_60_withElement = document.getElementById(`all_${thickness}_sagprice_with_60%`);
+    let price = totalWeight * localData.sag_price;
+    let eltamter = 0;
+    for (let i = 0; i < length_input.length; i++) {
+        eltamter += ((length_input[i] * width_input[i]) / melion) * 2;
+    }   
+    let eldehanprice = (eltamter * parseFloat(localData.paint_price)) / 3;
+    let result = price + totaladds + eldehanprice;   
+    if (sagprice_withElement) sagprice_withElement.textContent = result.toFixed(2);
+    if (sagprice_15_withElement) sagprice_15_withElement.textContent = (result * 1.15).toFixed(2);
+    if (sagprice_20_withElement) sagprice_20_withElement.textContent = (result * 1.20).toFixed(2);
+    if (sagprice_25_withElement) sagprice_25_withElement.textContent = (result * 1.25).toFixed(2);
+    if (sagprice_30_withElement) sagprice_30_withElement.textContent = (result * 1.30).toFixed(2);
+    if (sagprice_35_withElement) sagprice_35_withElement.textContent = (result * 1.35).toFixed(2);
+    if (sagprice_40_withElement) sagprice_40_withElement.textContent = (result * 1.40).toFixed(2);
+    if (sagprice_45_withElement) sagprice_45_withElement.textContent = (result * 1.45).toFixed(2);
+    if (sagprice_50_withElement) sagprice_50_withElement.textContent = (result * 1.50).toFixed(2);
+    if (sagprice_55_withElement) sagprice_55_withElement.textContent = (result * 1.55).toFixed(2);
+    if (sagprice_60_withElement) sagprice_60_withElement.textContent = (result * 1.60).toFixed(2);
+  });
+}
