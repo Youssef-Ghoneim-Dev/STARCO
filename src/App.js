@@ -6,6 +6,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import  ControlAllInputsContext  from './context/ControlAllInputsContext.js';
 import price from './pricing/price.js';
 function App() {
+    // localStorage.removeItem('information')
     useEffect(() => {
         if (!localStorage.getItem('information')) {
             localStorage.setItem('information', JSON.stringify({
@@ -45,7 +46,7 @@ function App() {
             [id]: e.target.value
         });
     }
-    let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
+let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
     if (!localStorage.getItem('information')) {
         localStorage.setItem('information', JSON.stringify({
             sag_price: 43,
@@ -77,7 +78,7 @@ function App() {
     initial['paint_price'] = initial['paint_price'] || 0;
 
     return initial;
-    });
+});
 
     useEffect(() => {
         price({ control_all_inputs, piece ,th_table });
