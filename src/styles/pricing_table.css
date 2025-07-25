@@ -33,7 +33,10 @@
   background-color: #a1cada;
   box-sizing: border-box;
 }
-
+.active:hover td {
+  background-color: #000000;
+  color: white;
+}
 .border_l {
   border-left: none !important;
 }

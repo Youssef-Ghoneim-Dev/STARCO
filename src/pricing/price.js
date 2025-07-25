@@ -19,7 +19,15 @@ export default function price({ control_all_inputs, th_table , piece }) {
   Thickness.forEach((thickness, index) => {
     let totalWeight = 0;
     for (let i = 0; i < length_input.length; i++) {
-      totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+        if (i===5 || i===6) {
+            if (thickness<1) {
+                totalWeight += ((length_input[i] * width_input[i] * 1 * Density) / melion) * 1.15;
+            }else{
+                totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+            }
+        }else{
+            totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+        }
     }
     let weightElement = document.getElementById(`all_${thickness}_wheight`);
     let sagPriceElement = document.getElementById(`all_${thickness}_sagprice_without`);
@@ -29,7 +37,15 @@ export default function price({ control_all_inputs, th_table , piece }) {
   Thickness.forEach((thickness, index) => {
     let totalWeight = 0;
     for (let i = 0; i < length_input.length; i++) {
-      totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+        if (i===5 || i===6) {
+            if (thickness<1) {
+                totalWeight += ((length_input[i] * width_input[i] * 1 * Density) / melion) * 1.15;
+            }else{
+                totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+            }
+        }else{
+            totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
+        }
     }
     let sagprice_withElement = document.getElementById(`all_${thickness}_sagprice_with`);
     let sagprice_15_withElement = document.getElementById(`all_${thickness}_sagprice_with_15%`);
@@ -48,17 +64,20 @@ export default function price({ control_all_inputs, th_table , piece }) {
         eltamter += ((length_input[i] * width_input[i]) / melion) * 2;
     }   
     let eldehanprice = (eltamter * parseFloat(localData.paint_price)) / 3;
-    let result = price + totaladds + eldehanprice;   
-    if (sagprice_withElement) sagprice_withElement.textContent = result.toFixed(2);
-    if (sagprice_15_withElement) sagprice_15_withElement.textContent = (result * 1.15).toFixed(2);
-    if (sagprice_20_withElement) sagprice_20_withElement.textContent = (result * 1.20).toFixed(2);
-    if (sagprice_25_withElement) sagprice_25_withElement.textContent = (result * 1.25).toFixed(2);
-    if (sagprice_30_withElement) sagprice_30_withElement.textContent = (result * 1.30).toFixed(2);
-    if (sagprice_35_withElement) sagprice_35_withElement.textContent = (result * 1.35).toFixed(2);
-    if (sagprice_40_withElement) sagprice_40_withElement.textContent = (result * 1.40).toFixed(2);
-    if (sagprice_45_withElement) sagprice_45_withElement.textContent = (result * 1.45).toFixed(2);
-    if (sagprice_50_withElement) sagprice_50_withElement.textContent = (result * 1.50).toFixed(2);
-    if (sagprice_55_withElement) sagprice_55_withElement.textContent = (result * 1.55).toFixed(2);
-    if (sagprice_60_withElement) sagprice_60_withElement.textContent = (result * 1.60).toFixed(2);
+    let result = 0;   
+    if (totalWeight !== 0) {
+      result = price + totaladds + eldehanprice;
+    }
+    if (sagprice_withElement) sagprice_withElement.textContent = Math.ceil(result);
+    if (sagprice_15_withElement) sagprice_15_withElement.textContent = Math.ceil(result * 1.15);
+    if (sagprice_20_withElement) sagprice_20_withElement.textContent = Math.ceil(result * 1.20);
+    if (sagprice_25_withElement) sagprice_25_withElement.textContent = Math.ceil(result * 1.25);
+    if (sagprice_30_withElement) sagprice_30_withElement.textContent = Math.ceil(result * 1.30);
+    if (sagprice_35_withElement) sagprice_35_withElement.textContent = Math.ceil(result * 1.35);
+    if (sagprice_40_withElement) sagprice_40_withElement.textContent = Math.ceil(result * 1.40);
+    if (sagprice_45_withElement) sagprice_45_withElement.textContent = Math.ceil(result * 1.45);
+    if (sagprice_50_withElement) sagprice_50_withElement.textContent = Math.ceil(result * 1.50);
+    if (sagprice_55_withElement) sagprice_55_withElement.textContent = Math.ceil(result * 1.55);
+    if (sagprice_60_withElement) sagprice_60_withElement.textContent = Math.ceil(result * 1.60);
   });
 }

@@ -3,8 +3,8 @@ import Footer from '../components/footer';
 import Button from '../components/button';
 import { Link } from 'react-router-dom';
 
-
 export default function HomePage() {
+
     function handle3D() {
         const lock = document.querySelector(".lockdiv");
         lock.style.display = "flex";
@@ -13,18 +13,20 @@ export default function HomePage() {
             lock.style.display = "none";
         }, 3000);
     }
+
+    const password = JSON.parse(localStorage.getItem("password")) || {};
+    const isLoggedIn = password.setpassword && !password.passwordchenge;
+
     return (
         <div className="HomePage">
             <Navbar text="Welcome in STARCO Company " />
-            <div className="lockdiv">
-                
-            </div>
+            <div className="lockdiv"></div>
             <div className="button-div">
-                <Link to="/sign-in">
-                    <Button class_pram="btn_price" text="Create a new price offer file"  />
+                <Link to={isLoggedIn ? "/price_page" : "/sign-in"}>
+                    <Button class_pram="btn_price" text="Create a new price offer file" />
                 </Link>
                 <Button class_pram="btn_3d" text="Create a new 3D file" onClick={handle3D} >
-                <span className="btn_3d_span">(coming soon)</span>
+                    <span className="btn_3d_span">(coming soon)</span>
                 </Button>
             </div>
             <Footer />

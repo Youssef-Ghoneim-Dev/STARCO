@@ -1,0 +1,59 @@
+.flex_column {
+  width: 100%;
+  display: flex;
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 60px;
+}
+.flex_row {
+  width: 80%;
+  direction: rtl;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+}
+.flex_row_check {
+  width: 80%;
+  direction: rtl;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 50px;
+}
+.flex_row_pdf {
+  width: 80%;
+  direction: rtl;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 50px;
+}
+.flex_col {
+  width: 80%;
+  direction: rtl;
+  display: flex;
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+}
+.flex_row h3 {
+  color: #355f7a;
+  font-size: 30px;
+}
+.flex_col h3 {
+  color: #355f7a;
+  font-size: 30px;
+}
+.flex_row p {
+  color: #858585;
+}
+
+.weight-checkbox-label {
+  direction: ltr !important;
+}

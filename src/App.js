@@ -1,12 +1,59 @@
-import { useEffect , useState , useMemo } from 'react';
+import { useEffect , useState , useMemo , useRef } from 'react';
 import HomePage from './pages/home_page.jsx';
 import SignInPage from './pages/sign_in_page.jsx';
 import PricePage from './pages/price_page.jsx';
 import { BrowserRouter, Route, Routes } from "react-router-dom";   
 import  ControlAllInputsContext  from './context/ControlAllInputsContext.js';
 import price from './pricing/price.js';
+import { Buffer } from 'buffer';
+import DashboardPage from './pages/dashboard.jsx';
+window.Buffer = Buffer;
 function App() {
-    // localStorage.removeItem('information')
+    const [price2, setPrice2] = useState([]);
+    const [selectedThickness, setSelectedThickness] = useState([]);
+    const [selectedPercentage, setSelectedPercentage] = useState("");
+    const [selectedbuyer, setSelectedbuyer] = useState("");
+    const [clientName, setClientName] = useState("");
+    const [plateName, setPlateName] = useState("");
+  const scrollDirection = useRef(0);
+  const animationFrame = useRef(null);
+
+  const scrollStep = () => {
+    if (scrollDirection.current !== 0) {
+      window.scrollBy(0, scrollDirection.current * 5); // سرعة السكروول هنا
+      animationFrame.current = requestAnimationFrame(scrollStep);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (scrollDirection.current !== 0) return; // بالفعل شغال
+
+      if (e.key === "ArrowUp") {
+        scrollDirection.current = -1;
+        animationFrame.current = requestAnimationFrame(scrollStep);
+      } else if (e.key === "ArrowDown") {
+        scrollDirection.current = 1;
+        animationFrame.current = requestAnimationFrame(scrollStep);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        scrollDirection.current = 0;
+        cancelAnimationFrame(animationFrame.current);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      cancelAnimationFrame(animationFrame.current);
+    };
+  }, []);
     useEffect(() => {
         if (!localStorage.getItem('information')) {
             localStorage.setItem('information', JSON.stringify({
@@ -83,14 +130,24 @@ let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
     useEffect(() => {
         price({ control_all_inputs, piece ,th_table });
     }, [control_all_inputs,piece ,th_table ]);
-    return (
-        <ControlAllInputsContext.Provider value={{handleInputChange,piece,setpiece,th_table,control_all_inputs,setcontrol_all_inputs,handleInputsControlChange}}>
+    useEffect(() => {
+        const updatedPrices = selectedThickness.map((thickness) => {
+            const el = document.getElementById(`all_${thickness}_sagprice_with_${selectedPercentage}`);
+            return el ? el.textContent : null;
+        });
+        setPrice2(updatedPrices);
+    }, [selectedThickness, selectedPercentage]);
+    
+let context = {handleInputChange,selectedbuyer,setSelectedbuyer ,piece,setpiece,th_table,control_all_inputs,setcontrol_all_inputs,handleInputsControlChange,selectedThickness,setSelectedThickness,selectedPercentage ,price2,setSelectedPercentage,clientName,setClientName,plateName,setPlateName}
+return (
+        <ControlAllInputsContext.Provider value={context}>
       <div className="App">
         <BrowserRouter>
             <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/sign-in" element={<SignInPage />} />
             <Route path="/price_page" element={<PricePage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             </Routes>
         </BrowserRouter>
     </div>

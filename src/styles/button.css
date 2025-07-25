@@ -3,8 +3,8 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 55px;
-  height: 50vh;
+  gap: 30px;
+  height: 35vh;
 }
 .btn_price {
   height: 60px;
@@ -98,4 +98,11 @@
   background-color: #a1cada;
   color: #000000;
   transform: scale(1.05);
+}
+.button_div {
+  line-height: 60px;
+}
+.btn_sign_in.disabled {
+  opacity: 0.8;
+  pointer-events: none;
 }

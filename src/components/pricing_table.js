@@ -41,7 +41,7 @@ export default function RenderPricingTable() {
                             <th rowSpan={11} className="radius_b_r space">السعر 
                                 بالنسبة :</th>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>15%</th>
                             <td id="all_0.6_sagprice_with_15%"></td>
                             <td id="all_0.7_sagprice_with_15%"></td>
@@ -55,7 +55,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_15%"></td>
                             <td id="all_3_sagprice_with_15%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>20%</th>
                             <td id="all_0.6_sagprice_with_20%"></td>
                             <td id="all_0.7_sagprice_with_20%"></td>
@@ -69,7 +69,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_20%"></td>
                             <td id="all_3_sagprice_with_20%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>25%</th>
                             <td id="all_0.6_sagprice_with_25%"></td>
                             <td id="all_0.7_sagprice_with_25%"></td>
@@ -83,7 +83,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_25%"></td>
                             <td id="all_3_sagprice_with_25%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>30%</th>
                             <td id="all_0.6_sagprice_with_30%"></td>
                             <td id="all_0.7_sagprice_with_30%"></td>
@@ -97,7 +97,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_30%"></td>
                             <td id="all_3_sagprice_with_30%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>35%</th>
                             <td id="all_0.6_sagprice_with_35%"></td>
                             <td id="all_0.7_sagprice_with_35%"></td>
@@ -111,7 +111,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_35%"></td>
                             <td id="all_3_sagprice_with_35%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th>40%</th>
                             <td id="all_0.6_sagprice_with_40%"></td>
                             <td id="all_0.7_sagprice_with_40%"></td>
@@ -125,7 +125,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_40%"></td>
                             <td id="all_3_sagprice_with_40%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th className="border_b">45%</th>
                             <td id="all_0.6_sagprice_with_45%" className="border_b"></td>
                             <td id="all_0.7_sagprice_with_45%" className="border_b"></td>
@@ -139,7 +139,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_45%" className="border_b"></td>
                             <td id="all_3_sagprice_with_45%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th className="border_b">50%</th>
                             <td id="all_0.6_sagprice_with_50%" className="border_b"></td>
                             <td id="all_0.7_sagprice_with_50%" className="border_b"></td>
@@ -153,7 +153,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_50%" className="border_b"></td>
                             <td id="all_3_sagprice_with_50%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th className="border_b">55%</th>
                             <td id="all_0.6_sagprice_with_55%" className="border_b"></td>
                             <td id="all_0.7_sagprice_with_55%" className="border_b"></td>
@@ -167,7 +167,7 @@ export default function RenderPricingTable() {
                             <td id="all_2.5_sagprice_with_55%" className="border_b"></td>
                             <td id="all_3_sagprice_with_55%" className="border_l"></td>
                         </tr>
-                        <tr>
+                        <tr className="active">
                             <th className="border_b">60%</th>
                             <td id="all_0.6_sagprice_with_60%" className="border_b"></td>
                             <td id="all_0.7_sagprice_with_60%" className="border_b"></td>

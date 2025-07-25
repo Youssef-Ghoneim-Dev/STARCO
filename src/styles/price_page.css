@@ -6,6 +6,12 @@
   margin-bottom: 40px;
   box-sizing: border-box;
 }
+.divider_div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
 .c_l {
   border-left: none !important;
 }
