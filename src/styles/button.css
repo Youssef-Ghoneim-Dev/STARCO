@@ -106,3 +106,168 @@
   opacity: 0.8;
   pointer-events: none;
 }
+
+@media (max-width: 710px) {
+  .btn_price,
+  .add-field,
+  .btn_sign_in {
+    padding: 0 60px;
+    font-size: 21px;
+    height: 56px;
+  }
+
+  .btn_3d {
+    padding: 0 80px;
+    font-size: 21px;
+    height: 68px;
+  }
+
+  .btn_3d span {
+    font-size: 15px;
+  }
+
+  .btn_3d:before {
+    width: 320px;
+    height: 9px;
+  }
+
+  .buttonDiv {
+    gap: 42px;
+  }
+
+  .button-div {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 630px) {
+  .btn_price,
+  .add-field,
+  .btn_sign_in {
+    padding: 0 50px;
+    font-size: 19px;
+    height: 52px;
+  }
+
+  .btn_3d {
+    padding: 0 70px;
+    font-size: 19px;
+    height: 62px;
+  }
+
+  .btn_3d span {
+    font-size: 14px;
+  }
+
+  .btn_3d:before {
+    width: 280px;
+    height: 8px;
+  }
+
+  .buttonDiv {
+    gap: 38px;
+  }
+
+  .button-div {
+    gap: 25px;
+  }
+}
+
+@media (max-width: 450px) {
+  .btn_price,
+  .add-field,
+  .btn_sign_in {
+    padding: 0 40px;
+    font-size: 17px;
+    height: 50px;
+  }
+
+  .btn_3d {
+    padding: 0 55px;
+    font-size: 17px;
+    height: 58px;
+  }
+
+  .btn_3d span {
+    font-size: 13px;
+  }
+
+  .btn_3d:before {
+    width: 240px;
+    height: 7px;
+  }
+
+  .buttonDiv {
+    gap: 34px;
+  }
+
+  .button-div {
+    gap: 22px;
+  }
+}
+
+@media (max-width: 400px) {
+  .btn_price,
+  .add-field,
+  .btn_sign_in {
+    padding: 0 35px;
+    font-size: 16px;
+    height: 48px;
+  }
+
+  .btn_3d {
+    padding: 0 45px;
+    font-size: 16px;
+    height: 54px;
+  }
+
+  .btn_3d span {
+    font-size: 12px;
+  }
+
+  .btn_3d:before {
+    width: 220px;
+    height: 6px;
+  }
+
+  .buttonDiv {
+    gap: 30px;
+  }
+
+  .button-div {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 350px) {
+  .btn_price,
+  .add-field,
+  .btn_sign_in {
+    padding: 0 30px;
+    font-size: 15px;
+    height: 46px;
+  }
+
+  .btn_3d {
+    padding: 0 38px;
+    font-size: 15px;
+    height: 50px;
+  }
+
+  .btn_3d span {
+    font-size: 11px;
+  }
+
+  .btn_3d:before {
+    width: 200px;
+    height: 5px;
+  }
+
+  .buttonDiv {
+    gap: 28px;
+  }
+
+  .button-div {
+    gap: 18px;
+  }
+}

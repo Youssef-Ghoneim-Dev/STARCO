@@ -48,3 +48,89 @@
   border-bottom: none !important;
   background-color: #a1cada;
 }
+@media (max-width: 710px) {
+  .information-input {
+    width: 80px;
+    font-size: 18px;
+    height: 50px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 80px;
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .information-table-container {
+    width: 80%;
+  }
+}
+
+@media (max-width: 630px) {
+  .information-input {
+    width: 70px;
+    font-size: 16px;
+    height: 45px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 70px;
+    height: 45px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 450px) {
+  .information-input {
+    width: 60px;
+    font-size: 15px;
+    height: 42px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 60px;
+    height: 42px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 400px) {
+  .information-input {
+    width: 55px;
+    font-size: 14px;
+    height: 40px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 55px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .information-table-container {
+    width: 80%;
+  }
+}
+
+@media (max-width: 350px) {
+  .information-input {
+    width: 50px;
+    font-size: 13px;
+    height: 38px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 50px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .information-inputs {
+    gap: 10px;
+  }
+}

@@ -6,10 +6,7 @@ import {
   View,
   Image,
   Font,
-  BlobProvider ,
 } from '@react-pdf/renderer';
-import { useContext } from 'react';
-import ControlAllInputsContext from '../context/ControlAllInputsContext.js';
 Font.register({
   family: 'Amiri',
   src: '/Amiri-Regular.ttf',
@@ -128,11 +125,6 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    a: {
-        display: "inline-block",
-        textDecoration: "none",
-        padding: "0 115px",
     }
 });
 function MyDocument({ selectedThickness = [], price2 = [], clientName = '', plateName = '',selectedbuyer = '',fontSize = 45 }) {
@@ -184,38 +176,4 @@ function MyDocument({ selectedThickness = [], price2 = [], clientName = '', plat
   </Document>
   );
 }
-export const Pdf = () => {
-    const { selectedThickness, price2, clientName, plateName,selectedbuyer,selectedPercentage } = useContext(ControlAllInputsContext);
-    const fontSize = plateName.length > 10 ? 30 : 45;
-    const filteredThickness = selectedThickness.filter((t, i) => price2[i] !== null && price2[i] !== undefined);
-    const filteredPrices = price2.filter((p) => p !== null && p !== undefined);
-    const canSubmit = filteredThickness.length > 0 && selectedPercentage !== "" && clientName !== "" && plateName !== "";
-  return (
-    <BlobProvider
-      document={
-        <MyDocument
-            selectedThickness={filteredThickness.sort((a, b) => Number(a) - Number(b))}
-            price2={filteredPrices}
-            clientName={clientName}
-            plateName={plateName}
-            selectedbuyer={selectedbuyer}
-            fontSize={fontSize}
-        />
-      }
-    >
-      {({ url, loading, error }) => {
-        if (error) return <div className='button_div'><p className="btn_sign_in">حصلت مشكلة في إنشاء الملف</p></div>;
-
-        return (
-          <div className='button_div'>
-                <a className={`btn_sign_in ${!canSubmit ? "disabled" : ""}`} style={styles.a} href={url} target="_blank" rel="noopener noreferrer">
-                see Pdf you create
-                </a>
-          </div>
-        );
-      }}
-    </BlobProvider>
-  );
-};
-
 export default MyDocument;

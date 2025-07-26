@@ -18,16 +18,16 @@ function App() {
   const scrollDirection = useRef(0);
   const animationFrame = useRef(null);
 
-  const scrollStep = () => {
-    if (scrollDirection.current !== 0) {
-      window.scrollBy(0, scrollDirection.current * 5); // سرعة السكروول هنا
-      animationFrame.current = requestAnimationFrame(scrollStep);
-    }
-  };
-
+  
   useEffect(() => {
+      const scrollStep = () => {
+        if (scrollDirection.current !== 0) {
+          window.scrollBy(0, scrollDirection.current * 5);
+          animationFrame.current = requestAnimationFrame(scrollStep);
+        }
+      };
     const handleKeyDown = (e) => {
-      if (scrollDirection.current !== 0) return; // بالفعل شغال
+      if (scrollDirection.current !== 0) return;
 
       if (e.key === "ArrowUp") {
         scrollDirection.current = -1;

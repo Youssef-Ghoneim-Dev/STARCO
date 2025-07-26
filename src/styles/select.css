@@ -21,3 +21,45 @@
   justify-content: center;
   align-items: center;
 }
+@media (max-width: 710px) {
+  .select {
+    width: 400px;
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 630px) {
+  .select {
+    width: 360px;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 450px) {
+  .select {
+    width: 300px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .select {
+    width: 270px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 350px) {
+  .select {
+    width: 240px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 340px) {
+  .select {
+    width: 220px;
+    font-size: 15px;
+  }
+}
+
