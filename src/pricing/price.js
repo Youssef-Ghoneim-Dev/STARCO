@@ -25,6 +25,8 @@ export default function price({ control_all_inputs, th_table , piece }) {
             }else{
                 totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
             }
+        }else if (i===4) {
+           totalWeight += (((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15) * 2;
         }else{
             totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
         }
@@ -43,6 +45,8 @@ export default function price({ control_all_inputs, th_table , piece }) {
             }else{
                 totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
             }
+        }else if (i===4) {
+           totalWeight += (((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15) * 2;
         }else{
             totalWeight += ((length_input[i] * width_input[i] * thickness * Density) / melion) * 1.15;
         }

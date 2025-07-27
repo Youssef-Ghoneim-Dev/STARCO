@@ -36,16 +36,22 @@ export default function RenderPdfInformation() {
     if (generatePdf) {
     const blob = await pdf(
         <MyDocument
-          selectedThickness={selectedThickness}
-          price2={price2}
-          clientName={clientName}
-          plateName={plateName}
+            selectedThickness={selectedThickness.sort((a, b) => Number(a) - Number(b))}
+            price2={price2}
+            clientName={clientName}
+            plateName={plateName}
+            selectedbuyer={selectedbuyer}
+            fontSize={plateName.length > 10 ? 30 : 45}
         />
       ).toBlob();
 
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      window.open("https://www.whatsapp.com", "_blank");
+      if (localStorag.who_are_you === "Engineer") {
+        window.open("http://wa.me/+201092131323", "_blank");
+      }else{
+        window.open("http://wa.me/+201050156113", "_blank");
+      }
       link.download = `STARCO ${clientName}.pdf`;
       link.click();
     }else{
@@ -71,10 +77,12 @@ export default function RenderPdfInformation() {
         await delay(duration);
             const blob = await pdf(
         <MyDocument
-          selectedThickness={selectedThickness}
-          price2={price2}
-          clientName={clientName}
-          plateName={plateName}
+            selectedThickness={selectedThickness.sort((a, b) => Number(a) - Number(b))}
+            price2={price2}
+            clientName={clientName}
+            plateName={plateName}
+            selectedbuyer={selectedbuyer}
+            fontSize={plateName.length > 10 ? 30 : 45}
         />
       ).toBlob();
 
@@ -87,6 +95,7 @@ export default function RenderPdfInformation() {
       }
       link.download = `STARCO ${clientName}.pdf`;
       link.click();
+      setGeneratePdf(true)
         setIsGenerating(false);   
         setProgress(0);
     }
