@@ -1,6 +1,20 @@
+import price from "../pricing/price";
+import { useContext } from "react";
+import ControlAllInputsContext from "../context/ControlAllInputsContext";
 export default function RenderPricingTable() {
+    const { control_all_inputs, piece ,th_table } = useContext(ControlAllInputsContext);
+    function handleAdditionalPriceChange() {
+        price({ control_all_inputs, piece ,th_table });
+    }
     return (
         <div className="RenderPricingTable">
+            <div className="pricing-input-div">
+                <div className="piece-div">
+                    <span className="piece">سعر إضافي</span>
+                </div>
+                <div className="line"></div>
+                <input id="additional_price" onChange={handleAdditionalPriceChange} className="input" type="number" />
+            </div>
             <div className="pricing-table-container">
                 <table className='pricing-table'>
                     <thead>

@@ -21,45 +21,78 @@
   justify-content: center;
   align-items: center;
 }
-@media (max-width: 710px) {
-  .select {
-    width: 400px;
-    font-size: 23px;
-  }
-}
 
-@media (max-width: 630px) {
+@media (max-width: 710px) {
+  .p_logIn {
+    font-size: 22px;
+    text-align: center;
+  }
+  .enter input,
   .select {
-    width: 360px;
+    width: 380px;
     font-size: 22px;
   }
 }
 
-@media (max-width: 450px) {
+@media (max-width: 630px) {
+  .enter input,
   .select {
-    width: 300px;
+    width: 320px;
+    font-size: 20px;
+  }
+  .enter .label {
     font-size: 20px;
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 450px) {
+  .enter input,
   .select {
     width: 270px;
     font-size: 18px;
+    height: 50px;
+  }
+  .enter {
+    height: 50px;
+  }
+  .select-div {
+    height: 50px;
+  }
+  .enter .label {
+    font-size: 18px;
+  }
+  .p_logIn {
+    font-size: 18px;
+  }
+  .enter .show_password {
+    font-size: 22px;
   }
 }
 
-@media (max-width: 350px) {
+@media (max-width: 400px) {
+  .enter input,
   .select {
     width: 240px;
     font-size: 16px;
   }
-}
-
-@media (max-width: 340px) {
-  .select {
-    width: 220px;
-    font-size: 15px;
+  .enter .label {
+    font-size: 16px;
   }
 }
 
+@media (max-width: 350px) {
+  .enter input,
+  .select {
+    width: 210px;
+    font-size: 15px;
+  }
+  .enter .label {
+    font-size: 15px;
+  }
+  .p_logIn {
+    font-size: 16px;
+  }
+  .enter .show_password {
+    font-size: 18px;
+  }
+}

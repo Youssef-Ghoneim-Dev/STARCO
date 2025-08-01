@@ -240,8 +240,8 @@ const handleGeneratePdf = async () => {
         </div>
       </div>
         <div className="flex_row_pdf">
-            <Button onClick={handleSubmit} text="Download PDF" class_pram={`btn_sign_in ${!canSubmit ? "disabled" : ""}`} />
-            <Button onClick={handleGeneratePdf} text="Generate PDF" class_pram={`btn_sign_in ${!canSubmit ? "disabled" : ""}`} />
+            <Button onClick={handleSubmit} text="Download PDF" class_pram={`btn_Pdf ${!canSubmit ? "disabled" : ""}`} />
+            <Button onClick={handleGeneratePdf} text="Generate PDF" class_pram={`btn_Pdf  ${!canSubmit ? "disabled" : ""}`} />
         </div>
         {isGenerating && (
         <div className="loading-overlay">

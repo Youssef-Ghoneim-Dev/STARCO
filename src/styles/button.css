@@ -25,13 +25,13 @@
 .btn_3d {
   font-family: "Inder";
   position: relative;
-  height: 74px;
+  height: 60px;
   background-color: #000000;
   color: #ffffff;
   border: none;
   border-radius: 20px;
-  padding: 0 103px;
-  font-size: 24px;
+  padding: 0 123px;
+  font-size: 20px;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   text-align: center;
@@ -55,6 +55,23 @@
   background-color: #440000;
   transform: scale(1.05);
 }
+.btn_Pdf {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 180.5px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.btn_Pdf:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
 .btn_sign_in {
   height: 60px;
   font-family: "Inder";
@@ -69,6 +86,24 @@
 }
 
 .btn_sign_in:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.btn_LogIn {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 180.5px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn_LogIn:hover {
   background-color: #a1cada;
   color: #000000;
   transform: scale(1.05);
@@ -102,32 +137,37 @@
 .button_div {
   line-height: 60px;
 }
-.btn_sign_in.disabled {
+.btn_Pdf.disabled {
   opacity: 0.8;
   pointer-events: none;
 }
 
 @media (max-width: 710px) {
-  .btn_price,
-  .add-field,
   .btn_sign_in {
     padding: 0 60px;
     font-size: 21px;
-    height: 56px;
+  }
+  .btn_LogIn {
+    width: 380px;
+    font-size: 21px;
+    padding: 0;
+  }
+  .btn_Pdf {
+    padding: 0 140px;
+    font-size: 21px;
   }
 
   .btn_3d {
-    padding: 0 80px;
+    padding: 0 97px;
     font-size: 21px;
-    height: 68px;
+    height: 60px;
   }
-
   .btn_3d span {
     font-size: 15px;
   }
 
   .btn_3d:before {
-    width: 320px;
+    top: 35%;
     height: 9px;
   }
 
@@ -141,18 +181,25 @@
 }
 
 @media (max-width: 630px) {
-  .btn_price,
-  .add-field,
   .btn_sign_in {
     padding: 0 50px;
     font-size: 19px;
-    height: 52px;
+    height: 50px;
+  }
+  .btn_LogIn {
+    width: 320px;
+    font-size: 19px;
+  }
+  .btn_Pdf {
+    padding: 0 100px;
+    font-size: 19px;
+    height: 50px;
   }
 
   .btn_3d {
-    padding: 0 70px;
+    padding: 0 83px;
     font-size: 19px;
-    height: 62px;
+    height: 50px;
   }
 
   .btn_3d span {
@@ -160,7 +207,7 @@
   }
 
   .btn_3d:before {
-    width: 280px;
+    top: 30%;
     height: 8px;
   }
 
@@ -174,18 +221,26 @@
 }
 
 @media (max-width: 450px) {
-  .btn_price,
-  .add-field,
   .btn_sign_in {
     padding: 0 40px;
     font-size: 17px;
     height: 50px;
   }
+  .btn_LogIn {
+    width: 270px;
+    font-size: 17px;
+    height: 50px;
+  }
+  .btn_Pdf {
+    padding: 0 80px;
+    font-size: 17px;
+    height: 50px;
+  }
 
   .btn_3d {
-    padding: 0 55px;
+    padding: 0 70px;
     font-size: 17px;
-    height: 58px;
+    height: 50px;
   }
 
   .btn_3d span {
@@ -193,7 +248,7 @@
   }
 
   .btn_3d:before {
-    width: 240px;
+    top: 25%;
     height: 7px;
   }
 
@@ -207,18 +262,30 @@
 }
 
 @media (max-width: 400px) {
-  .btn_price,
-  .add-field,
   .btn_sign_in {
     padding: 0 35px;
     font-size: 16px;
     height: 48px;
   }
-
-  .btn_3d {
-    padding: 0 45px;
+  .btn_LogIn {
+    width: 240px;
     font-size: 16px;
-    height: 54px;
+  }
+  .btn_Pdf {
+    padding: 0px;
+    width: 280px;
+    font-size: 16px;
+    height: 48px;
+  }
+  .add-field {
+    width: 280px;
+    font-size: 18px;
+    height: 48px;
+  }
+  .btn_3d {
+    padding: 0 62px;
+    font-size: 16px;
+    height: 48px;
   }
 
   .btn_3d span {
@@ -226,7 +293,7 @@
   }
 
   .btn_3d:before {
-    width: 220px;
+    top: 25%;
     height: 6px;
   }
 
@@ -240,18 +307,29 @@
 }
 
 @media (max-width: 350px) {
-  .btn_price,
-  .add-field,
   .btn_sign_in {
     padding: 0 30px;
     font-size: 15px;
     height: 46px;
   }
-
-  .btn_3d {
-    padding: 0 38px;
+  .btn_LogIn {
+    width: 210px;
     font-size: 15px;
-    height: 50px;
+  }
+  .btn_Pdf {
+    width: 250px;
+    font-size: 15px;
+    height: 46px;
+  }
+  .add-field {
+    width: 250px;
+    font-size: 15px;
+    height: 46px;
+  }
+  .btn_3d {
+    padding: 0 55px;
+    font-size: 15px;
+    height: 46px;
   }
 
   .btn_3d span {
@@ -259,7 +337,7 @@
   }
 
   .btn_3d:before {
-    width: 200px;
+    top: 20%;
     height: 5px;
   }
 

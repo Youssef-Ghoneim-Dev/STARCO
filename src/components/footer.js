@@ -17,10 +17,10 @@ export default function Footer() {
             <div className="footer_right">
                 <p>Follow Us</p>
                 <div className="social_media">
-                    <a href="https://www.facebook.com/Arcoegyy/?_rdr" target="_blank" rel="noopener noreferrer">
+                    <a href="https://www.facebook.com/starcofactory/?_rdr" target="_blank" rel="noopener noreferrer">
                         <i className='bx bxl-facebook'></i>
                     </a>
-                    <a href="https://mail.google.com/mail/u/0/#inbox?compose=DmwnWrRnZfZnwFwDKHQBbgFsRJVZnMKjPFMbcGQCvvflnXjkdDCgqdmQfNWjJtBRPkhspxXsbMFQ" target="_blank" rel="noopener noreferrer">
+                    <a href="mailto:starco.egypt1@gmail.com" target="_blank" rel="noopener noreferrer">
                         <i className='bx bx-envelope'></i>
                      </a>
                     <a href="http://wa.me/+201050156113" target="_blank" rel="noopener noreferrer">

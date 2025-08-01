@@ -80,3 +80,39 @@
   border-bottom: none !important;
   box-sizing: border-box;
 }
+
+@media (max-width: 710px) {
+  .weight-table th,
+  .weight-table td {
+    width: 90px !important;
+    font-size: 15px;
+  }
+}
+@media (max-width: 630px) {
+  .weight-table th,
+  .weight-table td {
+    width: 80px !important;
+    font-size: 14px;
+  }
+}
+@media (max-width: 450px) {
+  .weight-table th,
+  .weight-table td {
+    width: 70px !important;
+    font-size: 13px;
+  }
+}
+@media (max-width: 400px) {
+  .weight-table th,
+  .weight-table td {
+    width: 60px !important;
+    font-size: 12px;
+  }
+}
+@media (max-width: 350px) {
+  .weight-table th,
+  .weight-table td {
+    width: 50px !important;
+    font-size: 11px;
+  }
+}

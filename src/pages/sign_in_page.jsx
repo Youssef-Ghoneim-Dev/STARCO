@@ -114,7 +114,7 @@ async function btn_click() {
       <Input id="input" />
       <Select />
       <div className="buttonDiv">
-        <Button class_pram="btn_sign_in" text="Log In" onClick={btn_click} />
+        <Button class_pram="btn_LogIn" text="Log In" onClick={btn_click} />
       </div>
       <Footer />
     </div>
