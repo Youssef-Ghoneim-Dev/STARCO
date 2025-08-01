@@ -143,6 +143,7 @@
 }
 
 @media (max-width: 710px) {
+    .btn_price,
   .btn_sign_in {
     padding: 0 60px;
     font-size: 21px;
@@ -181,6 +182,7 @@
 }
 
 @media (max-width: 630px) {
+  .btn_price,
   .btn_sign_in {
     padding: 0 50px;
     font-size: 19px;
@@ -221,6 +223,7 @@
 }
 
 @media (max-width: 450px) {
+  .btn_price,
   .btn_sign_in {
     padding: 0 40px;
     font-size: 17px;
@@ -262,6 +265,7 @@
 }
 
 @media (max-width: 400px) {
+.btn_price,
   .btn_sign_in {
     padding: 0 35px;
     font-size: 16px;
@@ -307,6 +311,7 @@
 }
 
 @media (max-width: 350px) {
+    .btn_price,
   .btn_sign_in {
     padding: 0 30px;
     font-size: 15px;
