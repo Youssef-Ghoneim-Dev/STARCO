@@ -147,6 +147,9 @@ input[type="number"]::-webkit-outer-spin-button {
     width: 35px;
     font-size: 14px;
   }
+  .piece {
+    font-size: 14px;
+  }
   .piece-div {
     width: 50px;
   }

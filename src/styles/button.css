@@ -42,13 +42,12 @@
 }
 .btn_3d:before {
   content: "";
-  width: 430px;
+  width: 100%;
   height: 10px;
   position: absolute;
-  left: 3px;
+  left: 0px;
   top: 45%;
-  border-radius: 10px;
-  transform: rotate(-8deg);
+  transform: rotate(-6deg);
   background-color: hsla(0, 0%, 100%, 0.25) !important;
 }
 .btn_3d:hover {
@@ -92,12 +91,13 @@
 }
 .btn_LogIn {
   height: 60px;
+  width: 440px;
   font-family: "Inder";
   background-color: #355f7a;
   color: white;
   border: none;
   border-radius: 20px;
-  padding: 0 180.5px;
+  padding: 0px;
   font-size: 28px;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
@@ -143,7 +143,10 @@
 }
 
 @media (max-width: 710px) {
-    .btn_price,
+  #generate-pdf-btn {
+    display: none;
+  }
+  .btn_price,
   .btn_sign_in {
     padding: 0 60px;
     font-size: 21px;
@@ -168,7 +171,8 @@
   }
 
   .btn_3d:before {
-    top: 35%;
+    transform: rotate(-7deg);
+    top: 42%;
     height: 9px;
   }
 
@@ -209,7 +213,8 @@
   }
 
   .btn_3d:before {
-    top: 30%;
+    transform: rotate(354deg);
+    top: 42%;
     height: 8px;
   }
 
@@ -251,7 +256,7 @@
   }
 
   .btn_3d:before {
-    top: 25%;
+    transform: rotate(353deg);
     height: 7px;
   }
 
@@ -265,7 +270,7 @@
 }
 
 @media (max-width: 400px) {
-.btn_price,
+  .btn_price,
   .btn_sign_in {
     padding: 0 35px;
     font-size: 16px;
@@ -297,7 +302,7 @@
   }
 
   .btn_3d:before {
-    top: 25%;
+    transform: rotate(352deg);
     height: 6px;
   }
 
@@ -311,7 +316,7 @@
 }
 
 @media (max-width: 350px) {
-    .btn_price,
+  .btn_price,
   .btn_sign_in {
     padding: 0 30px;
     font-size: 15px;
@@ -342,7 +347,7 @@
   }
 
   .btn_3d:before {
-    top: 20%;
+    transform: rotate(353deg);
     height: 5px;
   }
 

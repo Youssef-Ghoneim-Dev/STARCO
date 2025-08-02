@@ -27,23 +27,32 @@ export default function PricePage() {
     }, 3000);
   }
 useEffect(() => {
+    let password = JSON.parse(localStorage.getItem("password"));
+    
   async function checkPasswordStatus() {
     const docRef = doc(db, "passwords", "main");
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      if (data.passwordchenge) {
+      if (data.passwordchenge && password) {
         localStorage.removeItem("password");
         localStorage.removeItem("select");
         showError("The password has been changed. You will be redirected...");
 
         setTimeout(() => {
-            setLoading(false);
             navigate("/sign-in");
+            setLoading(false);
         }, 3000);
-      } else {
-        setLoading(false);
+      } else if (!password) {
+        setLoading(true);
+        showError("Please sign in to access the page");
+        setTimeout(() => {
+            navigate("/sign-in");
+            setLoading(false);
+        }, 3000);
+      }else {
+         setLoading(false);
       }
     } else {
       console.error("Password doc not found");
