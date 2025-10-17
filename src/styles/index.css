@@ -13,6 +13,7 @@
 @import "./weight_table.css";
 @import "./pdf_information.css";
 @import "./dashboard.css";
+@import "./new_row.css";
 * {
   margin: 0;
   padding: 0;

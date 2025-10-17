@@ -1,0 +1,13 @@
+.centered-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.new-row {
+  width: 80%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  font-size: 18px;
+}

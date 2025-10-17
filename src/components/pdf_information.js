@@ -2,8 +2,8 @@ import Button from "./button";
 import { useContext, useState } from "react";
 import ControlAllInputsContext from "../context/ControlAllInputsContext.js";
 import { pdf } from "@react-pdf/renderer";
+import NewRow from '../components/new_row';
 import MyDocument from "../pdf/pdf_render.js";
-
 export default function RenderPdfInformation() {
   const Thickness = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
   const percentages = ["15%", "20%", "25%", "30%", "35%", "40%", "45%", "50%", "55%", "60%"];
@@ -239,6 +239,13 @@ const handleGeneratePdf = async () => {
           />
         </div>
       </div>
+            <div className="divider_div">
+                <hr className='divider' />
+            </div>
+            <NewRow />
+            <div className="divider_div">
+                <hr className='divider' />
+            </div>
         <div className="flex_row_pdf">
             <Button onClick={handleSubmit} text="Download PDF" class_pram={`btn_Pdf ${!canSubmit ? "disabled" : ""}`} />
             <Button onClick={handleGeneratePdf} text="Generate PDF" id="generate-pdf-btn" class_pram={`btn_Pdf  ${!canSubmit ? "disabled" : ""}`} />
