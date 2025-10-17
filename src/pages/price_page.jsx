@@ -15,53 +15,53 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export default function PricePage() {
     const { piece,setpiece,th_table } = useContext(ControlAllInputsContext);
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  function showError(message) {
-    const lock = document.querySelector(".lockp");
-    const lock2 = document.querySelector(".lock2");
-    lock.style.display = "flex";
-    lock2.textContent = message;
-    setTimeout(() => {
-      lock.style.display = "none";
-    }, 3000);
-  }
-useEffect(() => {
-    let password = JSON.parse(localStorage.getItem("password"));
-    
-  async function checkPasswordStatus() {
-    const docRef = doc(db, "passwords", "main");
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      if (data.passwordchenge && password) {
-        localStorage.removeItem("password");
-        localStorage.removeItem("select");
-        showError("The password has been changed. You will be redirected...");
-
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    function showError(message) {
+        const lock = document.querySelector(".lockp");
+        const lock2 = document.querySelector(".lock2");
+        lock.style.display = "flex";
+        lock2.textContent = message;
         setTimeout(() => {
-            navigate("/sign-in");
-            setLoading(false);
+        lock.style.display = "none";
         }, 3000);
-      } else if (!password) {
-        setLoading(true);
-        showError("Please sign in to access the page");
-        setTimeout(() => {
-            navigate("/sign-in");
-            setLoading(false);
-        }, 3000);
-      }else {
-         setLoading(false);
-      }
-    } else {
-      console.error("Password doc not found");
-      navigate("/sign-in");
     }
-  }
+    useEffect(() => {
+        let password = JSON.parse(localStorage.getItem("password"));
+        
+    async function checkPasswordStatus() {
+        const docRef = doc(db, "passwords", "main");
+        const docSnap = await getDoc(docRef);
 
-  checkPasswordStatus();
-}, [navigate]);
+        if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.passwordchenge && password) {
+            localStorage.removeItem("password");
+            localStorage.removeItem("select");
+            showError("The password has been changed. You will be redirected...");
+
+            setTimeout(() => {
+                navigate("/sign-in");
+                setLoading(false);
+            }, 3000);
+        } else if (!password) {
+            setLoading(true);
+            showError("Please sign in to access the page");
+            setTimeout(() => {
+                navigate("/sign-in");
+                setLoading(false);
+            }, 3000);
+        }else {
+            setLoading(false);
+        }
+        } else {
+        console.error("Password doc not found");
+        navigate("/sign-in");
+        }
+    }
+
+    checkPasswordStatus();
+    }, [navigate]);
 
 
   return (

@@ -2,18 +2,10 @@ import Navbar from '../components/navbar';
 import Footer from '../components/footer';
 import Button from '../components/button';
 import { Link } from 'react-router-dom';
-
+import { useContext } from "react";
+import ControlAllInputsContext from "../context/ControlAllInputsContext";
 export default function HomePage() {
-
-    function handle3D() {
-        const lock = document.querySelector(".lockdiv");
-        lock.style.display = "flex";
-        lock.innerHTML = `<div class="lock2">This feature is coming soon!</div>`;
-        setTimeout(() => {
-            lock.style.display = "none";
-        }, 3000);
-    }
-
+    const { handle3D } = useContext(ControlAllInputsContext);
     const password = JSON.parse(localStorage.getItem("password")) || {};
     const isLoggedIn = password.setpassword && !password.passwordchenge;
 

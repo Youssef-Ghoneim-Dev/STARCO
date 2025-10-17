@@ -93,6 +93,14 @@ function App() {
             [id]: e.target.value
         });
     }
+    function handle3D() {
+        const lock = document.querySelector(".lockdiv");
+        lock.style.display = "flex";
+        lock.innerHTML = `<div class="lock2">This feature is coming soon!</div>`;
+        setTimeout(() => {
+            lock.style.display = "none";
+        }, 3000);
+    }
 let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
     if (!localStorage.getItem('information')) {
         localStorage.setItem('information', JSON.stringify({
@@ -138,7 +146,7 @@ let [control_all_inputs, setcontrol_all_inputs] = useState(() => {
         setPrice2(updatedPrices);
     }, [selectedThickness, selectedPercentage]);
     
-let context = {handleInputChange,selectedbuyer,setSelectedbuyer ,piece,setpiece,th_table,control_all_inputs,setcontrol_all_inputs,handleInputsControlChange,selectedThickness,setSelectedThickness,selectedPercentage ,price2,setSelectedPercentage,clientName,setClientName,plateName,setPlateName}
+let context = {handleInputChange,handle3D,selectedbuyer,setSelectedbuyer ,piece,setpiece,th_table,control_all_inputs,setcontrol_all_inputs,handleInputsControlChange,selectedThickness,setSelectedThickness,selectedPercentage ,price2,setSelectedPercentage,clientName,setClientName,plateName,setPlateName}
 return (
         <ControlAllInputsContext.Provider value={context}>
       <div className="App">
