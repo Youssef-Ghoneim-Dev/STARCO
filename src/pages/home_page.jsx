@@ -3,9 +3,9 @@ import Footer from '../components/footer';
 import Button from '../components/button';
 import { Link } from 'react-router-dom';
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext';
 export default function HomePage() {
-    const { handle3D } = useContext(ControlAllInputsContext);
+    const { handle3D } = useContext(AppContext);
     const password = JSON.parse(localStorage.getItem("password")) || {};
     const isLoggedIn = password.setpassword && !password.passwordchenge;
 

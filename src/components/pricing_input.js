@@ -1,7 +1,8 @@
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext';
+
 export default function PricingInput({piece,information,length,idd,onChange}) {
-    const { control_all_inputs,handleInputsControlChange } = useContext(ControlAllInputsContext);
+    const { controlAllInputs,handleInputsControlChange } = useContext(AppContext);
     if (information) {
         return(
             <div className="pricing-input-div">
@@ -11,7 +12,7 @@ export default function PricingInput({piece,information,length,idd,onChange}) {
                 <div className="line"></div>
                 <label htmlFor={`length${length}`} className="label">الطول:</label>
                 <input 
-                    value={control_all_inputs[`length${length}`] || ""} 
+                    value={controlAllInputs[`length${length}`] || ""} 
                     type="number" 
                     id={`length${length}`} 
                     onChange={(e) => handleInputsControlChange(e, `length${length}`)} 
@@ -19,7 +20,7 @@ export default function PricingInput({piece,information,length,idd,onChange}) {
                 <div className="line"></div>
                 <label htmlFor={`width${length}`} className="label">العرض:</label>
                 <input 
-                    value={control_all_inputs[`width${length}`] || ""} 
+                    value={controlAllInputs[`width${length}`] || ""} 
                     type="number" 
                     id={`width${length}`} 
                     onChange={(e) => handleInputsControlChange(e, `width${length}`)}
@@ -33,7 +34,7 @@ export default function PricingInput({piece,information,length,idd,onChange}) {
                     <span className="piece">{piece}</span>
                 </div>
                 <div className="line"></div>
-                <input onChange={onChange} id={idd} className="input" type="number" value={control_all_inputs[idd] || ""} />
+                <input onChange={onChange} id={idd} className="input" type="number" value={controlAllInputs[idd] || ""} />
             </div>
         )
     }

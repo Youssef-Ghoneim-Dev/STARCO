@@ -1,4 +1,4 @@
-export default function price({ control_all_inputs, th_table , piece }) {
+export default function price({ controlAllInputs, th_table , piece }) {
   const localData = JSON.parse(localStorage.getItem("information")); 
   const additional_price = document.getElementById("additional_price");
   const Thickness = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
@@ -7,8 +7,8 @@ export default function price({ control_all_inputs, th_table , piece }) {
   const length_input = [];
   const width_input = [];
   for (let i = 0; i < piece.length; i++) {
-    let length = parseFloat(control_all_inputs[`length${i}`]) || 0;
-    let width = parseFloat(control_all_inputs[`width${i}`]) || 0;
+    let length = parseFloat(controlAllInputs[`length${i}`]) || 0;
+    let width = parseFloat(controlAllInputs[`width${i}`]) || 0;
     length_input.push(length);
     width_input.push(width);
   }

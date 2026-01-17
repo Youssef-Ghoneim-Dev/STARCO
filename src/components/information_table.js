@@ -1,7 +1,8 @@
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext.js';
+
 export default function RenderInformationTable({th_table}) {
-    const { handleInputChange , control_all_inputs } = useContext(ControlAllInputsContext);
+    const { handleInputChange , controlAllInputs } = useContext(AppContext);
     return (
             <div className="information-inputs">
                 <div className='information-table-container'>
@@ -16,7 +17,7 @@ export default function RenderInformationTable({th_table}) {
                     <tbody>
                         <tr>
                             {th_table.map((item, index) => (
-                                <td key={index} className={index === 0 ? 'radius_b_r' : index === th_table.length - 1 ? 'radius_b_l' : ''}><input onChange={(e) => handleInputChange(e, item)} value={control_all_inputs[item] || ""} id={item} type="number" className='information-input' /></td>
+                                <td key={index} className={index === 0 ? 'radius_b_r' : index === th_table.length - 1 ? 'radius_b_l' : ''}><input onChange={(e) => handleInputChange(e, item)} value={controlAllInputs[item] || ""} id={item} type="number" className='information-input' /></td>
                             ))}
                         </tr>
                     </tbody>

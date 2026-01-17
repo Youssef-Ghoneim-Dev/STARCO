@@ -1,9 +1,9 @@
 import { useState , useEffect } from "react";
 import price from "../pricing/price";
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext';
 export default function RenderWeightTable() {
-    const { control_all_inputs,piece ,th_table } = useContext(ControlAllInputsContext);
+    const { controlAllInputs,piece ,th_table } = useContext(AppContext);
     let [weight, setweight] = useState(false);
     function handleWeightChange(e) {
         setweight(e.target.checked);
@@ -11,10 +11,10 @@ export default function RenderWeightTable() {
      useEffect(() => {
         if (weight) {
             setTimeout(() => {
-                price({ control_all_inputs, piece ,th_table});
+                price({ controlAllInputs, piece ,th_table});
             }, 0);
         }
-    }, [weight, control_all_inputs, piece ,th_table]);
+    }, [weight, controlAllInputs, piece ,th_table]);
     function renderWeightTable() {
             return (
                 <table className='weight-table'>

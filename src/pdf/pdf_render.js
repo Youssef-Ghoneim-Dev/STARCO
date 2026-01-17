@@ -127,12 +127,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     }
 });
-function MyDocument({ selectedThickness = [], price2 = [], clientName = '', plateName = '',selectedbuyer = '',fontSize = 45 }) {
+function MyDocument({ selectedThickness = [], price2 = [], clientName = '', plateName = '',selectedBuyer = '',fontSize = 45 }) {
   return (
     <Document>
     <Page size={{ width: 1920, height: 1080 }} style={styles.page}>
       <Image src="/1.png" style={styles.image} />
-      <Text style={styles.overlayText}>{selectedbuyer + " / " + clientName}</Text>
+      <Text style={styles.overlayText}>{selectedBuyer + " / " + clientName}</Text>
     </Page>
     <Page size={{ width: 1920, height: 1080 }} style={styles.page}>
         <Image src="/2.png" style={styles.image} />

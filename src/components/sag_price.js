@@ -1,8 +1,8 @@
 import PricingInput from './pricing_input';
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext';
 export default function RenderSagPrice() {
-    const { handleInputChange } = useContext(ControlAllInputsContext);
+    const { handleInputChange } = useContext(AppContext);
     return (
             <div className="pricing-inputs">
                 <PricingInput idd="sag_price" piece={"سعر الصاج"} information={false} onChange={(e) => handleInputChange(e, "sag_price")}/>

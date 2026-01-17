@@ -1,8 +1,8 @@
 import Button from "./button";
 import { useContext, useState } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext.js";
+import { AppContext } from '../context/AppContext';
+
 import { pdf } from "@react-pdf/renderer";
-import NewRow from '../components/new_row';
 import MyDocument from "../pdf/pdf_render.js";
 export default function RenderPdfInformation() {
   const Thickness = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
@@ -20,9 +20,9 @@ export default function RenderPdfInformation() {
     plateName,
     setPlateName,
     price2,
-    setSelectedbuyer,
-    selectedbuyer,
-  } = useContext(ControlAllInputsContext);
+    setSelectedBuyer,
+    selectedBuyer,
+  } = useContext(AppContext);
   const canSubmit = selectedThickness.length > 0 && selectedPercentage !== "" && clientName !== "" && plateName !== "";
   const handleThicknessChange = (value) => {
     setSelectedThickness((prev) =>
@@ -31,7 +31,7 @@ export default function RenderPdfInformation() {
         : [...prev, value]
     );
   };
-  let localStorag = JSON.parse(localStorage.getItem("select"));
+  let localStorag = JSON.parse(localStorage.getItem("user_meta"));
   const handleSubmit = async () => {
     if (generatePdf) {
     const blob = await pdf(
@@ -40,7 +40,7 @@ export default function RenderPdfInformation() {
             price2={price2}
             clientName={clientName}
             plateName={plateName}
-            selectedbuyer={selectedbuyer}
+            selectedBuyer={selectedBuyer}
             fontSize={plateName.length > 10 ? 30 : 45}
         />
       ).toBlob();
@@ -81,7 +81,7 @@ export default function RenderPdfInformation() {
             price2={price2}
             clientName={clientName}
             plateName={plateName}
-            selectedbuyer={selectedbuyer}
+            selectedBuyer={selectedBuyer}
             fontSize={plateName.length > 10 ? 30 : 45}
         />
       ).toBlob();
@@ -129,7 +129,7 @@ const handleGeneratePdf = async () => {
       price2={price2}
       clientName={clientName}
       plateName={plateName}
-      selectedbuyer={selectedbuyer}
+      selectedBuyer={selectedBuyer}
       fontSize={plateName.length > 10 ? 30 : 45}
     />
   ).toBlob();
@@ -192,8 +192,8 @@ const handleGeneratePdf = async () => {
               className="weight-checkbox-input"
               name="kind"
               value="السادة"
-              checked={selectedbuyer === "السادة"}
-              onChange={() => setSelectedbuyer("السادة")}
+              checked={selectedBuyer === "السادة"}
+              onChange={() => setSelectedBuyer("السادة")}
             />
             <span className="checkmark"></span>
             شركة
@@ -204,8 +204,8 @@ const handleGeneratePdf = async () => {
               className="weight-checkbox-input"
               name="kind"
               value="السيد"
-              checked={selectedbuyer === "السيد"}
-              onChange={() => setSelectedbuyer("السيد")}
+              checked={selectedBuyer === "السيد"}
+              onChange={() => setSelectedBuyer("السيد")}
             />
             <span className="checkmark"></span>
             عميل
@@ -239,13 +239,6 @@ const handleGeneratePdf = async () => {
           />
         </div>
       </div>
-            <div className="divider_div">
-                <hr className='divider' />
-            </div>
-            <NewRow />
-            <div className="divider_div">
-                <hr className='divider' />
-            </div>
         <div className="flex_row_pdf">
             <Button onClick={handleSubmit} text="Download PDF" class_pram={`btn_Pdf ${!canSubmit ? "disabled" : ""}`} />
             <Button onClick={handleGeneratePdf} text="Generate PDF" id="generate-pdf-btn" class_pram={`btn_Pdf  ${!canSubmit ? "disabled" : ""}`} />

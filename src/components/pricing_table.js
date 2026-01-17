@@ -1,10 +1,11 @@
 import price from "../pricing/price";
 import { useContext } from "react";
-import ControlAllInputsContext from "../context/ControlAllInputsContext";
+import { AppContext } from '../context/AppContext';
+
 export default function RenderPricingTable() {
-    const { control_all_inputs, piece ,th_table } = useContext(ControlAllInputsContext);
+    const { controlAllInputs, piece ,th_table } = useContext(AppContext);
     function handleAdditionalPriceChange() {
-        price({ control_all_inputs, piece ,th_table });
+        price({ controlAllInputs, piece ,th_table });
     }
     return (
         <div className="RenderPricingTable">
