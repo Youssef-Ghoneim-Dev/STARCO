@@ -14,9 +14,9 @@ export default function HomePricePage() {
         const [loading, setLoading] = useState(true);
         const [panals, setPanals] = useState([]);
       
-      const fetchPanals = useCallback(() => {
+    const fetchPanals = useCallback(() => {
         const colRef = collection(db, "panals");
-        const unsubscribe = onSnapshot(colRef, (snapshot) => {
+        return onSnapshot(colRef, (snapshot) => {
             const data = snapshot.docs.map((doc) => {
             const raw = doc.data();
             return {
@@ -31,8 +31,8 @@ export default function HomePricePage() {
             setPanals(data);
             setLoading(false);
         });
-        return () => unsubscribe();
-      }, []);
+    }, []);
+
 
       function timeAgo(date) {
         const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -53,12 +53,6 @@ export default function HomePricePage() {
             numberNaw: 0,
         });
       }, []);
-
-        useEffect(() => {
-            const unsubscribe = fetchPanals();
-            return () => unsubscribe();
-        }, []);
-
         async function refreshPanals() {
           const colRef = collection(db, "panals");
           const snapshot = await getDocs(colRef);
@@ -78,20 +72,22 @@ export default function HomePricePage() {
         }, 3000);
       }
     
-      useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          if (!user) {
+    useEffect(() => {
+        let unsubscribePanals;
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (!user) {
             showError("Please sign in to access the page");
-            setTimeout(() => {
-              navigate("/sign-in");
-            }, 2000);
-          } else {
-            fetchPanals();
-          }
+            setTimeout(() => navigate("/sign-in"), 2000);
+            } else {
+            unsubscribePanals = fetchPanals();
+            }
         });
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribePanals) unsubscribePanals();
+        };
+    }, [navigate, fetchPanals]);
 
-        return () => unsubscribe();
-      }, [navigate, fetchPanals]);
     
       if (loading) {
         return (

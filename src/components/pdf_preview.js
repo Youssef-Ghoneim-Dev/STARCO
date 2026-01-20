@@ -4,13 +4,8 @@ import { deleteDoc , doc ,updateDoc } from "firebase/firestore"
 import db from "../firebase";
 export default function PdfPreview({ name, Panal , time ,id }) {
     const navigate = useNavigate();
-    const [confirmDelete, setConfirmDelete] = useState(false);
     let [showDelete, setShowDelete] = useState(false);
     async function handleDelete() {
-        if (!confirmDelete) {
-            setShowDelete(true);
-            return;
-        }
         await Promise.all([
             deleteDoc(doc(db, "panals", id)),
             deleteDoc(doc(db, "panalDetails", id)),
@@ -18,7 +13,6 @@ export default function PdfPreview({ name, Panal , time ,id }) {
         ]);
         setShowDelete(false);
     }
-
     async function getData() {
         updateDoc(doc(db, "counters", "panels"), {
             numberNaw: id,
@@ -37,10 +31,11 @@ export default function PdfPreview({ name, Panal , time ,id }) {
                 <button onClick={() => setShowDelete(false)} className="cancel-button">إلغاء</button>
                 <button
                     className="delete-button"
-                    onClick={() => setConfirmDelete(true)}
+                    onClick={handleDelete}
                 >
-                    حذف نهائي
+                حذف نهائي
                 </button>
+
             </div>
         </div>
     </div>
@@ -52,7 +47,7 @@ export default function PdfPreview({ name, Panal , time ,id }) {
             <p>منذ {time}</p>
        </div>
        <h4>{Panal}</h4>
-       <i className='bx bxs-trash abs' onClick={(e) => {e.stopPropagation(); handleDelete()}}></i>
+       <i className='bx bxs-trash abs' onClick={(e) => {e.stopPropagation(); setShowDelete(true)}}></i>
     </div>
   )
 }
