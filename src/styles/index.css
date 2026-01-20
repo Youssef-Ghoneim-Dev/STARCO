@@ -16,6 +16,7 @@
 @import "./new_row.css";
 @import "./add_price.css";
 @import "./pdf_preview.css";
+@import "./num_panel.css";
 * {
   margin: 0;
   padding: 0;

@@ -1,7 +1,8 @@
 import { createContext, useState, useRef, useMemo, useEffect } from 'react';
 import price from '../pricing/price.js';
 import { Buffer } from 'buffer';
-
+import { getDoc, updateDoc, doc } from "firebase/firestore";
+import db from "../firebase";
 export const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -16,6 +17,7 @@ export function AppProvider({ children }) {
   const [clientName, setClientName] = useState("");
   const [plateName, setPlateName] = useState("");
   const [piece, setPiece] = useState(["العلبة", "الجنب", "المراية", "الجلسة", "الجريدة","باب1", "باب2","إضافي1"]);
+    let [panalNumber, setPanalNumber] = useState(1);
 
   const scrollDirection = useRef(0);
   const animationFrame = useRef(null);
@@ -24,35 +26,9 @@ export function AppProvider({ children }) {
     ["مصنعية", "كوالين", "مفصلات", "نقل", "مسامير", "استرتش", "نحاس", "فيبر", "ريكام", "فيوز"]
   ), []);
 
-  const [controlAllInputs, setControlAllInputs] = useState(() => {
-    if (!localStorage.getItem('information')) {
-      localStorage.setItem('information', JSON.stringify({
-        sag_price: 43,
-        paint_price: 150,
-        مصنعية: 150,
-        كوالين: 80,  
-        مفصلات: 60,
-        نقل: 25,
-        مسامير: 10,
-        استرتش: 10,
-        نحاس: "",
-        فيبر: "",
-        ريكام: "",
-        فيوز: "",
-      }));
-    }
-    const localVar = JSON.parse(localStorage.getItem('information')) || {};
-    let initial = {};
-    for (let i = 0; i < piece.length; i++) {
-      initial[`width${i}`] = "";
-      initial[`length${i}`] = "";
-    }
-    Object.assign(initial, localVar);
-    initial['sag_price'] ||= 0;
-    initial['paint_price'] ||= 0;
-    return initial;
-  });
-
+  localStorage.removeItem("information");
+  localStorage.removeItem("password");
+  localStorage.removeItem("select");
 
   // ---- Functions ----
   const clickFunPanalfun = () => {
@@ -61,19 +37,17 @@ export function AppProvider({ children }) {
       setPiece(prev => [...prev, prev[prev.length-1]+(numPanal+1)]);
     } else handleError();
   }
-
-  const handleInputChange = (e, item) => {
-    let currentData = JSON.parse(localStorage.getItem('information'));
-    localStorage.setItem('information', JSON.stringify({
-      ...currentData,
-      [item]: e.target.value
-    }));
-    setControlAllInputs(prev => ({ ...prev, [item]: e.target.value }));
-  }
-
-  const handleInputsControlChange = (e, id) => {
-    setControlAllInputs(prev => ({ ...prev, [id]: e.target.value }));
-  }
+    const handleInputBlur = async (e, id) => {
+        const docRef = doc(db, "counters", "panels");
+        const docSnap = await getDoc(docRef);
+        const panalDetailsRef = doc(db, "panalDetails", docSnap.data().numberNaw.toString());
+        await updateDoc(panalDetailsRef, {
+            "Panels.RawMaterialPrices": {
+                ...(await getDoc(panalDetailsRef)).data().Panels?.RawMaterialPrices,
+                [id]: parseFloat(e.target.value)
+            }
+        });
+    };
 
   const handle3D = () => {
     const lock = document.querySelector(".lockdiv");
@@ -89,10 +63,10 @@ export function AppProvider({ children }) {
     setTimeout(() => lock.style.display = "none", 3000);
   }
 
-  // ---- Effects ----
+//   ---- Effects ----
   useEffect(() => {
-    price({ controlAllInputs, piece, th_table });
-  }, [controlAllInputs, piece, th_table]);
+    price({ piece, th_table });
+  }, [ piece, th_table]);
 
   useEffect(() => {
     const updatedPrices = selectedThickness.map((thickness) => {
@@ -141,12 +115,11 @@ export function AppProvider({ children }) {
       plateName, setPlateName,
       piece, setPiece,
       th_table,
-      controlAllInputs, setControlAllInputs,
       clickFunPanalfun,
-      handleInputChange,
-      handleInputsControlChange,
+      handleInputBlur,
       handle3D,
       handleError,
+      panalNumber, setPanalNumber
     }}>
       {children}
     </AppContext.Provider>

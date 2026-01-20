@@ -1,0 +1,39 @@
+.NumPanel {
+  height: 35px;
+  width: fit-content;
+  box-sizing: border-box;
+  border: 2px solid #ddd;
+  border-radius: 25px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.NumPanel h2 {
+  font-family: "ArefRuqaa";
+  font-size: 20px;
+  color: #355f7a;
+}
+.NumPanel .active {
+  background-color: #f0f0f0;
+  color: black;
+  padding: 0 2px;
+  border-radius: 10px;
+}
+.NumPanel div {
+  width: 2px;
+  height: 35px;
+  background-color: #ddd;
+}
+.NumPanel i {
+  font-size: 22px;
+  background-color: #355f7a;
+  color: white;
+  cursor: pointer;
+  border-radius: 20px;
+}
+.NumPanel i:hover {
+  background-color: #2a4554;
+}

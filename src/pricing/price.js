@@ -1,5 +1,19 @@
-export default function price({ controlAllInputs, th_table , piece }) {
-  const localData = JSON.parse(localStorage.getItem("information")); 
+import { getDoc, doc } from "firebase/firestore";
+import db from "../firebase";
+export default async function price({ th_table , piece }) {
+    const controlAllInputs = {};
+  const docRef = doc(db, "RawMaterialPrices", "RawMaterialPrice");
+  const docSnap = await getDoc(docRef);
+  const localData = docSnap.data();
+  const controlRef = doc(db, "panalDetails", (await getDoc(doc(db, "counters", "panels"))).data().numberNaw.toString());
+  const controlSnap = await getDoc(controlRef);
+  const controlData = controlSnap.data();
+  
+    for (let i = 0; i < piece.length; i++) {
+        controlAllInputs[`width${i}`] = controlData?.Panels?.Lengths?.[`width${i}`] || "";
+        controlAllInputs[`length${i}`] = controlData?.Panels?.Lengths?.[`length${i}`] || "";
+    }
+  
   const additional_price = document.getElementById("additional_price");
   const Thickness = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
   const Density = 7.85;
@@ -73,16 +87,16 @@ export default function price({ controlAllInputs, th_table , piece }) {
     if (totalWeight !== 0) {
       result = price + totaladds + eldehanprice;
     }
-    if (sagprice_withElement) sagprice_withElement.textContent = ((Math.ceil(result)) + Number(additional_price.value));
-    if (sagprice_15_withElement) sagprice_15_withElement.textContent = ((Math.ceil(result * 1.15)) + Number(additional_price.value));
-    if (sagprice_20_withElement) sagprice_20_withElement.textContent = ((Math.ceil(result * 1.20)) + Number(additional_price.value));
-    if (sagprice_25_withElement) sagprice_25_withElement.textContent = ((Math.ceil(result * 1.25)) + Number(additional_price.value));
-    if (sagprice_30_withElement) sagprice_30_withElement.textContent = ((Math.ceil(result * 1.30)) + Number(additional_price.value));
-    if (sagprice_35_withElement) sagprice_35_withElement.textContent = ((Math.ceil(result * 1.35)) + Number(additional_price.value));
-    if (sagprice_40_withElement) sagprice_40_withElement.textContent = ((Math.ceil(result * 1.40)) + Number(additional_price.value));
-    if (sagprice_45_withElement) sagprice_45_withElement.textContent = ((Math.ceil(result * 1.45)) + Number(additional_price.value));
-    if (sagprice_50_withElement) sagprice_50_withElement.textContent = ((Math.ceil(result * 1.50)) + Number(additional_price.value));
-    if (sagprice_55_withElement) sagprice_55_withElement.textContent = ((Math.ceil(result * 1.55)) + Number(additional_price.value));
-    if (sagprice_60_withElement) sagprice_60_withElement.textContent = ((Math.ceil(result * 1.60)) + Number(additional_price.value));
+    if (sagprice_withElement) sagprice_withElement.textContent = Math.round(((Math.ceil(result)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_15_withElement) sagprice_15_withElement.textContent = Math.round(((Math.ceil(result * 1.15)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_20_withElement) sagprice_20_withElement.textContent = Math.round(((Math.ceil(result * 1.20)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_25_withElement) sagprice_25_withElement.textContent = Math.round(((Math.ceil(result * 1.25)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_30_withElement) sagprice_30_withElement.textContent = Math.round(((Math.ceil(result * 1.30)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_35_withElement) sagprice_35_withElement.textContent = Math.round(((Math.ceil(result * 1.35)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_40_withElement) sagprice_40_withElement.textContent = Math.round(((Math.ceil(result * 1.40)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_45_withElement) sagprice_45_withElement.textContent = Math.round(((Math.ceil(result * 1.45)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_50_withElement) sagprice_50_withElement.textContent = Math.round(((Math.ceil(result * 1.50)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_55_withElement) sagprice_55_withElement.textContent = Math.round(((Math.ceil(result * 1.55)) + Number(additional_price.value)) / 10) * 10;
+    if (sagprice_60_withElement) sagprice_60_withElement.textContent = Math.round(((Math.ceil(result * 1.60)) + Number(additional_price.value)) / 10) * 10;
   });
 }

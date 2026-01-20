@@ -38,7 +38,7 @@ useEffect(() => {
 
     return(
         <nav className="navbar">
-            <img src="starco_logo.jpg" alt="starco logo" ></img>
+            <img src="../starco_logo.jpg" alt="starco logo" ></img>
             <h1>{text}</h1>
             <i id="dark-mode-toggle" className={darkMode ? "bx bx-sun" : "bx bx-moon"} onClick={toggleDarkMode} title={darkMode ? "light mode" : "dark mode"}></i>
         </nav>

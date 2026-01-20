@@ -1,12 +1,32 @@
 import price from "../pricing/price";
-import { useContext } from "react";
+import { useContext , useState } from "react";
 import { AppContext } from '../context/AppContext';
+import { updateDoc, doc , getDoc } from "firebase/firestore";
+import db from "../firebase";
 
 export default function RenderPricingTable() {
-    const { controlAllInputs, piece ,th_table } = useContext(AppContext);
-    function handleAdditionalPriceChange() {
-        price({ controlAllInputs, piece ,th_table });
+    const { piece ,th_table } = useContext(AppContext);
+    let [value_additional_price, setValueAdditionalPrice] = useState("");
+    async function handleAdditionalPriceChange() {
+        price({ piece, th_table });
+        const value = value_additional_price;
+        const counterRef = doc(db, "counters", "panels");
+        const counterSnap = await getDoc(counterRef);
+        const currentPanelId = counterSnap.data().numberNaw.toString();
+        const panalDetailsRef = doc(db, "panalDetails", currentPanelId);
+        if (value === "" || isNaN(value)) {
+            await updateDoc(panalDetailsRef, {
+            additional_price: 0
+            });
+            return;
+        }
+        const numericValue = Number(value);
+        await updateDoc(panalDetailsRef, {
+            additional_price: numericValue
+        });
     }
+
+
     return (
         <div className="RenderPricingTable">
             <div className="pricing-input-div">
@@ -14,7 +34,15 @@ export default function RenderPricingTable() {
                     <span className="piece">سعر إضافي</span>
                 </div>
                 <div className="line"></div>
-                <input id="additional_price" onChange={handleAdditionalPriceChange} className="input" type="number" />
+                <input
+                    id="additional_price"
+                    type="number"
+                    value={value_additional_price}
+                    onChange={(e) => setValueAdditionalPrice(e.target.value)}
+                    onBlur={handleAdditionalPriceChange}
+                    className="input"
+                />
+
             </div>
             <div className="pricing-table-container">
                 <table className='pricing-table'>

@@ -3,7 +3,7 @@ export default function Footer() {
     <div className="footer">
         <div className="flex_space_between">
             <h1>STARCO</h1>
-            <img src="starco_logo.jpg" alt="starco logo"></img>
+            <img src="../starco_logo.jpg" alt="starco logo"></img>
         </div>
         <div className="flex_space_between_bottom">
             <div className="footer_left">

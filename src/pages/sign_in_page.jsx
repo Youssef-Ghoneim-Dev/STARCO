@@ -60,8 +60,17 @@ export default function SignInPage() {
 
       {loading && (
         <div className="loading-overlay">
-          <div className="spinner"></div>
-          <div className="loading-text">Signing in...</div>
+            <div className="loading-container">
+                <div className="spinner"></div>
+                <div className="loading-text">
+                    Signing in
+                    <span className="dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </div>
+            </div>
         </div>
       )}
 

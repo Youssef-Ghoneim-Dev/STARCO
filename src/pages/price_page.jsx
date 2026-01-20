@@ -8,48 +8,50 @@ import RenderWeightTable from '../components/weight_table';
 import { useContext } from "react";
 import { AppContext } from '../context/AppContext';
 import RenderPdfInformation from '../components/pdf_information';
-
-
+import price from '../pricing/price';
 export default function PricePage() {
-  const { piece, setpiece, th_table } = useContext(AppContext);
+  const { piece,th_table, panalNumber } = useContext(AppContext);  
+  price({ piece, th_table });
+    if (panalNumber === 1) {
+        return(
+            <div className="Price_page">
+                <Navbar text="STARCO Company" />
 
-  return (
-    <div className="Price_page">
-      <Navbar text="STARCO Company" />
+                <PricingHeader />
 
-      <PricingHeader piece={piece} setpiece={setpiece} />
+                <div className="divider_div">
+                    <hr className='divider' />
+                </div>
 
-      <div className="divider_div">
-        <hr className='divider' />
-      </div>
+                <RenderSagPrice />
 
-      <RenderSagPrice />
+                <div className="divider_div">
+                    <hr className='divider' />
+                </div>
 
-      <div className="divider_div">
-        <hr className='divider' />
-      </div>
+                <RenderWeightTable />
 
-      <RenderWeightTable />
+                <div className="divider_div">
+                    <hr className='divider' />
+                </div>
 
-      <div className="divider_div">
-        <hr className='divider' />
-      </div>
+                <RenderInformationTable th_table={th_table} />
 
-      <RenderInformationTable th_table={th_table} />
+                <div className="divider_div">
+                    <hr className='divider' />
+                </div>
 
-      <div className="divider_div">
-        <hr className='divider' />
-      </div>
+                <RenderPricingTable />
 
-      <RenderPricingTable />
+                <div className="divider_div">
+                    <hr className='divider' />
+                </div>
 
-      <div className="divider_div">
-        <hr className='divider' />
-      </div>
+                <RenderPdfInformation />
 
-      <RenderPdfInformation />
+                <Footer />
+            </div>
+        )
+    }
 
-      <Footer />
-    </div>
-  );
 }
