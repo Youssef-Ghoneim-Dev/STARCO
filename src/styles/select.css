@@ -1,0 +1,97 @@
+.select {
+  height: 60px;
+  padding: 0 25px;
+  position: relative;
+  background: transparent;
+  border: 2px solid #355f7a;
+  font-family: "ArefRuqaa";
+  border-radius: 10px;
+  font-size: 25px;
+  font-weight: bold;
+  color: #355f7a;
+  width: 440px;
+  box-sizing: border-box !important;
+  cursor: pointer;
+}
+.select-div {
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 710px) {
+  .p_logIn {
+    font-size: 22px;
+    text-align: center;
+  }
+  .enter input,
+  .select {
+    width: 380px;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 630px) {
+  .enter input,
+  .select {
+    width: 320px;
+    font-size: 20px;
+  }
+  .enter .label {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 450px) {
+  .enter input,
+  .select {
+    width: 270px;
+    font-size: 18px;
+    height: 50px;
+  }
+  .enter {
+    height: 50px;
+  }
+  .select-div {
+    height: 50px;
+  }
+  .enter .label {
+    font-size: 18px;
+  }
+  .p_logIn {
+    font-size: 18px;
+  }
+  .enter .show_password {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 400px) {
+  .enter input,
+  .select {
+    width: 240px;
+    font-size: 16px;
+  }
+  .enter .label {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 350px) {
+  .enter input,
+  .select {
+    width: 210px;
+    font-size: 15px;
+  }
+  .enter .label {
+    font-size: 15px;
+  }
+  .p_logIn {
+    font-size: 16px;
+  }
+  .enter .show_password {
+    font-size: 18px;
+  }
+}

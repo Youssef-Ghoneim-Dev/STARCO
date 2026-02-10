@@ -1,0 +1,127 @@
+.navbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 30px;
+  background-color: #355f7a;
+  height: 70px;
+  color: white;
+  box-sizing: border-box;
+}
+.navbar h1 {
+  font-family: "Inknut Antiqua";
+  font-size: 24px;
+  margin: 0;
+}
+.navbar img {
+  height: 50px;
+  width: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.navbar i {
+  font-size: 35px;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s;
+}
+.navbar i:hover {
+  color: #e7e7e7;
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px 20px;
+  }
+  .navbar h1 {
+    font-size: 20px;
+  }
+  .navbar img {
+    height: 40px;
+    width: 40px;
+  }
+  .navbar i {
+    font-size: 30px;
+  }
+}
+@media (max-width: 710px) {
+  .navbar h1 {
+    font-size: 20px;
+  }
+  .navbar img {
+    height: 45px;
+    width: 45px;
+  }
+  .navbar i {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 630px) {
+  .navbar h1 {
+    font-size: 18px;
+  }
+  .navbar img {
+    height: 40px;
+    width: 40px;
+  }
+  .navbar i {
+    font-size: 28px;
+  }
+}
+@media (max-width: 524px) {
+  .navbar {
+    padding: 5px 10px;
+  }
+  .navbar h1 {
+    font-size: 16px;
+  }
+  .navbar img {
+    height: 35px;
+    width: 35px;
+  }
+  .navbar i {
+    font-size: 25px;
+  }
+}
+
+@media (max-width: 450px) {
+  .navbar h1 {
+    font-size: 14px;
+  }
+  .navbar img {
+    height: 35px;
+    width: 35px;
+  }
+  .navbar i {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 400px) {
+  .navbar h1 {
+    font-size: 12px;
+  }
+  .navbar img {
+    height: 30px;
+    width: 30px;
+  }
+  .navbar i {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 350px) {
+  .navbar h1 {
+    font-size: 10px;
+  }
+  .navbar img {
+    height: 28px;
+    width: 28px;
+  }
+  .navbar i {
+    font-size: 22px;
+  }
+}

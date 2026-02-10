@@ -1,0 +1,42 @@
+.AddPrice {
+  box-sizing: border-box;
+  width: 22%;
+  min-width: 400px;
+  height: 40vh;
+  border: 2px solid #e7e7e7;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.5s all ease-in-out;
+}
+.AddPrice:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border: 2px solid #355f7a;
+  cursor: pointer;
+  color: #355f7a;
+}
+.AddPrice i {
+  font-size: 60px;
+}
+.pricing_pdf {
+  margin-top: 20px;
+  display: flex;
+  flex-flow: row-reverse wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 450px) {
+  .AddPrice {
+    width: 90%;
+    min-width: unset;
+    height: 25vh;
+    padding: 20px 0;
+  }
+  .AddPrice i {
+    font-size: 40px;
+  }
+}

@@ -1,0 +1,361 @@
+.button-div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  height: 35vh;
+}
+.btn_price {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #a1cada;
+  border: none;
+  border-radius: 20px;
+  padding: 0 65px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.btn_price:hover {
+  background-color: #355f7a;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+.btn_3d {
+  font-family: "Inder";
+  position: relative;
+  height: 60px;
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 0 123px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  text-align: center;
+}
+.btn_3d span {
+  display: block;
+  color: #949393;
+}
+.btn_3d:before {
+  content: "";
+  width: 100%;
+  height: 10px;
+  position: absolute;
+  left: 0px;
+  top: 45%;
+  transform: rotate(-6deg);
+  background-color: hsla(0, 0%, 100%, 0.25) !important;
+}
+.btn_3d:hover {
+  background-color: #440000;
+  transform: scale(1.05);
+}
+.btn_Pdf {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 180.5px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.btn_Pdf:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.btn_sign_in {
+  height: 60px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 180.5px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn_sign_in:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.btn_LogIn {
+  height: 60px;
+  width: 440px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn_LogIn:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.buttonDiv {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 55px;
+  margin-top: 30px;
+}
+
+.add-field {
+  height: 50px;
+  font-family: "Inder";
+  background-color: #355f7a;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 100px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.5s ease-in-out;
+}
+.add-field:hover {
+  background-color: #a1cada;
+  color: #000000;
+  transform: scale(1.05);
+}
+.button_div {
+  line-height: 60px;
+}
+.btn_Pdf.disabled {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+@media (max-width: 710px) {
+  #generate-pdf-btn {
+    display: none;
+  }
+  .btn_price,
+  .btn_sign_in {
+    padding: 0 60px;
+    font-size: 21px;
+  }
+  .btn_LogIn {
+    width: 380px;
+    font-size: 21px;
+    padding: 0;
+  }
+  .btn_Pdf {
+    padding: 0 140px;
+    font-size: 21px;
+  }
+
+  .btn_3d {
+    padding: 0 97px;
+    font-size: 21px;
+    height: 60px;
+  }
+  .btn_3d span {
+    font-size: 15px;
+  }
+
+  .btn_3d:before {
+    transform: rotate(-7deg);
+    top: 42%;
+    height: 9px;
+  }
+
+  .buttonDiv {
+    gap: 42px;
+  }
+
+  .button-div {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 630px) {
+  .btn_price,
+  .btn_sign_in {
+    padding: 0 50px;
+    font-size: 19px;
+    height: 50px;
+  }
+  .btn_LogIn {
+    width: 320px;
+    font-size: 19px;
+  }
+  .btn_Pdf {
+    padding: 0 100px;
+    font-size: 19px;
+    height: 50px;
+  }
+
+  .btn_3d {
+    padding: 0 83px;
+    font-size: 19px;
+    height: 50px;
+  }
+
+  .btn_3d span {
+    font-size: 14px;
+  }
+
+  .btn_3d:before {
+    transform: rotate(354deg);
+    top: 42%;
+    height: 8px;
+  }
+
+  .buttonDiv {
+    gap: 38px;
+  }
+
+  .button-div {
+    gap: 25px;
+  }
+}
+
+@media (max-width: 450px) {
+  .btn_price,
+  .btn_sign_in {
+    padding: 0 40px;
+    font-size: 17px;
+    height: 50px;
+  }
+  .btn_LogIn {
+    width: 270px;
+    font-size: 17px;
+    height: 50px;
+  }
+  .btn_Pdf {
+    padding: 0 80px;
+    font-size: 17px;
+    height: 50px;
+  }
+
+  .btn_3d {
+    padding: 0 70px;
+    font-size: 17px;
+    height: 50px;
+  }
+
+  .btn_3d span {
+    font-size: 13px;
+  }
+
+  .btn_3d:before {
+    transform: rotate(353deg);
+    height: 7px;
+  }
+
+  .buttonDiv {
+    gap: 34px;
+  }
+
+  .button-div {
+    gap: 22px;
+  }
+}
+
+@media (max-width: 400px) {
+  .btn_price,
+  .btn_sign_in {
+    padding: 0 35px;
+    font-size: 16px;
+    height: 48px;
+  }
+  .btn_LogIn {
+    width: 240px;
+    font-size: 16px;
+  }
+  .btn_Pdf {
+    padding: 0px;
+    width: 280px;
+    font-size: 16px;
+    height: 48px;
+  }
+  .add-field {
+    width: 280px;
+    font-size: 18px;
+    height: 48px;
+  }
+  .btn_3d {
+    padding: 0 62px;
+    font-size: 16px;
+    height: 48px;
+  }
+
+  .btn_3d span {
+    font-size: 12px;
+  }
+
+  .btn_3d:before {
+    transform: rotate(352deg);
+    height: 6px;
+  }
+
+  .buttonDiv {
+    gap: 30px;
+  }
+
+  .button-div {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 350px) {
+  .btn_price,
+  .btn_sign_in {
+    padding: 0 30px;
+    font-size: 15px;
+    height: 46px;
+  }
+  .btn_LogIn {
+    width: 210px;
+    font-size: 15px;
+  }
+  .btn_Pdf {
+    width: 250px;
+    font-size: 15px;
+    height: 46px;
+  }
+  .add-field {
+    width: 250px;
+    font-size: 15px;
+    height: 46px;
+  }
+  .btn_3d {
+    padding: 0 55px;
+    font-size: 15px;
+    height: 46px;
+  }
+
+  .btn_3d span {
+    font-size: 11px;
+  }
+
+  .btn_3d:before {
+    transform: rotate(353deg);
+    height: 5px;
+  }
+
+  .buttonDiv {
+    gap: 28px;
+  }
+
+  .button-div {
+    gap: 18px;
+  }
+}

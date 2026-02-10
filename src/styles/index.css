@@ -1,0 +1,56 @@
+@import "./App.css";
+@import "./button.css";
+@import "./footer.css";
+@import "./index.css";
+@import "./information_table.css";
+@import "./input.css";
+@import "./navbar.css";
+@import "./price_page.css";
+@import "./pricing_header.css";
+@import "./pricing_input.css";
+@import "./pricing_table.css";
+@import "./select.css";
+@import "./weight_table.css";
+@import "./pdf_information.css";
+@import "./dashboard.css";
+@import "./new_row.css";
+@import "./add_price.css";
+@import "./pdf_preview.css";
+@import "./num_panel.css";
+* {
+  margin: 0;
+  padding: 0;
+}
+body {
+  margin: 0;
+  user-select: none;
+}
+@font-face {
+  font-family: "Inknut Antiqua";
+  src: url("./InknutAntiqua-Black.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Inder";
+  src: url("./Inder-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "inter";
+  src: url("./Inter_wght.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "ArefRuqaa";
+  src: url("./ArefRuqaa-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}

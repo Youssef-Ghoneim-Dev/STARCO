@@ -1,0 +1,40 @@
+.divider {
+  width: 80%;
+  border: none;
+  border-top: 3px dashed #a1cada;
+  margin-top: 40px;
+  margin-bottom: 40px;
+  box-sizing: border-box;
+}
+.divider_div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+.c_l {
+  border-left: none !important;
+}
+.c_r {
+  border-right: none !important;
+}
+.radius_t_l {
+  border-top-left-radius: 12px;
+  border-top: none !important;
+  border-left: none !important;
+}
+.radius_t_r {
+  border-top-right-radius: 12px;
+  border-top: none !important;
+  border-right: none !important;
+}
+.radius_b_l {
+  border-bottom-left-radius: 12px;
+  border-bottom: none !important;
+  border-left: none !important;
+}
+.radius_b_r {
+  border-bottom-right-radius: 12px;
+  border-bottom: none !important;
+  border-right: none !important;
+}

@@ -1,0 +1,67 @@
+.pricing-header {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+}
+.pricing-title {
+  font-size: 35px;
+  color: #355f7a;
+  margin: 0;
+  font-family: "ArefRuqaa";
+  direction: rtl;
+}
+.pricing-inputs {
+  display: flex;
+  flex-flow: row-reverse wrap;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 50px;
+}
+@media (max-width: 710px) {
+  .pricing-title {
+    font-size: 30px;
+  }
+  .pricing-inputs {
+    gap: 40px;
+  }
+}
+
+@media (max-width: 630px) {
+  .pricing-title {
+    font-size: 28px;
+  }
+  .pricing-inputs {
+    gap: 35px;
+  }
+}
+
+@media (max-width: 450px) {
+  .pricing-title {
+    font-size: 24px;
+  }
+  .pricing-inputs {
+    gap: 30px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .pricing-title {
+    font-size: 22px;
+  }
+  .pricing-inputs {
+    gap: 25px;
+  }
+}
+
+@media (max-width: 350px) {
+  .pricing-title {
+    font-size: 20px;
+  }
+  .pricing-inputs {
+    gap: 20px;
+  }
+}

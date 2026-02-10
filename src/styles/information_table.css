@@ -1,0 +1,136 @@
+.information-inputs {
+  width: 100%;
+  direction: rtl;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 20px;
+}
+.information-input {
+  border: none;
+  outline: none;
+  width: 100px;
+  font-size: 20px;
+  font-family: "ArefRuqaa";
+  text-align: center;
+  height: 60px;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+.information-table-container {
+  overflow-x: auto;
+  width: 80%;
+}
+.information-table {
+  width: 100% !important;
+  border-collapse: collapse;
+}
+.information-table th {
+  background-color: #355f7a;
+  box-sizing: border-box;
+  color: white;
+  height: 60px;
+  width: 100px;
+  border-top: none !important;
+  border: 3px solid #ffffff;
+  padding: 0;
+}
+.information-table td {
+  padding: 0;
+  border: 3px solid #ffffff;
+  box-sizing: border-box;
+  height: 60px;
+  width: 100px;
+  text-align: center;
+  font-family: "inter";
+  font-size: 20px;
+  border-bottom: none !important;
+  background-color: #a1cada;
+}
+@media (max-width: 710px) {
+  .information-input {
+    width: 80px;
+    font-size: 18px;
+    height: 50px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 80px;
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .information-table-container {
+    width: 80%;
+  }
+}
+
+@media (max-width: 630px) {
+  .information-input {
+    width: 70px;
+    font-size: 16px;
+    height: 45px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 70px;
+    height: 45px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 450px) {
+  .information-input {
+    width: 60px;
+    font-size: 15px;
+    height: 42px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 60px;
+    height: 42px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 400px) {
+  .information-input {
+    width: 55px;
+    font-size: 14px;
+    height: 40px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 55px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .information-table-container {
+    width: 80%;
+  }
+}
+
+@media (max-width: 350px) {
+  .information-input {
+    width: 50px;
+    font-size: 13px;
+    height: 38px;
+  }
+
+  .information-table th,
+  .information-table td {
+    width: 50px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .information-inputs {
+    gap: 10px;
+  }
+}

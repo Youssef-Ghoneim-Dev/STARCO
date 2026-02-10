@@ -1,0 +1,118 @@
+.weight-inputs {
+  display: flex;
+  flex-flow: column wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+.weight-checkbox {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 30px;
+}
+.weight-checkbox-label {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 24px;
+  color: #355f7a;
+  font-family: "Inder";
+  cursor: pointer;
+}
+.weight-checkbox-input {
+  display: none;
+}
+.checkmark {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #355f7a;
+  border-radius: 4px;
+  position: relative;
+}
+.weight-checkbox-input:checked + .checkmark::after {
+  content: "✔";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 16px;
+  background-color: #a1cada;
+  border-radius: 4px;
+}
+.weight-table-container {
+  direction: rtl;
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+}
+.weight-table {
+  flex-shrink: 0;
+  border-collapse: collapse;
+}
+.weight-table th {
+  background-color: #355f7a;
+  color: white;
+  height: 60px;
+  width: 111px !important;
+  border: 3px solid #ffffff;
+  border-top: none !important;
+  box-sizing: border-box;
+}
+.weight-table td {
+  border: 3px solid #ffffff;
+  height: 60px;
+  width: 111px !important;
+  text-align: center;
+  font-family: "inter";
+  font-size: 16px;
+  background-color: #a1cada;
+  border-bottom: none !important;
+  box-sizing: border-box;
+}
+
+@media (max-width: 710px) {
+  .weight-table th,
+  .weight-table td {
+    width: 90px !important;
+    font-size: 15px;
+  }
+}
+@media (max-width: 630px) {
+  .weight-table th,
+  .weight-table td {
+    width: 80px !important;
+    font-size: 14px;
+  }
+}
+@media (max-width: 450px) {
+  .weight-table th,
+  .weight-table td {
+    width: 70px !important;
+    font-size: 13px;
+  }
+}
+@media (max-width: 400px) {
+  .weight-table th,
+  .weight-table td {
+    width: 60px !important;
+    font-size: 12px;
+  }
+}
+@media (max-width: 350px) {
+  .weight-table th,
+  .weight-table td {
+    width: 50px !important;
+    font-size: 11px;
+  }
+}
