@@ -36,6 +36,7 @@ app.use(`${baseUrl}system`, systemConfiguration);
 app.use(`${baseUrl}projects`, projectsrouter);
 app.use(`${baseUrl}drafts`, draftsrouter);
 app.use(erwhandling);
+const mongoose = require("mongoose")
 async function startServer() {
     try {
         await mongoose.connect(process.env.DATABASE_URL);
