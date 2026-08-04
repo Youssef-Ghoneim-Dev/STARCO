@@ -1,4 +1,0 @@
-{
-  "framework": "express",
-  "entrypoint": "api/index.js"
-}
