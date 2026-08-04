@@ -18,7 +18,7 @@ const erwhandling = require("./midelwers/Handeling error");
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-
+console.log(process.env.DATABASE_URL);
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log("MongoDB Connected"))
     .catch(console.error);
