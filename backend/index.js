@@ -17,11 +17,6 @@ const erwhandling = require("./midelwers/Handeling error");
 
 require("dotenv").config();
 
-const mongoose = require("mongoose");
-mongoose.connect(process.env.DATABASE_URL)
-    .then(() => console.log("MongoDB Connected"))
-    .catch(console.error);
-
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
@@ -41,6 +36,17 @@ app.use(`${baseUrl}system`, systemConfiguration);
 app.use(`${baseUrl}projects`, projectsrouter);
 app.use(`${baseUrl}drafts`, draftsrouter);
 app.use(erwhandling);
-app.listen(port, () => {
-    console.log(`App is running on port ${port}`);
-});
+async function startServer() {
+    try {
+        await mongoose.connect(process.env.DATABASE_URL);
+        console.log("MongoDB Connected");
+
+        app.listen(port, () => {
+            console.log(`App is running on port ${port}`);
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+startServer();
