@@ -18,7 +18,6 @@ const erwhandling = require("./midelwers/Handeling error");
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-console.log(process.env.DATABASE_URL);
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log("MongoDB Connected"))
     .catch(console.error);
@@ -34,7 +33,7 @@ process.on("uncaughtException", (error) => {
     console.log("uncaughtException ::", error);
 });
 app.get("/", (req, res) => {
-    res.send("Backend is running 🚀");
+    res.send(`Backend is running 🚀${process.env.DATABASE_URL}`);
 });
 app.use(`${baseUrl}users`, usersrouter);
 app.use(`${baseUrl}clients`, clientsrouter);
