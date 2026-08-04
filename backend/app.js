@@ -32,7 +32,9 @@ app.use("/uploads", express.static("uploads"));
 process.on("uncaughtException", (error) => {
     console.log("uncaughtException ::", error);
 });
-
+app.get("/", (req, res) => {
+    res.send("Backend is running 🚀");
+});
 app.use(`${baseUrl}users`, usersrouter);
 app.use(`${baseUrl}clients`, clientsrouter);
 app.use(`${baseUrl}system`, systemConfiguration);
