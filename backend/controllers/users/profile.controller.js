@@ -7,7 +7,7 @@ const UpdateProfile = async (req, res, next) => {
         if (targetUser.isDeleted) {
             return res.status(409).json({
                 status: "error",
-                msg: "User is already restored"
+                message: "User is already restored"
             });
         }
         if (
@@ -16,7 +16,7 @@ const UpdateProfile = async (req, res, next) => {
         ) {
             return res.status(400).json({
                 status: "error",
-                msg: "No changes detected."
+                message: "No changes detected."
             });
         }
         const isDuplicted = await models.select_one({
@@ -26,19 +26,19 @@ const UpdateProfile = async (req, res, next) => {
         if (isDuplicted !== null) {
             return res.status(409).json({
                 status: "error",
-                msg: `Duplicted email ${user.email}`,
+                message: `Duplicted email ${user.email}`,
             })
         }
         const queryResult = await models.update(user);
         if (queryResult === null) {
             return res.status(404).json({
                 status: "error",
-                msg: `user id ${user.id} not found`,
+                message: `user id ${user.id} not found`,
             })
         }
         return res.status(200).json({
             status: "ok",
-            msg: "user update",
+            message: "user update",
         })
     } catch (error) {
         next(error)
@@ -52,12 +52,12 @@ const DeleteProfile = async (req, res, next) => {
         if (result === null) {
             return res.status(409).json({
                 status: "error",
-                msg: `this id not found ${userId}`,
+                message: `this id not found ${userId}`,
             })
         }
         return res.status(200).json({
             status: "ok",
-            msg: "user is deleted",
+            message: "user is deleted",
         })
     } catch (error) {
         next(error)

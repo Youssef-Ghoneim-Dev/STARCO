@@ -6,7 +6,7 @@ module.exports = (req, res, next) => {
             if (error) {
                 return res.status(401).json({
                     status: "error",
-                    msg: `authorization error ${error}`
+                    message: `authorization error ${error}`
                 })
             }
             else {
@@ -17,7 +17,7 @@ module.exports = (req, res, next) => {
     } else {
         return res.status(403).json({
             status: "error",
-            msg: "No token provieded"
+            message: "No token provieded"
         })
     }
 }

@@ -8,7 +8,7 @@ const get = async (req, res, next) => {
         ) {
             return res.status(403).json({
                 status: "error",
-                msg: "You are not allowed"
+                message: "You are not allowed"
             });
         }
         const config = await models.get();
@@ -28,7 +28,7 @@ const update = async (req, res, next) => {
         ) {
             return res.status(403).json({
                 status: "error",
-                msg: "You are not allowed"
+                message: "You are not allowed"
             });
         }
         const config = await models.update(req.body);

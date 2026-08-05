@@ -40,7 +40,7 @@ const saveDraft = async (req, res, next) => {
 
         return res.status(200).json({
             status: "ok",
-            msg: "draft saved"
+            message: "draft saved"
         });
 
     } catch (error) {
@@ -58,13 +58,13 @@ const deleteDraft = async (req, res, next) => {
         if (result === null) {
             return res.status(404).json({
                 status: "error",
-                msg: "draft not found"
+                message: "draft not found"
             });
         }
 
         return res.status(200).json({
             status: "ok",
-            msg: "draft deleted"
+            message: "draft deleted"
         });
 
     } catch (error) {
@@ -82,7 +82,7 @@ const heartbeat = async (req, res, next) => {
         if (result === null) {
             return res.status(404).json({
                 status: "error",
-                msg: "draft not found"
+                message: "draft not found"
             });
         }
 

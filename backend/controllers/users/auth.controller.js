@@ -11,7 +11,7 @@ const register = async (req, res, next) => {
         if (queryResult != null) {
             return res.status(409).json({
                 status: "error",
-                msg: `email ${user.email} is added before`,
+                message: `email ${user.email} is added before`,
             })
         };
         const salt = bcrypt.genSaltSync(10);
@@ -20,7 +20,7 @@ const register = async (req, res, next) => {
         await models.add_one(user);
         return res.status(201).json({
             status: "ok",
-            msg: "user added",
+            message: "Account created successfully",
         })
     } catch (error) {
         next(error)
@@ -33,7 +33,7 @@ const login = async (req, res, next) => {
         const queryResult = await models.select_one({ email: user.email })
         if (queryResult === null) {
             return res.status(404).json({
-                status: "Not found",
+                status: "error",
                 message: `Email:${user.email} is Not found`
             })
         }
@@ -41,12 +41,6 @@ const login = async (req, res, next) => {
             return res.status(403).json({
                 status: "error",
                 message: "Your account has been deleted"
-            });
-        }
-        if (!queryResult.approved) {
-            return res.status(403).json({
-                status: "error",
-                message: "Waiting for manager approval"
             });
         }
         const ismatch = bcrypt.compareSync(user.password, queryResult.password)
@@ -59,9 +53,30 @@ const login = async (req, res, next) => {
             }, process.env.TOKEN_KEY)
             res.header("Access-Control-Expose-Headers", "*")
             res.header("x-auth-token", token)
+            if (!queryResult.approved) {
+                return res.status(200).json({
+                    status: "pending",
+                    message: "Waiting for manager approval",
+                    token,
+                    user: {
+                        id: queryResult._id,
+                        name: queryResult.name,
+                        email: queryResult.email,
+                        role: queryResult.role
+                    }
+                });
+            }
             return res.status(200).json({
                 status: "ok",
-                message: `login`,
+                message: "Login Successfully",
+                token,
+                approved: queryResult.approved,
+                user: {
+                    id: queryResult._id,
+                    name: queryResult.name,
+                    email: queryResult.email,
+                    role: queryResult.role
+                }
             })
         }
         return res.status(401).json({

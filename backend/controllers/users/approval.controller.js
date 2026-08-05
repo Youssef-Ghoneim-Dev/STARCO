@@ -18,7 +18,7 @@ const getPendingUsers = async (req, res, next) => {
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
 
@@ -35,7 +35,7 @@ const approveUser = async (req, res, next) => {
         if (targetUser.approved) {
             return res.status(409).json({
                 status: "error",
-                msg: "User is already approved"
+                message: "User is already approved"
             });
         }
         if (manager.role === "OwnerManager") {
@@ -43,29 +43,29 @@ const approveUser = async (req, res, next) => {
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user approved",
+                message: "user approved",
             })
         } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
             const result = await models.approve(userId);
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user approved",
+                message: "user approved",
             })
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
     } catch (error) {
@@ -80,7 +80,7 @@ const deletePendingUser = async (req, res, next) => {
         if (targetUser === null) {
             return res.status(409).json({
                 status: "error",
-                msg: `this id not found ${userId}`,
+                message: `this id not found ${userId}`,
             })
         }
         if (manager.role === "OwnerManager") {
@@ -91,12 +91,12 @@ const deletePendingUser = async (req, res, next) => {
             if (deletedUser === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `User is already approved.`,
+                    message: `User is already approved.`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user is deleted",
+                message: "user is deleted",
             })
         } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
             const deletedUser = await models.deleteForever({
@@ -106,17 +106,17 @@ const deletePendingUser = async (req, res, next) => {
             if (deletedUser === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `User is already approved.`,
+                    message: `User is already approved.`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user is deleted",
+                message: "user is deleted",
             })
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
     } catch (error) {

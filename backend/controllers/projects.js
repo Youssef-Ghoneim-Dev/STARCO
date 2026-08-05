@@ -29,7 +29,7 @@ const getProject = async (req, res, next) => {
         if (project === null) {
             return res.status(404).json({
                 status: "error",
-                msg: `project id ${projectId} not found`
+                message: `project id ${projectId} not found`
             });
         }
 
@@ -67,7 +67,7 @@ const addProject = async (req, res, next) => {
 
         return res.status(201).json({
             status: "ok",
-            msg: "project added"
+            message: "project added"
         });
 
     } catch (error) {
@@ -90,13 +90,13 @@ const updateProject = async (req, res, next) => {
         if (queryResult === null) {
             return res.status(404).json({
                 status: "error",
-                msg: `project id ${projectId} not found`
+                message: `project id ${projectId} not found`
             });
         }
 
         return res.status(200).json({
             status: "ok",
-            msg: "project updated"
+            message: "project updated"
         });
 
     } catch (error) {
@@ -114,13 +114,13 @@ const deleteProject = async (req, res, next) => {
         if (result === null) {
             return res.status(404).json({
                 status: "error",
-                msg: `project id ${projectId} not found`
+                message: `project id ${projectId} not found`
             });
         }
 
         return res.status(200).json({
             status: "ok",
-            msg: "project deleted"
+            message: "project deleted"
         });
 
     } catch (error) {
@@ -138,13 +138,13 @@ const restoreProject = async (req, res, next) => {
         if (result === null) {
             return res.status(404).json({
                 status: "error",
-                msg: `project id ${projectId} not found`
+                message: `project id ${projectId} not found`
             });
         }
 
         return res.status(200).json({
             status: "ok",
-            msg: "project restored"
+            message: "project restored"
         });
 
     } catch (error) {

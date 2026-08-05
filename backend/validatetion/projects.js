@@ -81,7 +81,7 @@ module.exports = (req, res, next) => {
     if (validate.error) {
         return res.status(400).json({
             status: "error",
-            msg: validate.error.details
+            message: validate.error.details
         });
     }
 

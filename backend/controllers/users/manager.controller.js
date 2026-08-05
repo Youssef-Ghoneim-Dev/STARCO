@@ -17,7 +17,7 @@ const getUsers = async (req, res, next) => {
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
 
@@ -43,7 +43,7 @@ const getDeletedUsers = async (req, res, next) => {
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
 
@@ -64,7 +64,7 @@ const updateUser = async (req, res, next) => {
         ) {
             return res.status(400).json({
                 status: "error",
-                msg: "No changes detected."
+                message: "No changes detected."
             });
         }
         const isDuplicted = await models.select_one({
@@ -74,7 +74,7 @@ const updateUser = async (req, res, next) => {
         if (isDuplicted !== null) {
             return res.status(409).json({
                 status: "error",
-                msg: `Duplicted email ${user.email}`,
+                message: `Duplicted email ${user.email}`,
             })
         }
         if (manager.role === "OwnerManager") {
@@ -82,29 +82,29 @@ const updateUser = async (req, res, next) => {
             if (queryResult === null) {
                 return res.status(404).json({
                     status: "error",
-                    msg: `user id ${user.id} not found`,
+                    message: `user id ${user.id} not found`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user update",
+                message: "user update",
             })
         } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
             const queryResult = await models.update(user);
             if (queryResult === null) {
                 return res.status(404).json({
                     status: "error",
-                    msg: `user id ${user.id} not found`,
+                    message: `user id ${user.id} not found`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user update",
+                message: "user update",
             })
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
     } catch (error) {
@@ -120,7 +120,7 @@ const deleteUser = async (req, res, next) => {
         if (targetUser.isDeleted) {
             return res.status(409).json({
                 status: "error",
-                msg: "User is already deleted"
+                message: "User is already deleted"
             });
         }
         if (manager.role === "OwnerManager") {
@@ -128,29 +128,29 @@ const deleteUser = async (req, res, next) => {
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user is deleted",
+                message: "user is deleted",
             })
         } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
             const result = await models.deleteOne(userId);
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user is deleted",
+                message: "user is deleted",
             })
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
     } catch (error) {
@@ -166,7 +166,7 @@ const restoreUser = async (req, res, next) => {
         if (!targetUser.isDeleted) {
             return res.status(409).json({
                 status: "error",
-                msg: "User is already restored"
+                message: "User is already restored"
             });
         }
         if (manager.role === "OwnerManager") {
@@ -174,29 +174,29 @@ const restoreUser = async (req, res, next) => {
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user restored",
+                message: "user restored",
             })
         } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
             const result = await models.restore(userId);
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
-                    msg: `this id not found ${userId}`,
+                    message: `this id not found ${userId}`,
                 })
             }
             return res.status(200).json({
                 status: "ok",
-                msg: "user restored",
+                message: "user restored",
             })
         } else {
             return res.status(403).json({
                 status: "error",
-                msg: `you are not admin`,
+                message: `you are not admin`,
             })
         }
     } catch (error) {
