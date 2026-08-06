@@ -75,13 +75,26 @@ module.exports = new mongoose.Schema({
     },
 
     client: {
-        id: mongoose.Schema.Types.ObjectId,
-        name: String,
+        id: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
+        name: {
+            type: String,
+            default: ""
+        },
+
         type: {
             type: String,
-            enum: ["person", "company"]
+            enum: ["person", "company"],
+            default: "person"
         },
-        profitPercentage: Number
+
+        profitPercentage: {
+            type: Number,
+            default: 0
+        }
     },
 
     status: {
