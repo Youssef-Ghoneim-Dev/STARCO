@@ -69,7 +69,6 @@ const panelSchema = new mongoose.Schema({
 }, { _id: false });
 
 module.exports = new mongoose.Schema({
-
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true

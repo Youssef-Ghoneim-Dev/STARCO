@@ -63,8 +63,27 @@ const DeleteProfile = async (req, res, next) => {
         next(error)
     }
 }
+const getProfile = async (req, res, next) => {
+    try {
 
+        const user = await models.select_one({
+            _id: req.decodedToken.id
+        });
+
+        return res.status(200).json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            approved: user.approved
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 module.exports = {
     UpdateProfile,
-    DeleteProfile
+    DeleteProfile,
+    getProfile
 }

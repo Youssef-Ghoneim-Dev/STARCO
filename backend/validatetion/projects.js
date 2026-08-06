@@ -3,7 +3,6 @@ const joi = require("joi");
 module.exports = (req, res, next) => {
 
     const validate = joi.object({
-
         client: joi.object({
             id: joi.string(),
             name: joi.string().min(2).max(100).required(),

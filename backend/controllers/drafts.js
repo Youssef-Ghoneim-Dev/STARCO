@@ -1,5 +1,5 @@
 const models = require("../models/drafts");
-
+const defaultProject = require("../utils/defaultProject");
 const getDraft = async (req, res, next) => {
     try {
 
@@ -10,9 +10,25 @@ const getDraft = async (req, res, next) => {
         });
 
         if (draft === null) {
+
+            const newDraft = {
+                userId,
+
+                editing: {
+                    userId,
+                    lastSeen: Date.now()
+                },
+
+                project: defaultProject()
+            };
+
+            const savedDraft = await models.save(newDraft);
+
             return res.status(200).json({
-                exists: false
+                exists: true,
+                draft: savedDraft
             });
+
         }
 
         return res.status(200).json({

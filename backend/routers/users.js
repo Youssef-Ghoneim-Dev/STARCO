@@ -19,6 +19,7 @@ usersrouter.delete("/admin/:id", authMw, CheckuserToken, manger.deleteUser);
 usersrouter.patch("/admin/:id", authMw, CheckuserToken, manger.restoreUser);
 
 
+usersrouter.get("/profile", authMw, CheckuserToken, profile.getProfile);
 usersrouter.put("/profile", authMw, CheckuserToken, uservalidatetion, profile.UpdateProfile);
 usersrouter.delete("/profile", authMw, CheckuserToken, profile.DeleteProfile);
 
