@@ -60,7 +60,14 @@ const saveDraft = async (req, res, next) => {
         });
 
     } catch (error) {
-        next(error);
+
+        console.error(error);
+
+        return res.status(500).json({
+            message: error.message,
+            stack: error.stack
+        });
+
     }
 };
 
