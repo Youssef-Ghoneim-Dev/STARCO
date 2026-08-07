@@ -1,6 +1,6 @@
 const dbconfig = require("../DB/config");
 const collectionName = "clients"
-const clientSchema = require("../DB/schema/clients")
+const clientSchema = require("../DB/schema/clients");
 const add_one = async (client) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -16,7 +16,14 @@ const select_one = async (client) => {
     const select_one = (await openconnection).findOne(client);
     return select_one;
 }
+const select_all = async () => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        clientSchema
+    );
 
+    return await openconnection.find({});
+};
 const search = async (name) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -44,10 +51,21 @@ const update = async (client) => {
         }
     );
 }
+const delete_one = async (id) => {
 
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        clientSchema
+    );
+
+    return await openconnection.findByIdAndDelete(id);
+
+};
 module.exports = {
     add_one,
+    select_all,
     search,
     select_one,
-    update
+    update,
+    delete_one
 }

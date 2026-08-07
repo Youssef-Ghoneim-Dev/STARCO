@@ -11,7 +11,6 @@ module.exports = new mongoose.Schema({
     },
 
     editing: {
-
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             required: true
