@@ -22,9 +22,17 @@ const getDraft = async (req, res, next) => {
                 project: defaultProject()
             };
 
-            const systemConfig = await require("../models/systemConfiguration").get();
-            newDraft.project = newDraft.project.panels.map(panel => {
-                panel.prices =  {
+            const systemConfig =
+                await require("../models/systemConfiguration").get();
+
+            if (!systemConfig) {
+                throw new Error("System configuration not found");
+            }
+
+            newDraft.project.panels = newDraft.project.panels.map(panel => {
+                panel.prices = {
+                    ...panel.prices,
+
                     sheetPrice: systemConfig.sheetPrice,
                     paintPrice: systemConfig.paintPrice,
                     manufacturing: systemConfig.prices.manufacturing,
@@ -33,19 +41,17 @@ const getDraft = async (req, res, next) => {
                     transport: systemConfig.prices.transport,
                     screws: systemConfig.prices.screws,
                     stretch: systemConfig.prices.stretch,
-                }
-                if (panelConfig) {
-                    panel.prices = { ...panel.prices, ...panelConfig.prices };
-                }
+                };
+
                 return panel;
             });
+
             const savedDraft = await models.save(newDraft);
 
             return res.status(200).json({
                 exists: true,
                 draft: savedDraft
             });
-
         }
 
         return res.status(200).json({
