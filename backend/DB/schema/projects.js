@@ -8,12 +8,10 @@ const panelPartSchema = new mongoose.Schema({
 
     width: {
         type: Number,
-        required: true
     },
 
     height: {
         type: Number,
-        required: true
     },
 
     quantity: {

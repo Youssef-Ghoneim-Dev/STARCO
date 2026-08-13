@@ -17,44 +17,30 @@ const defaultProject = () => {
                 parts: [
                     {
                         name: "العلبة",
-                        width: 0,
-                        height: 0,
                         quantity: 1
                     },
                     {
                         name: "الجنب",
-                        width: 0,
-                        height: 0,
                         quantity: 2
                     },
                     {
                         name: "المراية",
-                        width: 0,
-                        height: 0,
                         quantity: 1
                     },
                     {
                         name: "الجلسة",
-                        width: 0,
-                        height: 0,
                         quantity: 1
                     },
                     {
                         name: "الجريدة",
-                        width: 0,
-                        height: 0,
                         quantity: 2
                     },
                     {
-                        name: "باب1",
-                        width: 0,
-                        height: 0,
+                        name: "باب 1",
                         quantity: 1
                     },
                     {
-                        name: "باب2",
-                        width: 0,
-                        height: 0,
+                        name: "باب 2",
                         quantity: 1
                     }
                 ],
