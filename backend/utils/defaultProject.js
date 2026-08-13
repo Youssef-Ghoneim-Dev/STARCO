@@ -64,8 +64,6 @@ const defaultProject = () => {
                 thickness: []
             }
         ],
-
-        isDeleted: false
     };
 
 };
