@@ -63,6 +63,42 @@ const panelSchema = new mongoose.Schema({
     }]
 
 }, { _id: false });
+const projectSchema = new mongoose.Schema({
+    client: {
+        id: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
+        name: {
+            type: String,
+            default: ""
+        },
+
+        type: {
+            type: String,
+            enum: ["person", "company"],
+            default: "person"
+        },
+
+        profitPercentage: {
+            type: Number,
+            default: 0
+        }
+    },
+
+    status: {
+        type: String,
+        enum: [
+            "pending",
+            "inProgress",
+            "completed"
+        ],
+        default: "pending"
+    },
+
+    panels: [panelSchema],
+}, { _id: false });
 module.exports = new mongoose.Schema({
 
     userId: {
@@ -85,7 +121,7 @@ module.exports = new mongoose.Schema({
     },
 
     project: {
-        type: panelSchema,
+        type: projectSchema,
         required: true
     }
 
