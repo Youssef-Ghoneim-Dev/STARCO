@@ -30,11 +30,6 @@ const panelSchema = new mongoose.Schema({
     parts: [panelPartSchema],
 
     prices: {
-
-        sheetPrice: Number,
-
-        paintPrice: Number,
-
         manufacturing: Number,
 
         locks: Number,
@@ -103,6 +98,11 @@ module.exports = new mongoose.Schema({
             "completed"
         ],
         default: "pending"
+    },
+    prices: {
+        sheetPrice: Number,
+
+        paintPrice: Number,
     },
 
     panels: [panelSchema],

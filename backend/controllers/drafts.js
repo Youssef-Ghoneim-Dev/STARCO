@@ -10,6 +10,12 @@ const getDraft = async (req, res, next) => {
         });
 
         if (draft === null) {
+            const systemConfig =
+                await require("../models/systemConfiguration").get();
+
+            if (!systemConfig) {
+                throw new Error("System configuration not found");
+            }
 
             const newDraft = {
                 userId,
@@ -19,28 +25,23 @@ const getDraft = async (req, res, next) => {
                     lastSeen: Date.now()
                 },
 
+                prices: {
+                    sheetPrice: systemConfig.sheetPrice,
+                    paintPrice: systemConfig.paintPrice
+                },
+
                 project: defaultProject()
             };
 
-            const systemConfig =
-                await require("../models/systemConfiguration").get();
-
-            if (!systemConfig) {
-                throw new Error("System configuration not found");
-            }
-
-            newDraft.project.panels = newDraft.project.panels.map(panel => {
+            newDraft.project.panels = newDraft.project.panels.map((panel) => {
                 panel.prices = {
                     ...panel.prices,
-
-                    sheetPrice: systemConfig.sheetPrice,
-                    paintPrice: systemConfig.paintPrice,
                     manufacturing: systemConfig.prices.manufacturing,
                     locks: systemConfig.prices.locks,
                     hinges: systemConfig.prices.hinges,
                     transport: systemConfig.prices.transport,
                     screws: systemConfig.prices.screws,
-                    stretch: systemConfig.prices.stretch,
+                    stretch: systemConfig.prices.stretch
                 };
 
                 return panel;
@@ -68,11 +69,13 @@ const saveDraft = async (req, res, next) => {
     try {
         const draft = {
             userId: req.decodedToken.id,
+
             editing: {
                 userId: req.decodedToken.id,
                 lastSeen: Date.now()
             },
-            project: req.body
+            prices: req.body.prices,
+            project: req.body.project
         };
 
         await models.save(draft);

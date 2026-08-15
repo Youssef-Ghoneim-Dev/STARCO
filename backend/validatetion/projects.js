@@ -13,7 +13,10 @@ module.exports = (req, res, next) => {
         status: joi.string()
             .valid("pending", "inProgress", "completed")
             .optional(),
-
+        prices: joi.object({
+            sheetPrice: joi.number().required(),
+            paintPrice: joi.number().required(),
+        }),
         panels: joi.array().items(
 
             joi.object({
@@ -37,10 +40,6 @@ module.exports = (req, res, next) => {
                 ).required(),
 
                 prices: joi.object({
-
-                    sheetPrice: joi.number().required(),
-
-                    paintPrice: joi.number().required(),
 
                     manufacturing: joi.number().required(),
 

@@ -9,7 +9,10 @@ const defaultProject = () => {
         },
 
         status: "pending",
-
+        prices: {
+            sheetPrice: 0,
+            paintPrice: 0,
+        },
         panels: [
             {
                 panelName: "لوحة 1",
@@ -46,8 +49,6 @@ const defaultProject = () => {
                 ],
 
                 prices: {
-                    sheetPrice: 0,
-                    paintPrice: 0,
                     manufacturing: 0,
                     locks: 0,
                     hinges: 0,
