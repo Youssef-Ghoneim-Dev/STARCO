@@ -1,5 +1,29 @@
 const models = require("../models/drafts");
 const defaultProject = require("../utils/defaultProject");
+
+const hasDraftContent = (draft) => {
+    const project = draft?.project;
+
+    if (!project) return false;
+    if (project.client?.name?.trim()) return true;
+
+    return (project.panels || []).some((panel) =>
+        (panel.thickness || []).length > 0 ||
+        (panel.parts || []).some((part) => part.width || part.height)
+    );
+};
+
+const getDraftStatus = async (req, res, next) => {
+    try {
+        const draft = await models.select_one({ userId: req.decodedToken.id });
+
+        return res.status(200).json({
+            exists: hasDraftContent(draft)
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 const getDraft = async (req, res, next) => {
     try {
 
@@ -145,6 +169,7 @@ const heartbeat = async (req, res, next) => {
 };
 
 module.exports = {
+    getDraftStatus,
     getDraft,
     saveDraft,
     deleteDraft,

@@ -6,6 +6,13 @@ const authMw = require("../midelwers/auth");
 const CheckuserToken = require("../midelwers/Users/CheckUserToken");
 
 draftsRouter.get(
+    "/status",
+    authMw,
+    CheckuserToken,
+    draftController.getDraftStatus
+);
+
+draftsRouter.get(
     "/",
     authMw,
     CheckuserToken,
