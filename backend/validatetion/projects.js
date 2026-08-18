@@ -4,7 +4,7 @@ module.exports = (req, res, next) => {
 
     const validate = joi.object({
         client: joi.object({
-            id: joi.string(),
+            id: joi.any().optional(),
             name: joi.string().min(2).max(100).required(),
             type: joi.string().valid("person", "company").required(),
             profitPercentage: joi.number().min(10).max(70).required()
