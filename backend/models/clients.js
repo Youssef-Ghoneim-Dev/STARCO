@@ -29,9 +29,11 @@ const search = async (name) => {
         collectionName,
         clientSchema
     );
+    const escapedName = String(name || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     return await openconnection.find({
         name: {
-            $regex: "^" + name,
+            $regex: "^" + escapedName,
             $options: "i"
         }
     }).limit(10);
