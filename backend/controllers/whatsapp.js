@@ -14,6 +14,23 @@ const { normalizePhoneNumber } = require("../utils/phoneNumber");
 
 const SESSION_HOURS = 24;
 
+const startProjectSyntax = `STARCO START v1
+اسم العميل: اكتب اسم العميل هنا
+نوع العميل: شركة`;
+
+const panelSyntax = `STARCO PANEL
+اسم اللوحة: اكتب اسم اللوحة هنا
+السمك المطلوب: 0.7, 1, 1.5
+التفاصيل: اكتب التفاصيل هنا`;
+
+const gettingStartedReplies = () => ([
+    "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد، أرسل رسالة البدء التالية كما هي، ثم عدّل البيانات المكتوبة بعد النقطتين.",
+    startProjectSyntax,
+    "بعد تأكيد بدء المشروع، سترسل لك المنصة صيغة اللوحة. يمكنك الضغط مطولًا على رسالة الصيغة ونسخها. ولحذف جلسة مفتوحة دون إنشاء مشروع أرسل: STARCO DELETE"
+]);
+
+const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
+
 const sendSafeText = async (to, body, projectId = null) => {
     try {
         const response = await sendTextMessage(to, body);
@@ -166,9 +183,9 @@ const finishSession = async (session, inboundMessage) => {
 const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, inboundMessage }) => {
     if (command.type === "start") {
         const validationError = validateStart(command);
-        if (validationError) return validationError;
+        if (validationError) return [validationError, startProjectSyntax];
         if (await getActiveSession(senderPhone)) {
-            return "لديك مشروع مفتوح بالفعل. أرسل STARCO FINISH لإنهائه أو STARCO CANCEL لإلغائه.";
+            return "لديك مشروع مفتوح بالفعل. أرسل STARCO FINISH لإنهائه أو STARCO DELETE لحذف الجلسة الحالية.";
         }
 
         const session = await sessions.create({
@@ -179,7 +196,11 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
         await messages.updateByProviderMessageId(inboundRecord.providerMessageId, { sessionId: session._id });
-        return "تم بدء المشروع. أرسل الآن رسالة STARCO PANEL الأولى، ثم أرسل الصور والتسجيلات الخاصة بها.";
+        return [
+            "تم بدء المشروع بنجاح. أرسل الآن رسالة اللوحة التالية، ثم بعد تأكيدها أرسل كل الصور والتسجيلات الخاصة بهذه اللوحة. عندما تبدأ لوحة جديدة، أرسل صيغة اللوحة مرة أخرى.",
+            panelSyntax,
+            "بعد الانتهاء من كل اللوحات أرسل: STARCO FINISH"
+        ];
     }
 
     if (command.type === "edit") {
@@ -209,16 +230,16 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
     }
 
     const session = await getActiveSession(senderPhone);
-    if (!session) return "ابدأ أولًا برسالة STARCO START v1 ثم بيانات العميل.";
+    if (!session) return gettingStartedReplies();
 
-    if (command.type === "cancel") {
+    if (command.type === "delete") {
         await sessions.updateById(session._id, { status: "cancelled", activePanelKey: null });
-        return "تم إلغاء جلسة المشروع. لم يتم إنشاء أي مشروع.";
+        return "تم حذف جلسة المشروع الحالية. لم يتم إنشاء أي مشروع، ويمكنك الآن بدء مشروع جديد برسالة STARCO START v1.";
     }
 
     if (command.type === "panel") {
         const validationError = validatePanel(command);
-        if (validationError) return validationError;
+        if (validationError) return [validationError, panelSyntax];
 
         const panel = {
             localPanelKey: crypto.randomUUID(),
@@ -235,7 +256,11 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             sessionId: session._id,
             panelLocalKey: panel.localPanelKey
         });
-        return `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن الصور والتسجيلات، أو ابدأ لوحة جديدة برسالة STARCO PANEL.`;
+        return [
+            `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها. عندما تنتهي منها، أرسل قالب STARCO PANEL نفسه لبدء لوحة جديدة.`,
+            panelSyntax,
+            "بعد الانتهاء من كل اللوحات أرسل: STARCO FINISH"
+        ];
     }
 
     if (command.type === "finish") {
@@ -245,7 +270,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
         return `تم إنشاء المشروع بنجاح.\nID: ${result.project._id}\nالرابط: ${baseUrl}/projects/${result.project._id}`;
     }
 
-    return "لم أفهم الأمر.";
+    return gettingStartedReplies();
 };
 
 const handleIncomingMessage = async (message, value) => {
@@ -276,7 +301,9 @@ const handleIncomingMessage = async (message, value) => {
 
     if (command) {
         const reply = await handleCommand({ command, senderPhone, marketer, inboundRecord, inboundMessage: message });
-        await sendSafeText(senderPhone, reply);
+        for (const body of normalizeReplies(reply)) {
+            await sendSafeText(senderPhone, body);
+        }
         return;
     }
 
@@ -285,6 +312,11 @@ const handleIncomingMessage = async (message, value) => {
         await sessions.updateById(activeSession._id, {
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
+        return;
+    }
+
+    for (const body of gettingStartedReplies()) {
+        await sendSafeText(senderPhone, body);
     }
 };
 

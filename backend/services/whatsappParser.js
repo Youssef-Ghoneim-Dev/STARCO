@@ -51,7 +51,7 @@ const parseWhatsappCommand = (text) => {
     }
 
     if (/^STARCO\s+FINISH$/i.test(firstLine)) return { type: "finish" };
-    if (/^STARCO\s+CANCEL$/i.test(firstLine)) return { type: "cancel" };
+    if (/^STARCO\s+(?:DELETE|CANCEL)$/i.test(firstLine)) return { type: "delete" };
     return null;
 };
 
