@@ -5,6 +5,7 @@ const panelSchema = new mongoose.Schema({
     sourceMessageId: { type: String, required: true },
     panelName: { type: String, required: true },
     requestedThicknesses: [{ type: Number }],
+    targetPanelIndex: { type: Number, default: null },
     panelType: { type: String, default: "" },
     hasCopper: { type: Boolean, default: null },
     details: { type: String, default: "" }
@@ -15,6 +16,8 @@ const schema = new mongoose.Schema({
     marketingRepId: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
     mode: { type: String, enum: ["create", "edit"], default: "create" },
     targetProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "projects", default: null },
+    targetPanelCount: { type: Number, default: 0 },
+    selectedPanelIndex: { type: Number, default: null },
     status: { type: String, enum: ["collecting", "finalizing", "finished", "cancelled", "expired"], default: "collecting" },
     templateVersion: { type: String, default: "v1" },
     client: {

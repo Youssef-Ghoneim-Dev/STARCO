@@ -23,12 +23,31 @@ const loadWhatsappTemplates = async () => {
     return getWhatsappTemplates(config?.whatsappTemplates);
 };
 
+const panelExample = `STARCO PANEL
+السمك المطلوب: 0.7, 1, 1.5
+نوع اللوحة: عادية
+هل يوجد نحاس: لا
+تفاصيل إضافية: اكتب التفاصيل هنا`;
+
+const panelInstructions = (templates) => [
+    `تم بدء المشروع بنجاح. أرسل بيانات اللوحة بالشكل التالي، ثم أرسل الصور والتسجيلات الخاصة بها. عند إنهاء جميع اللوحات أرسل: STARCO FINISH\n\nمثال:\n${panelExample}`,
+    templates.panel
+];
+
+const singleLine = (value) => String(value || "").replace(/[\r\n]+/g, " ").trim();
+
+const editPanelReply = (panel, panelNumber) => {
+    const thicknesses = panel.requestedThicknesses || panel.thickness || [];
+    const details = panel.details ?? panel.additionalDetails ?? "";
+    const hasCopper = panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : "";
+    return `هذه هي بيانات لوحة ${panelNumber}. عدّل السطر الذي تريده فقط ثم أرسل الرسالة كاملة:\n\nSTARCO PANEL\nالسمك المطلوب: ${thicknesses.join(", ")}\nنوع اللوحة: ${singleLine(panel.panelType)}\nهل يوجد نحاس: ${hasCopper}\nتفاصيل إضافية: ${singleLine(details)}`;
+};
+
 const gettingStartedReplies = async () => {
     const templates = await loadWhatsappTemplates();
     return [
-        "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد، أرسل رسالة البدء التالية كما هي، ثم عدّل البيانات المكتوبة بعد النقطتين.",
-        templates.startProject,
-        "بعد تأكيد بدء المشروع، سترسل لك المنصة صيغة اللوحة. يمكنك الضغط مطولًا على رسالة الصيغة ونسخها. ولحذف جلسة مفتوحة دون إنشاء مشروع أرسل: STARCO DELETE"
+        "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد استخدم الشكل التالي:\n\nمثال:\nSTARCO START\nاسم العميل: شركة ستاركو",
+        templates.startProject
     ];
 };
 
@@ -102,12 +121,13 @@ const getActiveSession = (senderPhone) => sessions.findActiveByPhone(senderPhone
 
 const validateStart = (command) => {
     if (!command.clientName) return "اكتب اسم العميل في سطر: اسم العميل: ...";
-    if (!command.clientType) return "اكتب نوع العميل هكذا: نوع العميل: فرد أو شركة";
     return null;
 };
 
-const validatePanel = (command) => {
-    if (!command.panelName) return "اكتب اسم اللوحة في سطر: اسم اللوحة: ...";
+const validatePanel = (command, session) => {
+    if (session.mode === "edit") {
+        if (!session.selectedPanelIndex) return "حدد رقم اللوحة أولًا، مثل: رقم اللوحة: 1";
+    }
     if (!command.thicknesses.length) return "اكتب السمك هكذا: السمك المطلوب: 0.7, 1, 1.5";
     if (!command.panelType) return "اكتب نوع اللوحة في سطر: نوع اللوحة: دفن أو عادية أو وتربروف أو نمطي";
     if (command.hasCopper === null) return "اكتب هل يوجد نحاس هكذا: هل يوجد نحاس: نعم أو لا";
@@ -142,35 +162,18 @@ const updateProjectFromSession = async (session) => {
     });
     if (!targetProject) return null;
 
-    const suppliedPanelsByName = new Map(
-        session.panels.map((panel) => [panel.panelName.trim(), panel])
-    );
-    const panels = targetProject.panels.map((existingPanel) => {
-        const incomingPanel = suppliedPanelsByName.get(existingPanel.panelName.trim());
+    const panels = targetProject.panels.map((existingPanel, index) => {
+        const incomingPanel = session.panels.find((panel) => panel.targetPanelIndex === index + 1);
         if (!incomingPanel) return existingPanel.toObject();
 
-        suppliedPanelsByName.delete(existingPanel.panelName.trim());
         return {
             ...existingPanel.toObject(),
-            panelName: incomingPanel.panelName,
+            panelName: existingPanel.panelName,
             thickness: incomingPanel.requestedThicknesses,
             panelType: incomingPanel.panelType,
             hasCopper: incomingPanel.hasCopper,
             additionalDetails: incomingPanel.details
         };
-    });
-
-    suppliedPanelsByName.forEach((panel) => {
-        panels.push({
-            panelId: crypto.randomUUID(),
-            panelName: panel.panelName,
-            thickness: panel.requestedThicknesses,
-            panelType: panel.panelType,
-            hasCopper: panel.hasCopper,
-            additionalDetails: panel.details,
-            parts: [],
-            prices: {}
-        });
     });
 
     return projects.update_whatsapp_project(targetProject._id, {
@@ -184,7 +187,12 @@ const updateProjectFromSession = async (session) => {
 
 const attachMessagesToProject = async (session, project) => {
     const panelMap = new Map(
-        session.panels.map((panel, index) => [panel.localPanelKey, project.panels[index]?.panelId])
+        session.panels.map((panel, index) => [
+            panel.localPanelKey,
+            session.mode === "edit"
+                ? project.panels[panel.targetPanelIndex - 1]?.panelId
+                : project.panels[index]?.panelId
+        ])
     );
     const incomingMessages = await messages.findBySession(session._id);
 
@@ -199,7 +207,10 @@ const attachMessagesToProject = async (session, project) => {
 
 const projectCreatedReply = (project) => {
     const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-    return `تم إنشاء المشروع بنجاح.\nID: ${project._id}\nالرابط: ${baseUrl}/projects/${project._id}`;
+    return [
+        `تم إنشاء المشروع بنجاح.\nالرابط: ${baseUrl}/projects/${project._id}\n\nلتعديل المشروع عبر WhatsApp، انسخ الرسالة التالية وأرسلها:`,
+        `STARCO EDIT #${project._id}`
+    ];
 };
 
 const finishSession = async (session, inboundMessage) => {
@@ -258,7 +269,9 @@ const completeRequestedFinishIfReady = async (sessionId) => {
 
     const result = await finishSession(session, { id: session.finishRequestedByMessageId });
     if (result.project) {
-        await sendSafeText(session.senderPhone, projectCreatedReply(result.project));
+        for (const body of projectCreatedReply(result.project)) {
+            await sendSafeText(session.senderPhone, body);
+        }
     } else if (result.error) {
         await sendSafeText(session.senderPhone, result.error);
     }
@@ -269,7 +282,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
 
     if (command.type === "start") {
         const validationError = validateStart(command);
-        if (validationError) return [validationError, templates.startProject];
+        if (validationError) return [`${validationError}\n\nمثال:\nSTARCO START\nاسم العميل: شركة ستاركو`, templates.startProject];
         if (await getActiveSession(senderPhone)) {
             return "لديك مشروع مفتوح بالفعل. أرسل STARCO FINISH لإنهائه أو STARCO DELETE لحذف الجلسة الحالية.";
         }
@@ -277,15 +290,11 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const session = await sessions.create({
             senderPhone,
             marketingRepId: marketer._id,
-            client: { name: command.clientName, type: command.clientType },
+            client: { name: command.clientName },
             startedByMessageId: inboundMessage.id,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return [
-            "تم بدء المشروع بنجاح. أرسل الآن رسالة اللوحة التالية، ثم بعد تأكيدها أرسل كل الصور والتسجيلات الخاصة بهذه اللوحة. عندما تبدأ لوحة جديدة، أرسل صيغة اللوحة مرة أخرى.",
-            templates.panel,
-            "بعد الانتهاء من كل اللوحات أرسل: STARCO FINISH"
-        ];
+        return panelInstructions(templates);
     }
 
     if (command.type === "edit") {
@@ -299,19 +308,20 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         });
         if (!targetProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
 
-        await sessions.create({
+        const editSession = await sessions.create({
             senderPhone,
             marketingRepId: marketer._id,
             mode: "edit",
             targetProjectId: targetProject._id,
+            targetPanelCount: targetProject.panels.length,
             client: {
-                name: command.clientName || targetProject.client.name,
-                type: command.clientType || targetProject.client.type
+                name: targetProject.client.name,
+                type: targetProject.client.type
             },
             startedByMessageId: inboundMessage.id,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return "تم فتح جلسة تعديل. أرسل رسائل STARCO PANEL ثم STARCO FINISH.";
+        return `تم فتح جلسة التعديل. هذا المشروع يحتوي على ${editSession.targetPanelCount} لوحة. اختر اللوحة التي تريد تعديلها بإرسال رسالة مثل:\n\nرقم اللوحة: 1`;
     }
 
     const session = await getActiveSession(senderPhone);
@@ -322,30 +332,67 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         return "تم حذف جلسة المشروع الحالية. لم يتم إنشاء أي مشروع، ويمكنك الآن بدء مشروع جديد برسالة STARCO START v1.";
     }
 
+    if (command.type === "panel-selection") {
+        if (session.mode !== "edit") {
+            return "اختيار رقم اللوحة متاح أثناء تعديل مشروع فقط.";
+        }
+        if (!command.panelNumber || command.panelNumber > session.targetPanelCount) {
+            return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${session.targetPanelCount} لوحة.`;
+        }
+
+        const targetProject = await projects.select_one({
+            _id: session.targetProjectId,
+            userId: marketer._id,
+            isDeleted: false
+        });
+        if (!targetProject) return "تعذر العثور على المشروع المطلوب تعديله.";
+
+        const pendingPanel = session.panels.find((panel) => panel.targetPanelIndex === command.panelNumber);
+        const panel = pendingPanel || targetProject.panels[command.panelNumber - 1];
+        await sessions.updateById(session._id, {
+            selectedPanelIndex: command.panelNumber,
+            activePanelKey: pendingPanel?.localPanelKey || null,
+            expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
+        });
+        return editPanelReply(panel, command.panelNumber);
+    }
+
     if (command.type === "panel") {
-        const validationError = validatePanel(command);
-        if (validationError) return [validationError, templates.panel];
+        const validationError = validatePanel(command, session);
+        if (validationError) return [
+            `${validationError}\n\nمثال:\n${panelExample}`,
+            templates.panel
+        ];
 
         const duplicatePanel = session.panels.find((panel) => panel.sourceMessageId === inboundMessage.id);
         if (duplicatePanel) {
             return `تم تسجيل لوحة: ${duplicatePanel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
         }
 
+        const existingEdit = session.mode === "edit"
+            ? session.panels.find((item) => item.targetPanelIndex === session.selectedPanelIndex)
+            : null;
         const panel = {
-            localPanelKey: crypto.randomUUID(),
+            localPanelKey: existingEdit?.localPanelKey || crypto.randomUUID(),
             sourceMessageId: inboundMessage.id,
-            panelName: command.panelName,
+            panelName: `لوحة ${session.panels.length + 1}`,
+            targetPanelIndex: session.mode === "edit" ? session.selectedPanelIndex : null,
             requestedThicknesses: command.thicknesses,
             panelType: command.panelType,
             hasCopper: command.hasCopper,
             details: command.details || ""
         };
+        const nextPanels = existingEdit
+            ? session.panels.map((item) => item.targetPanelIndex === session.selectedPanelIndex ? panel : item)
+            : [...session.panels, panel];
         await sessions.updateById(session._id, {
-            $push: { panels: panel },
+            panels: nextPanels,
             activePanelKey: panel.localPanelKey,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
+        return session.mode === "edit"
+            ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
+            : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
     }
 
     if (command.type === "finish") {

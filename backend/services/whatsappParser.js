@@ -9,17 +9,15 @@ const field = (text, label) => {
     return match?.[1]?.trim() || "";
 };
 
-const parseType = (value) => {
-    const normalized = value.trim().toLowerCase();
-    if (["شركة", "company"].includes(normalized)) return "company";
-    if (["فرد", "person"].includes(normalized)) return "person";
-    return null;
-};
-
 const parseThicknesses = (value) => normalizeDigits(value)
     .split(/[,،]/)
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item) && item > 0);
+
+const parsePanelNumber = (value) => {
+    const number = Number(normalizeDigits(value).trim());
+    return Number.isInteger(number) && number > 0 ? number : null;
+};
 
 const parseYesNo = (value) => {
     const normalized = String(value || "").trim().toLowerCase();
@@ -34,24 +32,25 @@ const parseWhatsappCommand = (text) => {
 
     if (/^STARCO\s+START(?:\s+v1)?$/i.test(firstLine)) {
         const clientName = field(value, "اسم العميل");
-        const clientType = parseType(field(value, "نوع العميل"));
-        return { type: "start", clientName, clientType };
+        return { type: "start", clientName };
     }
 
     const editMatch = firstLine.match(/^STARCO\s+EDIT\s+#?([a-f\d]{24})$/i);
     if (editMatch) {
         return {
             type: "edit",
-            projectId: editMatch[1],
-            clientName: field(value, "اسم العميل"),
-            clientType: parseType(field(value, "نوع العميل"))
+            projectId: editMatch[1]
         };
+    }
+
+    const selectionMatch = firstLine.match(/^رقم\s+اللوحة\s*:\s*(.+)$/i);
+    if (selectionMatch) {
+        return { type: "panel-selection", panelNumber: parsePanelNumber(selectionMatch[1]) };
     }
 
     if (/^STARCO\s+PANEL$/i.test(firstLine)) {
         return {
             type: "panel",
-            panelName: field(value, "اسم اللوحة"),
             thicknesses: parseThicknesses(field(value, "السمك المطلوب")),
             panelType: field(value, "نوع اللوحة"),
             hasCopper: parseYesNo(field(value, "هل يوجد نحاس")),

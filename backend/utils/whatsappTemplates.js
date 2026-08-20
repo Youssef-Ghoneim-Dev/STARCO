@@ -1,25 +1,43 @@
 const defaults = {
-    startProject: `STARCO START v1
-اسم العميل: اكتب اسم العميل هنا
-نوع العميل: شركة`,
+    startProject: `STARCO START
+اسم العميل:`,
     panel: `STARCO PANEL
-اسم اللوحة: اكتب اسم اللوحة هنا
-السمك المطلوب: 0.7, 1, 1.5
-نوع اللوحة: عادية
-هل يوجد نحاس: لا
-تفاصيل إضافية: اكتب التفاصيل هنا`
+السمك المطلوب:
+نوع اللوحة:
+هل يوجد نحاس:
+تفاصيل إضافية:`
 };
 
+const removeLegacyFields = (template, labels) => String(template || "")
+    .split(/\r?\n/)
+    .filter((line) => !labels.some((label) => new RegExp(`^\\s*${label}\\s*:`, "i").test(line)))
+    .join("\n")
+    .trim();
+
+const emptyFieldValues = (template, labels) => String(template || "")
+    .split(/\r?\n/)
+    .map((line) => {
+        const label = labels.find((item) => new RegExp(`^\\s*${item}\\s*:`, "i").test(line));
+        return label ? `${label}:` : line;
+    })
+    .join("\n");
+
 const getWhatsappTemplates = (templates = {}) => ({
-    startProject: templates.startProject || defaults.startProject,
-    panel: templates.panel || defaults.panel
+    startProject: emptyFieldValues(
+        removeLegacyFields(templates.startProject || defaults.startProject, ["نوع العميل"]),
+        ["اسم العميل"]
+    ),
+    panel: emptyFieldValues(
+        removeLegacyFields(templates.panel || defaults.panel, ["اسم اللوحة"]),
+        ["السمك المطلوب", "نوع اللوحة", "هل يوجد نحاس", "تفاصيل إضافية"]
+    )
 });
 
 const isValidTemplates = (templates) => {
     if (!templates || typeof templates.startProject !== "string" || typeof templates.panel !== "string") return false;
 
-    return ["STARCO START", "اسم العميل", "نوع العميل"].every((value) => templates.startProject.includes(value)) &&
-        ["STARCO PANEL", "اسم اللوحة", "السمك المطلوب", "نوع اللوحة", "هل يوجد نحاس"].every((value) => templates.panel.includes(value));
+    return ["STARCO START", "اسم العميل"].every((value) => templates.startProject.includes(value)) &&
+        ["STARCO PANEL", "السمك المطلوب", "نوع اللوحة", "هل يوجد نحاس"].every((value) => templates.panel.includes(value));
 };
 
 module.exports = { defaults, getWhatsappTemplates, isValidTemplates };
