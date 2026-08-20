@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Private Google Drive credentials
+google-service-account.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

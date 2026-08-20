@@ -9,12 +9,12 @@
     "dev": "nodemon index.js",
     "migrate:roles": "node migrations/migrateEmployeeToEngineer.js",
     "test": "echo \"Error: no test specified\" && exit 1"
-    },
+  },
   "keywords": [],
   "author": "youssef_ghoneim",
   "license": "ISC",
   "type": "commonjs",
-    "dependencies": {
+  "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

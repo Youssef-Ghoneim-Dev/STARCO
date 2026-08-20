@@ -13,7 +13,13 @@ module.exports = new mongoose.Schema({
     text: { type: String, default: null },
     media: {
         providerMediaId: { type: String, default: null },
-        mimeType: { type: String, default: null }
+        mimeType: { type: String, default: null },
+        fileName: { type: String, default: null },
+        fileSize: { type: Number, default: null },
+        storageProvider: { type: String, enum: ["google-drive", null], default: null },
+        storageFileId: { type: String, default: null },
+        uploadedAt: { type: Date, default: null },
+        uploadError: { type: String, default: null }
     },
     status: { type: String, default: "received" },
     rawPayload: { type: mongoose.Schema.Types.Mixed, default: null }

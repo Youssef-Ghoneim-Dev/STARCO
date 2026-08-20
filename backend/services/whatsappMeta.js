@@ -53,6 +53,31 @@ const markMessageAsRead = (messageId) => requestMeta("/messages", {
     message_id: messageId
 });
 
+const downloadMedia = async (mediaId) => {
+    const { accessToken, apiVersion } = getConfig();
+    const metadataResponse = await fetch(`https://graph.facebook.com/${apiVersion}/${mediaId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const metadata = await metadataResponse.json();
+
+    if (!metadataResponse.ok || !metadata.url) {
+        throw new Error(metadata?.error?.message || "Could not get WhatsApp media metadata");
+    }
+
+    const fileResponse = await fetch(metadata.url, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!fileResponse.ok) {
+        throw new Error("Could not download WhatsApp media");
+    }
+
+    return {
+        buffer: Buffer.from(await fileResponse.arrayBuffer()),
+        mimeType: metadata.mime_type || fileResponse.headers.get("content-type") || "application/octet-stream",
+        fileSize: Number(metadata.file_size) || null
+    };
+};
+
 const isValidWebhookSignature = (rawBody, signature) => {
     const appSecret = process.env.WHATSAPP_APP_SECRET;
     if (!appSecret || !rawBody || !signature) return false;
@@ -71,5 +96,6 @@ module.exports = {
     sendTextMessage,
     sendTemplateMessage,
     markMessageAsRead,
+    downloadMedia,
     isValidWebhookSignature
 };

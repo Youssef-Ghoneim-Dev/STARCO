@@ -4,6 +4,8 @@ const panelSchema = new mongoose.Schema({
     localPanelKey: { type: String, required: true },
     panelName: { type: String, required: true },
     requestedThicknesses: [{ type: Number }],
+    panelType: { type: String, default: "" },
+    hasCopper: { type: Boolean, default: null },
     details: { type: String, default: "" }
 }, { _id: false });
 

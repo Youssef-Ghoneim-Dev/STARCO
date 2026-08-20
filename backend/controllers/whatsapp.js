@@ -8,8 +8,10 @@ const {
     isValidWebhookSignature,
     markMessageAsRead,
     sendTextMessage,
-    sendTemplateMessage
+    sendTemplateMessage,
+    downloadMedia
 } = require("../services/whatsappMeta");
+const { uploadFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
 
 const SESSION_HOURS = 24;
@@ -21,7 +23,9 @@ const startProjectSyntax = `STARCO START v1
 const panelSyntax = `STARCO PANEL
 اسم اللوحة: اكتب اسم اللوحة هنا
 السمك المطلوب: 0.7, 1, 1.5
-التفاصيل: اكتب التفاصيل هنا`;
+نوع اللوحة: عادية
+هل يوجد نحاس: لا
+تفاصيل إضافية: اكتب التفاصيل هنا`;
 
 const gettingStartedReplies = () => ([
     "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد، أرسل رسالة البدء التالية كما هي، ثم عدّل البيانات المكتوبة بعد النقطتين.",
@@ -74,6 +78,35 @@ const mediaFromMessage = (message) => {
     return { providerMediaId: media.id, mimeType: media.mime_type || null };
 };
 
+const mediaExtension = (mimeType) => ({
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "audio/ogg": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "video/mp4": "mp4",
+    "application/pdf": "pdf"
+}[mimeType] || "bin");
+
+const savePanelMediaToGoogleDrive = async (message, media) => {
+    const downloaded = await downloadMedia(media.providerMediaId);
+    const fileName = `whatsapp-${message.id}-${Date.now()}.${mediaExtension(downloaded.mimeType)}`;
+    const uploaded = await uploadFile({
+        fileName,
+        mimeType: downloaded.mimeType,
+        buffer: downloaded.buffer
+    });
+
+    return {
+        fileName: uploaded.name || fileName,
+        fileSize: Number(uploaded.size) || downloaded.fileSize || downloaded.buffer.length,
+        storageProvider: "google-drive",
+        storageFileId: uploaded.id,
+        uploadedAt: new Date()
+    };
+};
+
 const getActiveSession = (senderPhone) => sessions.findActiveByPhone(senderPhone);
 
 const validateStart = (command) => {
@@ -85,6 +118,8 @@ const validateStart = (command) => {
 const validatePanel = (command) => {
     if (!command.panelName) return "اكتب اسم اللوحة في سطر: اسم اللوحة: ...";
     if (!command.thicknesses.length) return "اكتب السمك هكذا: السمك المطلوب: 0.7, 1, 1.5";
+    if (!command.panelType) return "اكتب نوع اللوحة في سطر: نوع اللوحة: دفن أو عادية أو وتربروف أو نمطي";
+    if (command.hasCopper === null) return "اكتب هل يوجد نحاس هكذا: هل يوجد نحاس: نعم أو لا";
     return null;
 };
 
@@ -100,6 +135,9 @@ const createProjectFromSession = (session) => projects.create({
     panels: session.panels.map((panel) => ({
         panelName: panel.panelName,
         thickness: panel.requestedThicknesses,
+        panelType: panel.panelType,
+        hasCopper: panel.hasCopper,
+        additionalDetails: panel.details,
         parts: [],
         prices: {}
     }))
@@ -124,7 +162,10 @@ const updateProjectFromSession = async (session) => {
         return {
             ...existingPanel.toObject(),
             panelName: incomingPanel.panelName,
-            thickness: incomingPanel.requestedThicknesses
+            thickness: incomingPanel.requestedThicknesses,
+            panelType: incomingPanel.panelType,
+            hasCopper: incomingPanel.hasCopper,
+            additionalDetails: incomingPanel.details
         };
     });
 
@@ -133,6 +174,9 @@ const updateProjectFromSession = async (session) => {
             panelId: crypto.randomUUID(),
             panelName: panel.panelName,
             thickness: panel.requestedThicknesses,
+            panelType: panel.panelType,
+            hasCopper: panel.hasCopper,
+            additionalDetails: panel.details,
             parts: [],
             prices: {}
         });
@@ -245,6 +289,8 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             localPanelKey: crypto.randomUUID(),
             panelName: command.panelName,
             requestedThicknesses: command.thicknesses,
+            panelType: command.panelType,
+            hasCopper: command.hasCopper,
             details: command.details || ""
         };
         await sessions.updateById(session._id, {
@@ -256,11 +302,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             sessionId: session._id,
             panelLocalKey: panel.localPanelKey
         });
-        return [
-            `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها. عندما تنتهي منها، أرسل قالب STARCO PANEL نفسه لبدء لوحة جديدة.`,
-            panelSyntax,
-            "بعد الانتهاء من كل اللوحات أرسل: STARCO FINISH"
-        ];
+        return `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
     }
 
     if (command.type === "finish") {
@@ -308,7 +350,23 @@ const handleIncomingMessage = async (message, value) => {
     }
 
     if (activeSession?.activePanelKey) {
-        await messages.updateByProviderMessageId(message.id, { status: "attached" });
+        if (inboundRecord.media?.providerMediaId) {
+            try {
+                const storedMedia = await savePanelMediaToGoogleDrive(message, inboundRecord.media);
+                await messages.updateByProviderMessageId(message.id, {
+                    media: { ...inboundRecord.media, ...storedMedia },
+                    status: "stored"
+                });
+            } catch (error) {
+                console.error("Google Drive media upload failed:", error.message);
+                await messages.updateByProviderMessageId(message.id, {
+                    "media.uploadError": error.message,
+                    status: "media_upload_failed"
+                });
+            }
+        } else {
+            await messages.updateByProviderMessageId(message.id, { status: "attached" });
+        }
         await sessions.updateById(activeSession._id, {
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
@@ -321,6 +379,10 @@ const handleIncomingMessage = async (message, value) => {
 };
 
 const receiveWebhook = async (req, res) => {
+    if (!isValidWebhookSignature(req.rawBody, req.get("x-hub-signature-256"))) {
+        return res.sendStatus(401);
+    }
+
     try {
         const changes = req.body?.entry?.flatMap((entry) => entry.changes || []) || [];
         for (const change of changes) {

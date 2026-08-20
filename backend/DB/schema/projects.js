@@ -32,6 +32,21 @@ const panelSchema = new mongoose.Schema({
         required: true
     },
 
+    panelType: {
+        type: String,
+        default: ""
+    },
+
+    hasCopper: {
+        type: Boolean,
+        default: null
+    },
+
+    additionalDetails: {
+        type: String,
+        default: ""
+    },
+
     parts: [panelPartSchema],
 
     prices: {
