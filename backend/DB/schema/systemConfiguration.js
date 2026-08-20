@@ -47,5 +47,12 @@ module.exports = new mongoose.Schema({
     whatsappTemplates: {
         startProject: { type: String, default: defaults.startProject },
         panel: { type: String, default: defaults.panel }
+    },
+
+    googleDrive: {
+        oauthRefreshToken: { type: String, default: null, select: false },
+        folderId: { type: String, default: null },
+        connectedEmail: { type: String, default: null },
+        connectedAt: { type: Date, default: null }
     }
 });

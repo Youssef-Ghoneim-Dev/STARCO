@@ -35,8 +35,24 @@ const updateWhatsappTemplates = async (templates) => {
     );
 };
 
+const getGoogleDriveConnection = async () => {
+    const connection = await dbconfig.openconnection(collectionName, schema);
+    return connection.findOne({}).select("+googleDrive.oauthRefreshToken");
+};
+
+const updateGoogleDriveConnection = async (googleDrive) => {
+    const connection = await dbconfig.openconnection(collectionName, schema);
+    return connection.findOneAndUpdate(
+        {},
+        { $set: { googleDrive } },
+        { new: true }
+    );
+};
+
 module.exports = {
     get,
     update,
-    updateWhatsappTemplates
+    updateWhatsappTemplates,
+    getGoogleDriveConnection,
+    updateGoogleDriveConnection
 };

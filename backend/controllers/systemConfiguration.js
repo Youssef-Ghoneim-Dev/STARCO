@@ -1,5 +1,7 @@
 const models = require("../models/systemConfiguration");
+const jwt = require("jsonwebtoken");
 const { getWhatsappTemplates: normalizeWhatsappTemplates, isValidTemplates } = require("../utils/whatsappTemplates");
+const googleDrive = require("../services/googleDrive");
 
 const isOwnerManager = (req) => req.decodedToken.role === "OwnerManager";
 
@@ -84,9 +86,53 @@ const updateWhatsappTemplates = async (req, res, next) => {
     }
 };
 
+const getGoogleDriveStatus = async (req, res, next) => {
+    try {
+        if (!isOwnerManager(req)) {
+            return res.status(403).json({ status: "error", message: "Only Owner Manager can manage Google Drive" });
+        }
+        return res.status(200).json(await googleDrive.getConnectionStatus());
+    } catch (error) {
+        next(error);
+    }
+};
+
+const startGoogleDriveConnection = async (req, res, next) => {
+    try {
+        if (!isOwnerManager(req)) {
+            return res.status(403).json({ status: "error", message: "Only Owner Manager can manage Google Drive" });
+        }
+        const state = jwt.sign(
+            { purpose: "google-drive-connect", userId: req.decodedToken.id },
+            process.env.TOKEN_KEY,
+            { expiresIn: "10m" }
+        );
+        return res.status(200).json({ authorizationUrl: googleDrive.createAuthorizationUrl(state) });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const finishGoogleDriveConnection = async (req, res) => {
+    try {
+        const state = jwt.verify(req.query.state, process.env.TOKEN_KEY);
+        if (state.purpose !== "google-drive-connect" || !req.query.code) {
+            return res.status(400).send("Invalid Google Drive connection request.");
+        }
+        await googleDrive.connectAccount(req.query.code);
+        return res.status(200).send("<html dir=\"rtl\"><body style=\"font-family:Arial;padding:40px\"><h2>تم ربط Google Drive بنجاح.</h2><p>يمكنك إغلاق هذه الصفحة والعودة إلى STARCO.</p></body></html>");
+    } catch (error) {
+        console.error("Google Drive connection failed:", error.message);
+        return res.status(400).send("<html dir=\"rtl\"><body style=\"font-family:Arial;padding:40px\"><h2>تعذر ربط Google Drive.</h2><p>ارجع إلى STARCO وحاول مرة أخرى.</p></body></html>");
+    }
+};
+
 module.exports = {
     get,
     update,
     getWhatsappTemplates,
-    updateWhatsappTemplates
+    updateWhatsappTemplates,
+    getGoogleDriveStatus,
+    startGoogleDriveConnection,
+    finishGoogleDriveConnection
 };
