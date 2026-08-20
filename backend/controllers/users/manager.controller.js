@@ -60,7 +60,9 @@ const updateUser = async (req, res, next) => {
         const targetUser = await models.select_one({ _id: userId })
         if (
             user.name === targetUser.name &&
-            user.email === targetUser.email
+            user.email === targetUser.email &&
+            user.phoneNumber === targetUser.phoneNumber &&
+            (!user.role || user.role === targetUser.role)
         ) {
             return res.status(400).json({
                 status: "error",
@@ -78,7 +80,7 @@ const updateUser = async (req, res, next) => {
             })
         }
         if (manager.role === "OwnerManager") {
-            const queryResult = await models.update(user);
+            const queryResult = await models.update(user, { allowRole: true });
             if (queryResult === null) {
                 return res.status(404).json({
                     status: "error",

@@ -31,6 +31,24 @@ const add_one = async (project) => {
     return await openconnection.insertOne(project);
 };
 
+const create = async (project) => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        projectSchema
+    );
+
+    return openconnection.create(project);
+};
+
+const update_whatsapp_project = async (projectId, update) => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        projectSchema
+    );
+
+    return openconnection.findByIdAndUpdate(projectId, update, { new: true });
+};
+
 const update = async (project) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -77,6 +95,8 @@ module.exports = {
     select_one,
     selectall,
     add_one,
+    create,
+    update_whatsapp_project,
     update,
     deleteOne,
     restore

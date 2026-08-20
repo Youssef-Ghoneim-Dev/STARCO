@@ -12,7 +12,8 @@ const UpdateProfile = async (req, res, next) => {
         }
         if (
             user.name === targetUser.name &&
-            user.email === targetUser.email
+            user.email === targetUser.email &&
+            user.phoneNumber === targetUser.phoneNumber
         ) {
             return res.status(400).json({
                 status: "error",
@@ -74,6 +75,7 @@ const getProfile = async (req, res, next) => {
             id: user._id,
             name: user.name,
             email: user.email,
+            phoneNumber: user.phoneNumber,
             role: user.role,
             approved: user.approved
         });

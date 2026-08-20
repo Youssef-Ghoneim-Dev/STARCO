@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,11 +15,16 @@ const clientsrouter = require("./routers/clients");
 const systemConfiguration = require("./routers/systemConfiguration");
 const projectsrouter = require("./routers/projects");
 const draftsrouter = require("./routers/drafts");
+const whatsapprouter = require("./routers/whatsapp");
 const erwhandling = require("./midelwers/Handeling error");
 
-require("dotenv").config();
-
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buffer) => {
+        if (req.url.startsWith(`${baseUrl}whatsapp/webhook`)) {
+            req.rawBody = Buffer.from(buffer);
+        }
+    }
+}));
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
@@ -35,6 +42,7 @@ app.use(`${baseUrl}clients`, clientsrouter);
 app.use(`${baseUrl}system`, systemConfiguration);
 app.use(`${baseUrl}projects`, projectsrouter);
 app.use(`${baseUrl}drafts`, draftsrouter);
+app.use(`${baseUrl}whatsapp`, whatsapprouter);
 app.use(erwhandling);
 const mongoose = require("mongoose")
 async function startServer() {

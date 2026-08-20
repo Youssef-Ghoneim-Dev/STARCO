@@ -1,14 +1,30 @@
 const dbconfig = require("../DB/config");
 const collectionName = "users"
 const userSchema = require("../DB/schema/users")
+
+const normalizePhoneNumber = (phoneNumber) =>
+    String(phoneNumber || "").replace(/\D/g, "");
 const select_one = async (condtion) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     const SelectOneuser = (await openconnection).findOne(condtion);
     return SelectOneuser;
 };
 
+const select_marketer_by_phone = async (phoneNumber) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.findOne({
+        phoneNumber: normalizePhoneNumber(phoneNumber),
+        role: "Marketer",
+        approved: true,
+        isDeleted: false
+    });
+};
+
 const add_one = async (user) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    if (user.phoneNumber) {
+        user.phoneNumber = normalizePhoneNumber(user.phoneNumber);
+    }
     const AddOneuser = (await openconnection).insertOne(user);
     return AddOneuser;
 }
@@ -19,12 +35,19 @@ const selectall = async (condtion) => {
     return users;
 }
 
-const update = async (user) => {
+const update = async (user, { allowRole = false } = {}) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
-    const queryResult = await openconnection.findByIdAndUpdate(user.id, {
+    const updates = {
         email: user.email,
-        name: user.name
-    });
+        name: user.name,
+        phoneNumber: user.phoneNumber ? normalizePhoneNumber(user.phoneNumber) : null
+    };
+
+    if (allowRole && user.role) {
+        updates.role = user.role;
+    }
+
+    const queryResult = await openconnection.findByIdAndUpdate(user.id, updates);
     return queryResult;
 }
 
@@ -56,6 +79,7 @@ const deleteForever = async (condtion) => {
 }
 module.exports = {
     select_one,
+    select_marketer_by_phone,
     add_one,
     selectall,
     update,

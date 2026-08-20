@@ -22,6 +22,11 @@ const panelPartSchema = new mongoose.Schema({
 
 const panelSchema = new mongoose.Schema({
 
+    panelId: {
+        type: String,
+        default: () => new mongoose.Types.ObjectId().toString()
+    },
+
     panelName: {
         type: String,
         required: true
@@ -98,6 +103,15 @@ module.exports = new mongoose.Schema({
             "completed"
         ],
         default: "pending"
+    },
+    source: {
+        type: String,
+        enum: ["manual", "whatsapp"],
+        default: "manual"
+    },
+    whatsappSessionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
     },
     prices: {
         sheetPrice: Number,

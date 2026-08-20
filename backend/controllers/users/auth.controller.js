@@ -62,6 +62,7 @@ const login = async (req, res, next) => {
                         id: queryResult._id,
                         name: queryResult.name,
                         email: queryResult.email,
+                        phoneNumber: queryResult.phoneNumber,
                         role: queryResult.role
                     }
                 });
@@ -75,6 +76,7 @@ const login = async (req, res, next) => {
                     id: queryResult._id,
                     name: queryResult.name,
                     email: queryResult.email,
+                    phoneNumber: queryResult.phoneNumber,
                     role: queryResult.role
                 }
             })
