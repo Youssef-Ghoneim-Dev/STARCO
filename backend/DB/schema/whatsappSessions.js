@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const panelSchema = new mongoose.Schema({
     localPanelKey: { type: String, required: true },
+    sourceMessageId: { type: String, required: true },
     panelName: { type: String, required: true },
     requestedThicknesses: [{ type: Number }],
     panelType: { type: String, default: "" },

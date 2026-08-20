@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { defaults } = require("../../utils/whatsappTemplates");
 
 module.exports = new mongoose.Schema({
     sheetPrice: {
@@ -41,5 +42,10 @@ module.exports = new mongoose.Schema({
             type: Number,
             required: true
         }
+    },
+
+    whatsappTemplates: {
+        startProject: { type: String, default: defaults.startProject },
+        panel: { type: String, default: defaults.panel }
     }
 });

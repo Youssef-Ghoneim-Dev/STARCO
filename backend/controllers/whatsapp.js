@@ -3,7 +3,9 @@ const users = require("../models/users");
 const projects = require("../models/projects");
 const sessions = require("../models/whatsappSessions");
 const messages = require("../models/whatsappMessages");
+const systemConfiguration = require("../models/systemConfiguration");
 const { parseWhatsappCommand } = require("../services/whatsappParser");
+const { getWhatsappTemplates } = require("../utils/whatsappTemplates");
 const {
     isValidWebhookSignature,
     markMessageAsRead,
@@ -16,37 +18,25 @@ const { normalizePhoneNumber } = require("../utils/phoneNumber");
 
 const SESSION_HOURS = 24;
 
-const startProjectSyntax = `STARCO START v1
-اسم العميل: اكتب اسم العميل هنا
-نوع العميل: شركة`;
+const loadWhatsappTemplates = async () => {
+    const config = await systemConfiguration.get();
+    return getWhatsappTemplates(config?.whatsappTemplates);
+};
 
-const panelSyntax = `STARCO PANEL
-اسم اللوحة: اكتب اسم اللوحة هنا
-السمك المطلوب: 0.7, 1, 1.5
-نوع اللوحة: عادية
-هل يوجد نحاس: لا
-تفاصيل إضافية: اكتب التفاصيل هنا`;
-
-const gettingStartedReplies = () => ([
-    "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد، أرسل رسالة البدء التالية كما هي، ثم عدّل البيانات المكتوبة بعد النقطتين.",
-    startProjectSyntax,
-    "بعد تأكيد بدء المشروع، سترسل لك المنصة صيغة اللوحة. يمكنك الضغط مطولًا على رسالة الصيغة ونسخها. ولحذف جلسة مفتوحة دون إنشاء مشروع أرسل: STARCO DELETE"
-]);
+const gettingStartedReplies = async () => {
+    const templates = await loadWhatsappTemplates();
+    return [
+        "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد، أرسل رسالة البدء التالية كما هي، ثم عدّل البيانات المكتوبة بعد النقطتين.",
+        templates.startProject,
+        "بعد تأكيد بدء المشروع، سترسل لك المنصة صيغة اللوحة. يمكنك الضغط مطولًا على رسالة الصيغة ونسخها. ولحذف جلسة مفتوحة دون إنشاء مشروع أرسل: STARCO DELETE"
+    ];
+};
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
 
 const sendSafeText = async (to, body, projectId = null) => {
     try {
-        const response = await sendTextMessage(to, body);
-        await messages.create({
-            providerMessageId: response?.messages?.[0]?.id,
-            direction: "outbound",
-            projectId,
-            recipientPhone: normalizePhoneNumber(to),
-            type: "text",
-            text: body,
-            status: "sent"
-        });
+        await sendTextMessage(to, body);
     } catch (error) {
         console.error("WhatsApp reply failed:", error.message);
     }
@@ -224,10 +214,12 @@ const finishSession = async (session, inboundMessage) => {
     return { project };
 };
 
-const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, inboundMessage }) => {
+const handleCommand = async ({ command, senderPhone, marketer, inboundMessage }) => {
+    const templates = await loadWhatsappTemplates();
+
     if (command.type === "start") {
         const validationError = validateStart(command);
-        if (validationError) return [validationError, startProjectSyntax];
+        if (validationError) return [validationError, templates.startProject];
         if (await getActiveSession(senderPhone)) {
             return "لديك مشروع مفتوح بالفعل. أرسل STARCO FINISH لإنهائه أو STARCO DELETE لحذف الجلسة الحالية.";
         }
@@ -239,10 +231,9 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             startedByMessageId: inboundMessage.id,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        await messages.updateByProviderMessageId(inboundRecord.providerMessageId, { sessionId: session._id });
         return [
             "تم بدء المشروع بنجاح. أرسل الآن رسالة اللوحة التالية، ثم بعد تأكيدها أرسل كل الصور والتسجيلات الخاصة بهذه اللوحة. عندما تبدأ لوحة جديدة، أرسل صيغة اللوحة مرة أخرى.",
-            panelSyntax,
+            templates.panel,
             "بعد الانتهاء من كل اللوحات أرسل: STARCO FINISH"
         ];
     }
@@ -283,10 +274,16 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
 
     if (command.type === "panel") {
         const validationError = validatePanel(command);
-        if (validationError) return [validationError, panelSyntax];
+        if (validationError) return [validationError, templates.panel];
+
+        const duplicatePanel = session.panels.find((panel) => panel.sourceMessageId === inboundMessage.id);
+        if (duplicatePanel) {
+            return `تم تسجيل لوحة: ${duplicatePanel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
+        }
 
         const panel = {
             localPanelKey: crypto.randomUUID(),
+            sourceMessageId: inboundMessage.id,
             panelName: command.panelName,
             requestedThicknesses: command.thicknesses,
             panelType: command.panelType,
@@ -297,10 +294,6 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
             $push: { panels: panel },
             activePanelKey: panel.localPanelKey,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
-        });
-        await messages.updateByProviderMessageId(inboundRecord.providerMessageId, {
-            sessionId: session._id,
-            panelLocalKey: panel.localPanelKey
         });
         return `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
     }
@@ -322,17 +315,6 @@ const handleIncomingMessage = async (message, value) => {
     const text = extractText(message);
     const command = parseWhatsappCommand(text);
     const activeSession = await getActiveSession(senderPhone);
-    const inboundRecord = await messages.create({
-        providerMessageId: message.id,
-        direction: "inbound",
-        sessionId: activeSession?._id || null,
-        panelLocalKey: activeSession?.activePanelKey || null,
-        senderPhone,
-        type: message.type,
-        text: text || null,
-        media: mediaFromMessage(message) || undefined,
-        rawPayload: { message, metadata: value.metadata }
-    });
 
     markMessageAsRead(message.id).catch((error) => console.error("Could not mark message as read:", error.message));
     const marketer = await users.select_marketer_by_phone(senderPhone);
@@ -342,7 +324,7 @@ const handleIncomingMessage = async (message, value) => {
     }
 
     if (command) {
-        const reply = await handleCommand({ command, senderPhone, marketer, inboundRecord, inboundMessage: message });
+        const reply = await handleCommand({ command, senderPhone, marketer, inboundMessage: message });
         for (const body of normalizeReplies(reply)) {
             await sendSafeText(senderPhone, body);
         }
@@ -350,11 +332,24 @@ const handleIncomingMessage = async (message, value) => {
     }
 
     if (activeSession?.activePanelKey) {
-        if (inboundRecord.media?.providerMediaId) {
+        const media = mediaFromMessage(message);
+        const inboundRecord = await messages.create({
+            providerMessageId: message.id,
+            direction: "inbound",
+            sessionId: activeSession._id,
+            panelLocalKey: activeSession.activePanelKey,
+            senderPhone,
+            type: message.type,
+            text: text || null,
+            media: media || undefined,
+            status: "attached"
+        });
+
+        if (media?.providerMediaId) {
             try {
-                const storedMedia = await savePanelMediaToGoogleDrive(message, inboundRecord.media);
+                const storedMedia = await savePanelMediaToGoogleDrive(message, media);
                 await messages.updateByProviderMessageId(message.id, {
-                    media: { ...inboundRecord.media, ...storedMedia },
+                    media: { ...media, ...storedMedia },
                     status: "stored"
                 });
             } catch (error) {
@@ -373,7 +368,7 @@ const handleIncomingMessage = async (message, value) => {
         return;
     }
 
-    for (const body of gettingStartedReplies()) {
+    for (const body of await gettingStartedReplies()) {
         await sendSafeText(senderPhone, body);
     }
 };

@@ -26,7 +26,17 @@ const update = async (config) => {
     );
 };
 
+const updateWhatsappTemplates = async (templates) => {
+    const connection = await dbconfig.openconnection(collectionName, schema);
+    return connection.findOneAndUpdate(
+        {},
+        { $set: { whatsappTemplates: templates } },
+        { new: true }
+    );
+};
+
 module.exports = {
     get,
-    update
+    update,
+    updateWhatsappTemplates
 };

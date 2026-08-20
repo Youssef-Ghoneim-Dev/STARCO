@@ -19,4 +19,18 @@ router.put(
     controller.update
 );
 
+router.get(
+    "/whatsapp-templates",
+    authMw,
+    CheckuserToken,
+    controller.getWhatsappTemplates
+);
+
+router.put(
+    "/whatsapp-templates",
+    authMw,
+    CheckuserToken,
+    controller.updateWhatsappTemplates
+);
+
 module.exports = router;
