@@ -15,7 +15,7 @@ const schema = new mongoose.Schema({
     marketingRepId: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
     mode: { type: String, enum: ["create", "edit"], default: "create" },
     targetProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "projects", default: null },
-    status: { type: String, enum: ["collecting", "finished", "cancelled", "expired"], default: "collecting" },
+    status: { type: String, enum: ["collecting", "finalizing", "finished", "cancelled", "expired"], default: "collecting" },
     templateVersion: { type: String, default: "v1" },
     client: {
         name: { type: String, default: "" },
@@ -25,6 +25,8 @@ const schema = new mongoose.Schema({
     activePanelKey: { type: String, default: null },
     startedByMessageId: { type: String, required: true },
     finishedByMessageId: { type: String, default: null },
+    finishRequestedByMessageId: { type: String, default: null },
+    finishRequestedAt: { type: Date, default: null },
     createdProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "projects", default: null },
     expiresAt: { type: Date, required: true }
 }, { timestamps: true });

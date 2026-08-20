@@ -33,6 +33,7 @@ const gettingStartedReplies = async () => {
 };
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const sendSafeText = async (to, body, projectId = null) => {
     try {
@@ -196,22 +197,71 @@ const attachMessagesToProject = async (session, project) => {
     ));
 };
 
+const projectCreatedReply = (project) => {
+    const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+    return `تم إنشاء المشروع بنجاح.\nID: ${project._id}\nالرابط: ${baseUrl}/projects/${project._id}`;
+};
+
 const finishSession = async (session, inboundMessage) => {
     if (!session.panels.length) {
         return { error: "لا يمكن إنهاء المشروع قبل إرسال لوحة واحدة على الأقل." };
     }
-    const project = session.mode === "edit"
-        ? await updateProjectFromSession(session)
-        : await createProjectFromSession(session);
-    if (!project) return { error: "تعذر العثور على المشروع المطلوب تعديله." };
-    await attachMessagesToProject(session, project);
-    await sessions.updateById(session._id, {
+
+    // A project must never be created while one of its WhatsApp attachments
+    // has not reached the configured storage provider.  This also prevents a
+    // failed Drive upload from being hidden behind a successful FINISH reply.
+    const sessionMessages = await messages.findBySession(session._id);
+    const unuploadedMedia = sessionMessages.filter((message) =>
+        message.media?.providerMediaId && !message.media?.storageFileId
+    );
+
+    if (unuploadedMedia.length) {
+        const failedUploads = unuploadedMedia.filter(
+            (message) => message.status === "media_upload_failed"
+        ).length;
+        if (failedUploads) {
+            return {
+                error: `تعذر رفع ${failedUploads} ملف إلى التخزين. لم يتم إنشاء المشروع حتى لا تضيع المرفقات.`
+            };
+        }
+
+        return { waiting: unuploadedMedia.length };
+    }
+
+    // Two uploads may finish at nearly the same time. Only the first request
+    // is allowed to claim and create the project.
+    const finalizingSession = await sessions.claimForFinalization(session._id);
+    if (!finalizingSession) return { finalizing: true };
+
+    const project = finalizingSession.mode === "edit"
+        ? await updateProjectFromSession(finalizingSession)
+        : await createProjectFromSession(finalizingSession);
+    if (!project) {
+        await sessions.updateById(finalizingSession._id, { status: "collecting" });
+        return { error: "تعذر العثور على المشروع المطلوب تعديله." };
+    }
+    await attachMessagesToProject(finalizingSession, project);
+    await sessions.updateById(finalizingSession._id, {
         status: "finished",
         finishedByMessageId: inboundMessage.id,
         createdProjectId: project._id,
         activePanelKey: null
     });
     return { project };
+};
+
+// FINISH is sent once. When the last media upload completes, this creates the
+// project and sends its result automatically without another WhatsApp command.
+const completeRequestedFinishIfReady = async (sessionId) => {
+    const session = await sessions.findById(sessionId);
+    if (!session || session.status !== "collecting" || !session.finishRequestedByMessageId) return;
+
+    const result = await finishSession(session, { id: session.finishRequestedByMessageId });
+    if (result.project) {
+        await sendSafeText(session.senderPhone, projectCreatedReply(result.project));
+    } else if (result.error) {
+        await sendSafeText(session.senderPhone, result.error);
+    }
 };
 
 const handleCommand = async ({ command, senderPhone, marketer, inboundMessage }) => {
@@ -299,10 +349,22 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
     }
 
     if (command.type === "finish") {
-        const result = await finishSession(session, inboundMessage);
+        // Persist the intent first. The short grace period lets WhatsApp
+        // webhooks for media sent just before FINISH create their records.
+        await sessions.updateById(session._id, {
+            finishRequestedByMessageId: inboundMessage.id,
+            finishRequestedAt: new Date(),
+            expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
+        });
+        await wait(2000);
+        const latestSession = await sessions.findById(session._id);
+        const result = await finishSession(latestSession, inboundMessage);
         if (result.error) return result.error;
-        const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-        return `تم إنشاء المشروع بنجاح.\nID: ${result.project._id}\nالرابط: ${baseUrl}/projects/${result.project._id}`;
+        if (result.waiting) {
+            return `جاري رفع ${result.waiting} ملف. سيتم إنشاء المشروع وإرسال الرابط تلقائيًا فور اكتمال الرفع.`;
+        }
+        if (result.finalizing) return "جاري إنشاء المشروع، وسيصل إليك الرابط تلقائيًا خلال لحظات.";
+        return projectCreatedReply(result.project);
     }
 
     return gettingStartedReplies();
@@ -352,12 +414,20 @@ const handleIncomingMessage = async (message, value) => {
                     media: { ...media, ...storedMedia },
                     status: "stored"
                 });
+                await completeRequestedFinishIfReady(activeSession._id);
             } catch (error) {
                 console.error("Google Drive media upload failed:", error.message);
                 await messages.updateByProviderMessageId(message.id, {
                     "media.uploadError": error.message,
                     status: "media_upload_failed"
                 });
+                const latestSession = await sessions.findById(activeSession._id);
+                if (latestSession?.finishRequestedByMessageId) {
+                    await sendSafeText(
+                        senderPhone,
+                        "تعذر رفع أحد الملفات إلى التخزين، لذلك لن يتم إنشاء المشروع تلقائيًا حتى لا تفقد المرفقات."
+                    );
+                }
             }
         } else {
             await messages.updateByProviderMessageId(message.id, { status: "attached" });
