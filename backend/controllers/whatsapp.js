@@ -249,8 +249,6 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundRecord, in
 };
 
 const handleIncomingMessage = async (message, value) => {
-    console.log("=== WHATSAPP WEBHOOK ===");
-    console.log(JSON.stringify(req.body, null, 2));
     const senderPhone = normalizePhoneNumber(message.from);
     if (await messages.findByProviderMessageId(message.id)) return;
 
@@ -291,12 +289,6 @@ const handleIncomingMessage = async (message, value) => {
 };
 
 const receiveWebhook = async (req, res) => {
-    console.log("=== WHATSAPP WEBHOOK ===");
-    console.log(JSON.stringify(req.body, null, 2));
-    if (!isValidWebhookSignature(req.rawBody, req.get("x-hub-signature-256"))) {
-        return res.sendStatus(401);
-    }
-
     try {
         const changes = req.body?.entry?.flatMap((entry) => entry.changes || []) || [];
         for (const change of changes) {
