@@ -82,9 +82,19 @@ const panelSchema = new mongoose.Schema({
 }, { _id: false });
 
 module.exports = new mongoose.Schema({
-    userId: {
+    // The marketer who opened the request on WhatsApp.  This is deliberately
+    // separate from the engineer who later owns the technical work.
+    marketingId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        ref: "users",
+        default: null
+    },
+
+    // Filled atomically when an engineer starts working on a pending project.
+    engineerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        default: null
     },
 
     client: {
@@ -126,6 +136,14 @@ module.exports = new mongoose.Schema({
     },
     whatsappSessionId: {
         type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
+    marketingCompletionNotifiedAt: {
+        type: Date,
+        default: null
+    },
+    marketingCompletionNotificationError: {
+        type: String,
         default: null
     },
     prices: {

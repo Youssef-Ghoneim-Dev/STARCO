@@ -4,6 +4,7 @@ const projects = require("../models/projects");
 const sessions = require("../models/whatsappSessions");
 const messages = require("../models/whatsappMessages");
 const systemConfiguration = require("../models/systemConfiguration");
+const defaultProject = require("../utils/defaultProject");
 const { parseWhatsappCommand } = require("../services/whatsappParser");
 const { getWhatsappTemplates } = require("../utils/whatsappTemplates");
 const {
@@ -136,30 +137,56 @@ const validatePanel = (command, session) => {
     return null;
 };
 
-const createProjectFromSession = (session) => projects.create({
-    userId: session.marketingRepId,
-    client: {
-        name: session.client.name,
-        type: session.client.type,
-        profitPercentage: 0
-    },
-    source: "whatsapp",
-    whatsappSessionId: session._id,
-    panels: session.panels.map((panel) => ({
-        panelName: panel.panelName,
-        thickness: panel.requestedThicknesses,
-        panelType: panel.panelType,
-        hasCopper: panel.hasCopper,
-        additionalDetails: panel.details,
-        parts: [],
-        prices: {}
-    }))
-});
+const createProjectFromSession = async (session) => {
+    const systemConfig = await systemConfiguration.get();
+    if (!systemConfig) throw new Error("System configuration not found");
+
+    const baseProject = defaultProject();
+    const configuredPanelPrices = systemConfig.prices || {};
+
+    return projects.create({
+        ...baseProject,
+        marketingId: session.marketingRepId,
+        engineerId: null,
+        status: "pending",
+        client: {
+            ...baseProject.client,
+            name: session.client.name,
+            type: session.client.type
+        },
+        prices: {
+            sheetPrice: systemConfig.sheetPrice ?? baseProject.prices.sheetPrice,
+            paintPrice: systemConfig.paintPrice ?? baseProject.prices.paintPrice
+        },
+        source: "whatsapp",
+        whatsappSessionId: session._id,
+        panels: session.panels.map((panel, index) => {
+            const basePanel = JSON.parse(JSON.stringify(baseProject.panels[0]));
+            return {
+                ...basePanel,
+                panelName: panel.panelName || `لوحة ${index + 1}`,
+                thickness: panel.requestedThicknesses,
+                panelType: panel.panelType,
+                hasCopper: panel.hasCopper,
+                additionalDetails: panel.details,
+                prices: {
+                    ...basePanel.prices,
+                    manufacturing: configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
+                    locks: configuredPanelPrices.locks ?? basePanel.prices.locks,
+                    hinges: configuredPanelPrices.hinges ?? basePanel.prices.hinges,
+                    transport: configuredPanelPrices.transport ?? basePanel.prices.transport,
+                    screws: configuredPanelPrices.screws ?? basePanel.prices.screws,
+                    stretch: configuredPanelPrices.stretch ?? basePanel.prices.stretch
+                }
+            };
+        })
+    });
+};
 
 const updateProjectFromSession = async (session) => {
     const targetProject = await projects.select_one({
         _id: session.targetProjectId,
-        userId: session.marketingRepId,
+        marketingId: session.marketingRepId,
         isDeleted: false
     });
     if (!targetProject) return null;
@@ -305,7 +332,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         }
         const targetProject = await projects.select_one({
             _id: command.projectId,
-            userId: marketer._id,
+            marketingId: marketer._id,
             isDeleted: false
         });
         if (!targetProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
@@ -347,7 +374,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
 
         const targetProject = await projects.select_one({
             _id: session.targetProjectId,
-            userId: marketer._id,
+            marketingId: marketer._id,
             isDeleted: false
         });
         if (!targetProject) return "تعذر العثور على المشروع المطلوب تعديله.";

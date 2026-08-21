@@ -55,9 +55,38 @@ const update = async (project) => {
         projectSchema
     );
 
-    return await openconnection.findByIdAndUpdate(
-        project.id,
-        project
+    return await openconnection.findByIdAndUpdate(project.id, project, { new: true });
+};
+
+const claimByEngineer = async (projectId, engineerId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, projectSchema);
+
+    return openconnection.findOneAndUpdate(
+        {
+            _id: projectId,
+            isDeleted: false,
+            status: "pending",
+            engineerId: null
+        },
+        {
+            engineerId,
+            status: "inProgress"
+        },
+        { new: true }
+    );
+};
+
+const updateOwnedProject = async (projectId, engineerId, updates) => {
+    const openconnection = await dbconfig.openconnection(collectionName, projectSchema);
+    return openconnection.findOneAndUpdate(
+        {
+            _id: projectId,
+            isDeleted: false,
+            engineerId,
+            status: "inProgress"
+        },
+        { ...updates, updatedAt: Date.now() },
+        { new: true, runValidators: true }
     );
 };
 
@@ -98,6 +127,8 @@ module.exports = {
     create,
     update_whatsapp_project,
     update,
+    claimByEngineer,
+    updateOwnedProject,
     deleteOne,
     restore
 };

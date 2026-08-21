@@ -1,27 +1,36 @@
 const joi = require("joi");
 
 module.exports = (req, res, next) => {
-
+    // Project autosave intentionally accepts unfinished fields. Final
+    // validation belongs to the explicit completion action in the UI.
     const validate = joi.object({
         client: joi.object({
             id: joi.any().optional(),
-            name: joi.string().min(2).max(100).required(),
-            type: joi.string().valid("person", "company").required(),
-            profitPercentage: joi.number().min(10).max(70).required()
-        }).required(),
+            name: joi.string().allow("").max(100).optional(),
+            type: joi.string().valid("person", "company").optional(),
+            profitPercentage: joi.number().min(0).max(100).optional()
+        }).optional(),
 
         status: joi.string()
             .valid("pending", "inProgress", "completed")
             .optional(),
         prices: joi.object({
-            sheetPrice: joi.number().required(),
-            paintPrice: joi.number().required(),
-        }),
+            sheetPrice: joi.number().allow(null).optional(),
+            paintPrice: joi.number().allow(null).optional(),
+        }).optional(),
         panels: joi.array().items(
 
             joi.object({
 
-                panelName: joi.string().min(1).max(100).required(),
+                panelId: joi.string().optional(),
+
+                panelName: joi.string().allow("").max(100).optional(),
+
+                panelType: joi.string().allow("").optional(),
+
+                hasCopper: joi.boolean().allow(null).optional(),
+
+                additionalDetails: joi.string().allow("").optional(),
 
                 parts: joi.array().items(
 
@@ -29,50 +38,49 @@ module.exports = (req, res, next) => {
 
                         name: joi.string().required(),
 
-                        width: joi.number().positive().required(),
+                    width: joi.number().positive().optional(),
 
-                        height: joi.number().positive().required(),
+                    height: joi.number().positive().optional(),
 
                         quantity: joi.number().integer().min(1).default(1)
 
                     })
 
-                ).required(),
+                ).optional(),
 
                 prices: joi.object({
 
-                    manufacturing: joi.number().required(),
+                    manufacturing: joi.number().optional(),
 
-                    locks: joi.number().required(),
+                    locks: joi.number().optional(),
 
-                    hinges: joi.number().required(),
+                    hinges: joi.number().optional(),
 
-                    transport: joi.number().required(),
+                    transport: joi.number().optional(),
 
-                    screws: joi.number().required(),
+                    screws: joi.number().optional(),
 
-                    stretch: joi.number().required(),
+                    stretch: joi.number().optional(),
 
-                    copper: joi.number().required(),
+                    copper: joi.number().optional(),
 
-                    fiber: joi.number().required(),
+                    fiber: joi.number().optional(),
 
-                    rakam: joi.number().required(),
+                    rakam: joi.number().optional(),
 
-                    fuse: joi.number().required(),
+                    fuse: joi.number().optional(),
 
                     additionalPrice: joi.number()
 
-                }).required(),
+                }).optional(),
 
                 thickness: joi.array()
                     .items(joi.number())
-                    .min(1)
-                    .required()
+                    .optional()
 
             })
 
-        ).min(1).required()
+        ).optional()
 
     }).validate(req.body);
 

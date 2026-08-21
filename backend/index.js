@@ -14,7 +14,6 @@ const usersrouter = require("./routers/users");
 const clientsrouter = require("./routers/clients");
 const systemConfiguration = require("./routers/systemConfiguration");
 const projectsrouter = require("./routers/projects");
-const draftsrouter = require("./routers/drafts");
 const whatsapprouter = require("./routers/whatsapp");
 const erwhandling = require("./midelwers/Handeling error");
 
@@ -41,7 +40,6 @@ app.use(`${baseUrl}users`, usersrouter);
 app.use(`${baseUrl}clients`, clientsrouter);
 app.use(`${baseUrl}system`, systemConfiguration);
 app.use(`${baseUrl}projects`, projectsrouter);
-app.use(`${baseUrl}drafts`, draftsrouter);
 app.use(`${baseUrl}whatsapp`, whatsapprouter);
 app.use(erwhandling);
 const mongoose = require("mongoose")

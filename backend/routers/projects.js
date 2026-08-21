@@ -43,6 +43,13 @@ projectsRouter.put(
     projectController.updateProject
 );
 
+projectsRouter.post(
+    "/:id/complete",
+    authMw,
+    CheckUserToken,
+    projectController.completeProject
+);
+
 projectsRouter.delete(
     "/:id",
     authMw,
