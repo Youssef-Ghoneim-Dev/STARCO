@@ -43,7 +43,10 @@ const editPanelReply = (panel, panelNumber) => {
     const thicknesses = panel.requestedThicknesses || panel.thickness || [];
     const details = panel.details ?? panel.additionalDetails ?? "";
     const hasCopper = panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : "";
-    return `هذه هي بيانات لوحة ${panelNumber}. عدّل السطر الذي تريده فقط ثم أرسل الرسالة كاملة:\n\nSTARCO PANEL\nالسمك المطلوب: ${thicknesses.join(", ")}\nنوع اللوحة: ${singleLine(panel.panelType)}\nهل يوجد نحاس: ${hasCopper}\nتفاصيل إضافية: ${singleLine(details)}`;
+    return [
+        `هذه هي بيانات لوحة ${panelNumber}. عدّل السطر الذي تريده ثم أرسل رسالة البيانات كاملة.`,
+        `STARCO PANEL\nالسمك المطلوب: ${thicknesses.join(", ")}\nنوع اللوحة: ${singleLine(panel.panelType)}\nهل يوجد نحاس: ${hasCopper}\nتفاصيل إضافية: ${singleLine(details)}`
+    ];
 };
 
 const gettingStartedReplies = async () => {
@@ -242,6 +245,28 @@ const projectCreatedReply = (project) => {
     ];
 };
 
+const projectUpdatedReply = (project) => {
+    const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+    return `تم تعديل المشروع بنجاح.\nالرابط: ${baseUrl}/projects/${project._id}`;
+};
+
+const notifyAssignedEngineerOfMarketingEdit = async (project) => {
+    if (!project?.engineerId) return;
+
+    const engineer = await users.select_one({
+        _id: project.engineerId,
+        approved: true,
+        isDeleted: false
+    });
+    if (!engineer?.phoneNumber) return;
+
+    const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+    await sendSafeText(
+        engineer.phoneNumber,
+        `تنبيه: المندوب عدّل بعض البيانات في مشروع يحتاج مراجعتك.\nID المشروع: ${project._id}\nالعميل: ${project.client?.name || "غير محدد"}\nالرابط: ${baseUrl}/projects/${project._id}\nبرجاء الدخول والتأكد من التعديلات.`
+    );
+};
+
 const finishSession = async (session, inboundMessage) => {
     if (!session.panels.length) {
         return { error: "لا يمكن إنهاء المشروع قبل إرسال لوحة واحدة على الأقل." };
@@ -287,6 +312,9 @@ const finishSession = async (session, inboundMessage) => {
         createdProjectId: project._id,
         activePanelKey: null
     });
+    if (finalizingSession.mode === "edit") {
+        await notifyAssignedEngineerOfMarketingEdit(project);
+    }
     return { project };
 };
 
@@ -298,7 +326,10 @@ const completeRequestedFinishIfReady = async (sessionId) => {
 
     const result = await finishSession(session, { id: session.finishRequestedByMessageId });
     if (result.project) {
-        for (const body of projectCreatedReply(result.project)) {
+        const replies = session.mode === "edit"
+            ? [projectUpdatedReply(result.project)]
+            : projectCreatedReply(result.project);
+        for (const body of replies) {
             await sendSafeText(session.senderPhone, body);
         }
     } else if (result.error) {
@@ -454,10 +485,18 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const result = await finishSession(latestSession, inboundMessage);
         if (result.error) return result.error;
         if (result.waiting) {
-            return `جاري رفع ${result.waiting} ملف. سيتم إنشاء المشروع وإرسال الرابط تلقائيًا فور اكتمال الرفع.`;
+            return session.mode === "edit"
+                ? `جاري رفع ${result.waiting} ملف. سيتم حفظ التعديلات وإرسال الرابط تلقائيًا فور اكتمال الرفع.`
+                : `جاري رفع ${result.waiting} ملف. سيتم إنشاء المشروع وإرسال الرابط تلقائيًا فور اكتمال الرفع.`;
         }
-        if (result.finalizing) return "جاري إنشاء المشروع، وسيصل إليك الرابط تلقائيًا خلال لحظات.";
-        return projectCreatedReply(result.project);
+        if (result.finalizing) {
+            return session.mode === "edit"
+                ? "جاري حفظ التعديلات، وسيصل إليك الرابط تلقائيًا خلال لحظات."
+                : "جاري إنشاء المشروع، وسيصل إليك الرابط تلقائيًا خلال لحظات.";
+        }
+        return session.mode === "edit"
+            ? projectUpdatedReply(result.project)
+            : projectCreatedReply(result.project);
     }
 
     return gettingStartedReplies();
