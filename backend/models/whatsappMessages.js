@@ -17,6 +17,8 @@ const findByProject = (projectId) => getModel().find({
     projectId,
     "media.storageFileId": { $ne: null }
 }).sort({ createdAt: 1 });
+const findAllByProject = (projectId) => getModel().find({ projectId });
+const deleteByProject = (projectId) => getModel().deleteMany({ projectId });
 
 module.exports = {
     findByProviderMessageId,
@@ -24,5 +26,7 @@ module.exports = {
     updateByProviderMessageId,
     updateManyBySession,
     findBySession,
-    findByProject
+    findByProject,
+    findAllByProject,
+    deleteByProject
 };

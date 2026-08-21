@@ -120,6 +120,11 @@ const restore = async (projectId) => {
     );
 };
 
+const deleteForever = async (projectId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, projectSchema);
+    return openconnection.findOneAndDelete({ _id: projectId, isDeleted: true });
+};
+
 module.exports = {
     select_one,
     selectall,
@@ -130,5 +135,6 @@ module.exports = {
     claimByEngineer,
     updateOwnedProject,
     deleteOne,
-    restore
+    restore,
+    deleteForever
 };

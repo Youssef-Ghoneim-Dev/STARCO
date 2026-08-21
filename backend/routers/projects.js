@@ -67,4 +67,11 @@ projectsRouter.patch(
     projectController.restoreProject
 );
 
+projectsRouter.delete(
+    "/:id/permanent",
+    authMw,
+    CheckUserToken,
+    projectController.permanentlyDeleteProject
+);
+
 module.exports = projectsRouter;

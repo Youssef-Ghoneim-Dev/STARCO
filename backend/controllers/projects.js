@@ -5,7 +5,7 @@ const defaultProject = require("../utils/defaultProject");
 const systemConfiguration = require("../models/systemConfiguration");
 const { sendTextMessage } = require("../services/whatsappMeta");
 const whatsappMessages = require("../models/whatsappMessages");
-const { downloadStoredFile } = require("../services/googleDrive");
+const { downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
 
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
@@ -163,7 +163,6 @@ const addProject = async (req, res, next) => {
             status: "inProgress",
             source: "manual"
         };
-        await syncClient(newProject);
         const project = await projectModels.create(newProject);
         return res.status(201).json({ status: "ok", message: "project added", project });
     } catch (error) {
@@ -184,16 +183,6 @@ const updateProject = async (req, res, next) => {
         }
 
         const updates = editableProjectData(req.body);
-        const projectForClientSync = {
-            ...existingProject.toObject(),
-            ...updates,
-            client: {
-                ...(existingProject.client?.toObject?.() || existingProject.client || {}),
-                ...(updates.client || {})
-            }
-        };
-        await syncClient(projectForClientSync);
-        updates.client = projectForClientSync.client;
         const project = isOwner(req.user)
             ? await projectModels.update({ id: projectId, ...updates, updatedAt: Date.now() })
             : await projectModels.updateOwnedProject(projectId, req.user._id, updates);
@@ -215,7 +204,9 @@ const completeProject = async (req, res, next) => {
             return res.status(200).json({ status: "ok", message: "المشروع مكتمل بالفعل.", project });
         }
 
-        const completedProject = await projectModels.update({ id: project._id, status: "completed", updatedAt: Date.now() });
+        const projectForClientSync = project.toObject();
+        await syncClient(projectForClientSync);
+        const completedProject = await projectModels.update({ id: project._id, client: projectForClientSync.client, status: "completed", updatedAt: Date.now() });
         let notification = "لم يتم إرسال رسالة؛ لا يوجد مسوّق مرتبط بالمشروع.";
         if (completedProject?.marketingId) {
             const marketer = await userModels.select_one({ _id: completedProject.marketingId, approved: true, isDeleted: false });
@@ -262,4 +253,21 @@ const restoreProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getProject, getProjectMedia, getProjectMediaFile, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject };
+const permanentlyDeleteProject = async (req, res, next) => {
+    try {
+        if (!canUseRecycleBin(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية الحذف النهائي." });
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: true });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
+
+        const messages = await whatsappMessages.findAllByProject(project._id);
+        const storedFileIds = [...new Set(messages.map((message) => message.media?.storageFileId).filter(Boolean))];
+        await Promise.all(storedFileIds.map((fileId) => deleteStoredFile(fileId)));
+        await whatsappMessages.deleteByProject(project._id);
+        await projectModels.deleteForever(project._id);
+        return res.status(200).json({ status: "ok", message: "تم حذف المشروع ومرفقاته نهائيًا." });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getProjects, getProject, getProjectMedia, getProjectMediaFile, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

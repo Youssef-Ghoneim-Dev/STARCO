@@ -153,6 +153,15 @@ const downloadStoredFile = async (fileId) => {
     };
 };
 
+const deleteStoredFile = async (fileId) => {
+    const accessToken = await getAccessToken();
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!response.ok && response.status !== 404) throw new Error("Could not delete the stored Google Drive file.");
+};
+
 const getConnectionStatus = async () => {
     const config = await systemConfiguration.getGoogleDriveConnection();
     return {
@@ -161,4 +170,4 @@ const getConnectionStatus = async () => {
     };
 };
 
-module.exports = { createAuthorizationUrl, connectAccount, uploadFile, downloadStoredFile, getConnectionStatus };
+module.exports = { createAuthorizationUrl, connectAccount, uploadFile, downloadStoredFile, deleteStoredFile, getConnectionStatus };
