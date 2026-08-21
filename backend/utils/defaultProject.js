@@ -55,6 +55,7 @@ const defaultProject = () => {
                     transport: null,
                     screws: null,
                     stretch: null,
+                    carton: null,
                     copper: null,
                     fiber: null,
                     rakam: null,

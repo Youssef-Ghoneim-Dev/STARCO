@@ -32,8 +32,7 @@ const panelExample = `STARCO PANEL
 اكتب: نعم أو لا
 تفاصيل إضافية: اكتب التفاصيل هنا`;
 
-const copperDetailsTemplate = `بيانات النحاس:
-نوع المفاتيح:
+const copperDetailsTemplate = `نوع المفاتيح:
 الرئيسي:
 الفرعيات:`;
 
@@ -42,8 +41,14 @@ const normalizePanelType = (value) => {
     if (["كنترول", "control"].includes(normalized)) return "كنترول";
     if (["واتربروف", "وتر بروف", "waterproof"].includes(normalized)) return "واتربروف";
     if (["نمطي", "standard"].includes(normalized)) return "نمطي";
-    return "";
+    // الأنواع الجديدة التي يضيفها Owner Manager تظل مقبولة في WhatsApp؛
+    // ربطها بكتالوج الإعدادات يتم بالاسم المخصص لها.
+    return String(value || "").trim();
 };
+
+const panelTypeKeyFor = (panelType, panelTypes = []) =>
+    panelTypes.find((item) => item.whatsappType === panelType)?.key
+    || ({ "كنترول": "control", "واتربروف": "waterproof", "نمطي": "standard" }[panelType] || "");
 
 const panelRegistrationReply = (panel, session) => session.mode === "edit"
     ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
@@ -182,23 +187,29 @@ const createProjectFromSession = async (session) => {
         whatsappSessionId: session._id,
         panels: session.panels.map((panel, index) => {
             const basePanel = JSON.parse(JSON.stringify(baseProject.panels[0]));
+            const typeConfig = (systemConfig.panelTypes || []).find((item) => item.key === panelTypeKeyFor(panel.panelType, systemConfig.panelTypes));
             return {
                 ...basePanel,
                 panelName: panel.panelName || `لوحة ${index + 1}`,
                 thickness: panel.requestedThicknesses,
                 panelType: panel.panelType,
+                panelTypeKey: typeConfig?.key || panelTypeKeyFor(panel.panelType, systemConfig.panelTypes),
                 hasCopper: panel.hasCopper,
                 additionalDetails: panel.details,
                 controlInstallation: panel.controlInstallation || "",
                 copperDetails: panel.copperDetails || {},
+                parts: (typeConfig?.parts || []).map((part) => ({
+                    name: part.name,
+                    quantity: part.quantity || 1
+                })),
                 prices: {
                     ...basePanel.prices,
-                    manufacturing: configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
-                    locks: configuredPanelPrices.locks ?? basePanel.prices.locks,
-                    hinges: configuredPanelPrices.hinges ?? basePanel.prices.hinges,
-                    transport: configuredPanelPrices.transport ?? basePanel.prices.transport,
-                    screws: configuredPanelPrices.screws ?? basePanel.prices.screws,
-                    stretch: configuredPanelPrices.stretch ?? basePanel.prices.stretch
+                    manufacturing: typeConfig?.prices?.manufacturing ?? configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
+                    locks: typeConfig?.prices?.locks ?? configuredPanelPrices.locks ?? basePanel.prices.locks,
+                    hinges: typeConfig?.prices?.hinges ?? configuredPanelPrices.hinges ?? basePanel.prices.hinges,
+                    transport: typeConfig?.prices?.transport ?? configuredPanelPrices.transport ?? basePanel.prices.transport,
+                    screws: typeConfig?.prices?.screws ?? configuredPanelPrices.screws ?? basePanel.prices.screws,
+                    stretch: typeConfig?.prices?.stretch ?? configuredPanelPrices.stretch ?? basePanel.prices.stretch
                 }
             };
         })
@@ -222,6 +233,7 @@ const updateProjectFromSession = async (session) => {
             panelName: existingPanel.panelName,
             thickness: incomingPanel.requestedThicknesses,
             panelType: incomingPanel.panelType,
+            panelTypeKey: incomingPanel.panelTypeKey || existingPanel.panelTypeKey || "",
             hasCopper: incomingPanel.hasCopper,
             additionalDetails: incomingPanel.details,
             controlInstallation: incomingPanel.controlInstallation || "",
@@ -489,7 +501,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             );
             await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
             if (currentPanel.hasCopper === true) {
-                return `تم حفظ التركيب. الآن املأ بيانات النحاس وأرسل القالب كاملًا:\n\n${copperDetailsTemplate}`;
+                return ["تم حفظ التركيب. الآن املأ الحقول التالية وأرسل القالب كاملًا:", copperDetailsTemplate];
             }
             return panelRegistrationReply(currentPanel, session);
         }
@@ -498,7 +510,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return "بيانات النحاس مطلوبة فقط عندما تكون قيمة «هل يوجد نحاس» هي نعم.";
         }
         if (!command.switches || !command.main || !command.branches) {
-            return `يرجى ملء نوع المفاتيح والرئيسي والفرعيات كلها.\n\n${copperDetailsTemplate}`;
+            return ["يرجى ملء نوع المفاتيح والرئيسي والفرعيات كلها.", copperDetailsTemplate];
         }
         const nextPanels = session.panels.map((panel, index) => index === panelIndex
             ? { ...(panel.toObject?.() || panel), copperDetails: { switches: command.switches, main: command.main, branches: command.branches } }
@@ -547,7 +559,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (panel.panelType === "كنترول" && !panel.controlInstallation) {
             replies.push("لوحة الكنترول تحتاج تحديد التركيب أولًا. أرسل كلمة واحدة فقط: دفن أو عادية.");
         } else if (panel.hasCopper === true) {
-            replies.push(`اللوحة تحتوي على نحاس. املأ البيانات التالية وأرسل القالب كاملًا:\n\n${copperDetailsTemplate}`);
+            replies.push("اللوحة تحتوي على نحاس. املأ الحقول التالية وأرسل القالب كاملًا:", copperDetailsTemplate);
         } else {
             replies.push(panelRegistrationReply(panel, session));
         }

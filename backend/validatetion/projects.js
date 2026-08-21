@@ -28,6 +28,14 @@ module.exports = (req, res, next) => {
 
                 panelType: joi.string().allow("").optional(),
 
+                panelTypeKey: joi.string().allow("").optional(),
+
+                dimensions: joi.object({
+                    length: joi.number().allow(null).optional(),
+                    width: joi.number().allow(null).optional(),
+                    depth: joi.number().allow(null).optional()
+                }).optional(),
+
                 hasCopper: joi.boolean().allow(null).optional(),
 
                 additionalDetails: joi.string().allow("").optional(),
@@ -69,6 +77,8 @@ module.exports = (req, res, next) => {
                     screws: joi.number().optional(),
 
                     stretch: joi.number().optional(),
+
+                    carton: joi.number().optional(),
 
                     copper: joi.number().optional(),
 

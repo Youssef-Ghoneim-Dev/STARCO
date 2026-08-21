@@ -37,6 +37,17 @@ const panelSchema = new mongoose.Schema({
         default: ""
     },
 
+    panelTypeKey: {
+        type: String,
+        default: ""
+    },
+
+    dimensions: {
+        length: { type: Number, default: null },
+        width: { type: Number, default: null },
+        depth: { type: Number, default: null }
+    },
+
     hasCopper: {
         type: Boolean,
         default: null
@@ -72,6 +83,8 @@ const panelSchema = new mongoose.Schema({
         screws: Number,
 
         stretch: Number,
+
+        carton: Number,
 
         copper: Number,
 

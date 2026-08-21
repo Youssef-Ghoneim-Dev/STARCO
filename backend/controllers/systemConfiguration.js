@@ -36,7 +36,11 @@ const update = async (req, res, next) => {
                 message: "You are not allowed"
             });
         }
-        const config = await models.update(req.body);
+        const updateData = { ...req.body };
+        // أنواع الألواح ومعادلاتها هي إعداد إداري؛ المهندس يستخدمها في
+        // التسعير لكنه لا يستطيع تغيير كتالوج النظام نفسه.
+        if (!isOwnerManager(req)) delete updateData.panelTypes;
+        const config = await models.update(updateData);
 
         return res.status(200).json({
             status: "ok",
