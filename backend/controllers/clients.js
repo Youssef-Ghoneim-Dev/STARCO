@@ -1,7 +1,16 @@
 const models = require("../models/clients")
 
+const canManageClients = (req) =>
+    req.decodedToken.role === "OwnerManager" || req.decodedToken.role === "Engineer";
+
+const rejectUnauthorized = (res) => res.status(403).json({
+    status: "error",
+    message: "لا تملك صلاحية إدارة العملاء."
+});
+
 const search = async (req, res, next) => {
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
         const searchText = req.query.name;
         const clients = await models.search(searchText)
         if (clients.length === 0) {
@@ -24,6 +33,7 @@ const search = async (req, res, next) => {
 
 const selectAll = async (req, res, next) => {
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
 
         const clients = await models.select_all();
 
@@ -39,6 +49,7 @@ const selectAll = async (req, res, next) => {
 const selectOne = async (req, res, next) => {
 
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
 
         const client = await models.select_one({
             _id: req.params.id
@@ -66,6 +77,7 @@ const selectOne = async (req, res, next) => {
 const addOne = async (req, res, next) => {
 
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
 
         const client = await models.add_one(req.body);
 
@@ -83,6 +95,7 @@ const addOne = async (req, res, next) => {
 const update = async (req, res, next) => {
 
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
 
         await models.update({
 
@@ -109,6 +122,7 @@ const update = async (req, res, next) => {
 const deleteOne = async (req, res, next) => {
 
     try {
+        if (!canManageClients(req)) return rejectUnauthorized(res);
 
         const result = await models.delete_one(req.params.id);
 

@@ -8,6 +8,7 @@ const { sendTextMessage } = require("../services/whatsappMeta");
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
 const canWorkOnProjects = (user) => isOwner(user) || isEngineer(user);
+const canUseRecycleBin = (user) => ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(user.role);
 const sameId = (first, second) => String(first || "") === String(second || "");
 
 const editableProjectData = (body = {}) => {
@@ -80,7 +81,7 @@ const getProject = async (req, res, next) => {
 
 const getDeletedProjects = async (req, res, next) => {
     try {
-        if (!isOwner(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع المحذوفة." });
+        if (!canUseRecycleBin(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع المحذوفة." });
         return res.status(200).json(await projectModels.selectall({ isDeleted: true }));
     } catch (error) {
         next(error);
@@ -213,7 +214,7 @@ const deleteProject = async (req, res, next) => {
 
 const restoreProject = async (req, res, next) => {
     try {
-        if (!isOwner(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية الاستعادة." });
+        if (!canUseRecycleBin(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية الاستعادة." });
         const result = await projectModels.restore(req.params.id);
         if (!result) return res.status(404).json({ status: "error", message: `project id ${req.params.id} not found` });
         return res.status(200).json({ status: "ok", message: "project restored" });

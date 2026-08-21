@@ -263,7 +263,7 @@ const notifyAssignedEngineerOfMarketingEdit = async (project) => {
     const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
     await sendSafeText(
         engineer.phoneNumber,
-        `تنبيه: المندوب عدّل بعض البيانات في مشروع يحتاج مراجعتك.\nID المشروع: ${project._id}\nالعميل: ${project.client?.name || "غير محدد"}\nالرابط: ${baseUrl}/projects/${project._id}\nبرجاء الدخول والتأكد من التعديلات.`
+        `تنبيه: المندوب عدّل بعض البيانات في مشروع يحتاج مراجعتك.\nID : ${project._id}\nالعميل: ${project.client?.name || "غير محدد"}\nالرابط: ${baseUrl}/projects/${project._id}\nبرجاء الدخول والتأكد من التعديلات.`
     );
 };
 

@@ -44,6 +44,21 @@ module.exports = new mongoose.Schema({
         }
     },
 
+    parts: {
+        chair: {
+            defaultWidth: { type: Number, default: 40 },
+            defaultHeight: { type: Number, default: 100 },
+            defaultQuantity: { type: Number, default: 2 },
+            quantityStep: { type: Number, default: 2 }
+        },
+        omega: {
+            defaultWidth: { type: Number, default: 45.5 },
+            defaultHeight: { type: Number, default: null },
+            defaultQuantity: { type: Number, default: 1 },
+            quantityStep: { type: Number, default: 1 }
+        }
+    },
+
     whatsappTemplates: {
         startProject: { type: String, default: defaults.startProject },
         panel: { type: String, default: defaults.panel }

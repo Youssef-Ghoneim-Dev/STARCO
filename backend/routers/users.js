@@ -4,6 +4,7 @@ const profile = require("../controllers/users/profile.controller")
 const manger = require("../controllers/users/manager.controller")
 const auth = require("../controllers/users/auth.controller")
 const uservalidatetion = require("../validatetion/users")
+const profileValidation = require("../validatetion/profile")
 const loginvalidatetion = require("../validatetion/login")
 const authMw = require("../midelwers/auth");
 const CheckuserToken = require("../midelwers/Users/CheckUserToken");
@@ -20,7 +21,7 @@ usersrouter.patch("/admin/:id", authMw, CheckuserToken, manger.restoreUser);
 
 
 usersrouter.get("/profile", authMw, CheckuserToken, profile.getProfile);
-usersrouter.put("/profile", authMw, CheckuserToken, uservalidatetion, profile.UpdateProfile);
+usersrouter.put("/profile", authMw, CheckuserToken, profileValidation, profile.UpdateProfile);
 usersrouter.delete("/profile", authMw, CheckuserToken, profile.DeleteProfile);
 
 

@@ -22,7 +22,7 @@ const select_all = async () => {
         clientSchema
     );
 
-    return await openconnection.find({});
+    return await openconnection.find({}).sort({ name: 1 });
 };
 const search = async (name) => {
     const openconnection = await dbconfig.openconnection(
@@ -48,9 +48,11 @@ const update = async (client) => {
     return await openconnection.findByIdAndUpdate(
         client.id,
         {
+            name: client.name,
             type: client.type,
             profitPercentage: client.profitPercentage
-        }
+        },
+        { new: true }
     );
 }
 const delete_one = async (id) => {
