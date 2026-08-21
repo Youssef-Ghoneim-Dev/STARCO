@@ -45,6 +45,10 @@ const normalizePanelType = (value) => {
     return "";
 };
 
+const panelRegistrationReply = (panel, session) => session.mode === "edit"
+    ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
+    : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
+
 const panelInstructions = (templates) => [
     `تم بدء المشروع بنجاح. أرسل بيانات اللوحة بالشكل التالي، ثم أرسل الصور والتسجيلات الخاصة بها. عند إنهاء جميع اللوحات أرسل: STARCO FINISH\n\nمثال:\n${panelExample}`,
     templates.panel
@@ -484,7 +488,10 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
                 : panel
             );
             await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
-            return `تم حفظ تركيب ${currentPanel.panelName}: ${command.value}.`;
+            if (currentPanel.hasCopper === true) {
+                return `تم حفظ التركيب. الآن املأ بيانات النحاس وأرسل القالب كاملًا:\n\n${copperDetailsTemplate}`;
+            }
+            return panelRegistrationReply(currentPanel, session);
         }
 
         if (currentPanel.hasCopper !== true) {
@@ -498,7 +505,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             : panel
         );
         await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
-        return `تم حفظ بيانات النحاس للوحة ${currentPanel.panelName}.`;
+        return panelRegistrationReply(currentPanel, session);
     }
 
     if (command.type === "panel") {
@@ -536,14 +543,13 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             activePanelKey: panel.localPanelKey,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        const replies = [session.mode === "edit"
-            ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
-            : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`];
+        const replies = [];
         if (panel.panelType === "كنترول" && !panel.controlInstallation) {
-            replies.push("يرجى تحديد تركيب لوحة الكنترول في رسالة بهذا الشكل:\nتركيب لوحة الكنترول: دفن أو عادية");
-        }
-        if (panel.hasCopper === true) {
-            replies.push(`اللوحة تحتوي على نحاس. املأ البيانات التالية وأرسلها:\n\n${copperDetailsTemplate}`);
+            replies.push("لوحة الكنترول تحتاج تحديد التركيب أولًا. أرسل كلمة واحدة فقط: دفن أو عادية.");
+        } else if (panel.hasCopper === true) {
+            replies.push(`اللوحة تحتوي على نحاس. املأ البيانات التالية وأرسل القالب كاملًا:\n\n${copperDetailsTemplate}`);
+        } else {
+            replies.push(panelRegistrationReply(panel, session));
         }
         return replies;
     }

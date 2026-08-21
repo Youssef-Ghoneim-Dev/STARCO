@@ -63,6 +63,11 @@ const parseWhatsappCommand = (text) => {
     const controlInstallation = field(value, "تركيب لوحة الكنترول") || field(value, "تركيب الكنترول");
     if (controlInstallation) return { type: "control-installation", value: controlInstallation };
 
+    const installationWord = firstLine.replace(/[أإآ]/g, "ا").trim();
+    if (["دفن", "دفنة", "عادية"].includes(installationWord)) {
+        return { type: "control-installation", value: installationWord === "دفنة" ? "دفن" : installationWord };
+    }
+
     const switches = field(value, "نوع المفاتيح") || field(value, "المفاتيح");
     const main = field(value, "الرئيسي");
     const branches = field(value, "الفرعيات");
