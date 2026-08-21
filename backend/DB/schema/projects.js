@@ -47,6 +47,17 @@ const panelSchema = new mongoose.Schema({
         default: ""
     },
 
+    controlInstallation: {
+        type: String,
+        default: ""
+    },
+
+    copperDetails: {
+        switches: { type: String, default: "" },
+        main: { type: String, default: "" },
+        branches: { type: String, default: "" }
+    },
+
     parts: [panelPartSchema],
 
     prices: {

@@ -20,6 +20,9 @@ projectsRouter.get(
     projectController.getDeletedProjects
 );
 
+projectsRouter.get("/:id/media", authMw, CheckUserToken, projectController.getProjectMedia);
+projectsRouter.get("/:id/media/:mediaId/file", authMw, CheckUserToken, projectController.getProjectMediaFile);
+
 projectsRouter.get(
     "/:id",
     authMw,

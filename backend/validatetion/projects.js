@@ -32,6 +32,14 @@ module.exports = (req, res, next) => {
 
                 additionalDetails: joi.string().allow("").optional(),
 
+                controlInstallation: joi.string().allow("").optional(),
+
+                copperDetails: joi.object({
+                    switches: joi.string().allow("").optional(),
+                    main: joi.string().allow("").optional(),
+                    branches: joi.string().allow("").optional()
+                }).optional(),
+
                 parts: joi.array().items(
 
                     joi.object({

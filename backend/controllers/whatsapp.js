@@ -26,11 +26,24 @@ const loadWhatsappTemplates = async () => {
 
 const panelExample = `STARCO PANEL
 السمك المطلوب: 0.7, 1, 1.5
-نوع اللوحة: عادية
-اختر نوعًا واحدًا: عادية / نمطي / دفن / وتربروف
+نوع اللوحة: كنترول
+اختر نوعًا واحدًا: كنترول / واتربروف / نمطي
 هل يوجد نحاس: لا
 اكتب: نعم أو لا
 تفاصيل إضافية: اكتب التفاصيل هنا`;
+
+const copperDetailsTemplate = `بيانات النحاس:
+نوع المفاتيح:
+الرئيسي:
+الفرعيات:`;
+
+const normalizePanelType = (value) => {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[أإآ]/g, "ا");
+    if (["كنترول", "control"].includes(normalized)) return "كنترول";
+    if (["واتربروف", "وتر بروف", "waterproof"].includes(normalized)) return "واتربروف";
+    if (["نمطي", "standard"].includes(normalized)) return "نمطي";
+    return "";
+};
 
 const panelInstructions = (templates) => [
     `تم بدء المشروع بنجاح. أرسل بيانات اللوحة بالشكل التالي، ثم أرسل الصور والتسجيلات الخاصة بها. عند إنهاء جميع اللوحات أرسل: STARCO FINISH\n\nمثال:\n${panelExample}`,
@@ -135,7 +148,7 @@ const validatePanel = (command, session) => {
         if (!session.selectedPanelIndex) return "حدد رقم اللوحة أولًا، مثل: رقم اللوحة: 1";
     }
     if (!command.thicknesses.length) return "اكتب السمك هكذا: السمك المطلوب: 0.7, 1, 1.5";
-    if (!command.panelType) return "اكتب نوع اللوحة في سطر: نوع اللوحة: دفن أو عادية أو وتربروف أو نمطي";
+    if (!normalizePanelType(command.panelType)) return "اكتب نوع اللوحة هكذا: كنترول أو واتربروف أو نمطي";
     if (command.hasCopper === null) return "اكتب هل يوجد نحاس هكذا: هل يوجد نحاس: نعم أو لا";
     return null;
 };
@@ -172,6 +185,8 @@ const createProjectFromSession = async (session) => {
                 panelType: panel.panelType,
                 hasCopper: panel.hasCopper,
                 additionalDetails: panel.details,
+                controlInstallation: panel.controlInstallation || "",
+                copperDetails: panel.copperDetails || {},
                 prices: {
                     ...basePanel.prices,
                     manufacturing: configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
@@ -204,7 +219,9 @@ const updateProjectFromSession = async (session) => {
             thickness: incomingPanel.requestedThicknesses,
             panelType: incomingPanel.panelType,
             hasCopper: incomingPanel.hasCopper,
-            additionalDetails: incomingPanel.details
+            additionalDetails: incomingPanel.details,
+            controlInstallation: incomingPanel.controlInstallation || "",
+            copperDetails: incomingPanel.copperDetails || {}
         };
     });
 
@@ -270,6 +287,21 @@ const notifyAssignedEngineerOfMarketingEdit = async (project) => {
 const finishSession = async (session, inboundMessage) => {
     if (!session.panels.length) {
         return { error: "لا يمكن إنهاء المشروع قبل إرسال لوحة واحدة على الأقل." };
+    }
+
+    const missingControlInstallation = session.panels.find((panel) =>
+        panel.panelType === "كنترول" && !String(panel.controlInstallation || "").trim()
+    );
+    if (missingControlInstallation) {
+        return { error: `يرجى تحديد تركيب ${missingControlInstallation.panelName}: دفن أو عادية، قبل إنهاء المشروع.` };
+    }
+
+    const missingCopperDetails = session.panels.find((panel) => {
+        const copper = panel.copperDetails || {};
+        return panel.hasCopper === true && (!copper.switches?.trim() || !copper.main?.trim() || !copper.branches?.trim());
+    });
+    if (missingCopperDetails) {
+        return { error: `يرجى استكمال بيانات النحاس للوحة ${missingCopperDetails.panelName} قبل إنهاء المشروع.\n\n${copperDetailsTemplate}` };
     }
 
     // A project must never be created while one of its WhatsApp attachments
@@ -420,7 +452,9 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             requestedThicknesses: existingProjectPanel.thickness || [],
             panelType: existingProjectPanel.panelType || "",
             hasCopper: existingProjectPanel.hasCopper,
-            details: existingProjectPanel.additionalDetails || ""
+            details: existingProjectPanel.additionalDetails || "",
+            controlInstallation: existingProjectPanel.controlInstallation || "",
+            copperDetails: existingProjectPanel.copperDetails || {}
         };
         const nextPanels = pendingPanel
             ? session.panels
@@ -432,6 +466,39 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
         return editPanelReply(panel, command.panelNumber);
+    }
+
+    if (command.type === "control-installation" || command.type === "copper-details") {
+        const panelIndex = session.mode === "edit"
+            ? (session.selectedPanelIndex || 0) - 1
+            : session.panels.length - 1;
+        const currentPanel = session.panels[panelIndex];
+        if (!currentPanel) return "أرسل بيانات لوحة أولًا باستخدام STARCO PANEL.";
+
+        if (command.type === "control-installation") {
+            if (currentPanel.panelType !== "كنترول") {
+                return "تحديد التركيب مطلوب فقط للوحات الكنترول.";
+            }
+            const nextPanels = session.panels.map((panel, index) => index === panelIndex
+                ? { ...(panel.toObject?.() || panel), controlInstallation: command.value }
+                : panel
+            );
+            await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
+            return `تم حفظ تركيب ${currentPanel.panelName}: ${command.value}.`;
+        }
+
+        if (currentPanel.hasCopper !== true) {
+            return "بيانات النحاس مطلوبة فقط عندما تكون قيمة «هل يوجد نحاس» هي نعم.";
+        }
+        if (!command.switches || !command.main || !command.branches) {
+            return `يرجى ملء نوع المفاتيح والرئيسي والفرعيات كلها.\n\n${copperDetailsTemplate}`;
+        }
+        const nextPanels = session.panels.map((panel, index) => index === panelIndex
+            ? { ...(panel.toObject?.() || panel), copperDetails: { switches: command.switches, main: command.main, branches: command.branches } }
+            : panel
+        );
+        await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
+        return `تم حفظ بيانات النحاس للوحة ${currentPanel.panelName}.`;
     }
 
     if (command.type === "panel") {
@@ -452,12 +519,14 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const panel = {
             localPanelKey: existingEdit?.localPanelKey || crypto.randomUUID(),
             sourceMessageId: inboundMessage.id,
-            panelName: `لوحة ${session.panels.length + 1}`,
+            panelName: existingEdit?.panelName || `لوحة ${session.panels.length + 1}`,
             targetPanelIndex: session.mode === "edit" ? session.selectedPanelIndex : null,
             requestedThicknesses: command.thicknesses,
-            panelType: command.panelType,
+            panelType: normalizePanelType(command.panelType),
             hasCopper: command.hasCopper,
-            details: command.details || ""
+            details: command.details || "",
+            controlInstallation: existingEdit?.controlInstallation || "",
+            copperDetails: existingEdit?.copperDetails || {}
         };
         const nextPanels = existingEdit
             ? session.panels.map((item) => item.targetPanelIndex === session.selectedPanelIndex ? panel : item)
@@ -467,9 +536,16 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             activePanelKey: panel.localPanelKey,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return session.mode === "edit"
+        const replies = [session.mode === "edit"
             ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
-            : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
+            : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`];
+        if (panel.panelType === "كنترول" && !panel.controlInstallation) {
+            replies.push("يرجى تحديد تركيب لوحة الكنترول في رسالة بهذا الشكل:\nتركيب لوحة الكنترول: دفن أو عادية");
+        }
+        if (panel.hasCopper === true) {
+            replies.push(`اللوحة تحتوي على نحاس. املأ البيانات التالية وأرسلها:\n\n${copperDetailsTemplate}`);
+        }
+        return replies;
     }
 
     if (command.type === "finish") {

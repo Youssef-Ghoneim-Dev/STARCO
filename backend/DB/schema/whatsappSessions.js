@@ -8,7 +8,13 @@ const panelSchema = new mongoose.Schema({
     targetPanelIndex: { type: Number, default: null },
     panelType: { type: String, default: "" },
     hasCopper: { type: Boolean, default: null },
-    details: { type: String, default: "" }
+    details: { type: String, default: "" },
+    controlInstallation: { type: String, default: "" },
+    copperDetails: {
+        switches: { type: String, default: "" },
+        main: { type: String, default: "" },
+        branches: { type: String, default: "" }
+    }
 }, { _id: false });
 
 const schema = new mongoose.Schema({

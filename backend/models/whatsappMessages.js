@@ -13,11 +13,16 @@ const updateByProviderMessageId = (providerMessageId, update) =>
 const updateManyBySession = (sessionId, update) =>
     getModel().updateMany({ sessionId }, update);
 const findBySession = (sessionId) => getModel().find({ sessionId });
+const findByProject = (projectId) => getModel().find({
+    projectId,
+    "media.storageFileId": { $ne: null }
+}).sort({ createdAt: 1 });
 
 module.exports = {
     findByProviderMessageId,
     create,
     updateByProviderMessageId,
     updateManyBySession,
-    findBySession
+    findBySession,
+    findByProject
 };

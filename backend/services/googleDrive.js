@@ -141,6 +141,18 @@ const uploadFile = async ({ fileName, mimeType, buffer }) => {
     return payload;
 };
 
+const downloadStoredFile = async (fileId) => {
+    const accessToken = await getAccessToken();
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!response.ok) throw new Error("Could not download the stored Google Drive file.");
+    return {
+        buffer: Buffer.from(await response.arrayBuffer()),
+        mimeType: response.headers.get("content-type") || "application/octet-stream"
+    };
+};
+
 const getConnectionStatus = async () => {
     const config = await systemConfiguration.getGoogleDriveConnection();
     return {
@@ -149,4 +161,4 @@ const getConnectionStatus = async () => {
     };
 };
 
-module.exports = { createAuthorizationUrl, connectAccount, uploadFile, getConnectionStatus };
+module.exports = { createAuthorizationUrl, connectAccount, uploadFile, downloadStoredFile, getConnectionStatus };

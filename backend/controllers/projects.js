@@ -4,6 +4,8 @@ const syncClient = require("../services/syncClient");
 const defaultProject = require("../utils/defaultProject");
 const systemConfiguration = require("../models/systemConfiguration");
 const { sendTextMessage } = require("../services/whatsappMeta");
+const whatsappMessages = require("../models/whatsappMessages");
+const { downloadStoredFile } = require("../services/googleDrive");
 
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
@@ -77,6 +79,43 @@ const getProject = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+const canReadProject = (user, project) => isOwner(user)
+    || (user.role === "Marketer" && sameId(project.marketingId, user._id))
+    || (isEngineer(user) && sameId(project.engineerId, user._id));
+
+const getProjectMedia = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canReadProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض مرفقات المشروع." });
+        const records = await whatsappMessages.findByProject(project._id);
+        return res.status(200).json(records.map((record) => ({
+            id: record._id,
+            panelId: record.panelId,
+            type: record.type,
+            mimeType: record.media?.mimeType || "application/octet-stream",
+            fileName: record.media?.fileName || "مرفق واتساب",
+            fileSize: record.media?.fileSize || null,
+            createdAt: record.createdAt
+        })));
+    } catch (error) { next(error); }
+};
+
+const getProjectMediaFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).end();
+        if (!canReadProject(req.user, project)) return res.sendStatus(403);
+        const records = await whatsappMessages.findByProject(project._id);
+        const record = records.find((item) => String(item._id) === req.params.mediaId);
+        if (!record?.media?.storageFileId) return res.sendStatus(404);
+        const file = await downloadStoredFile(record.media.storageFileId);
+        res.setHeader("Content-Type", file.mimeType);
+        res.setHeader("Cache-Control", "private, max-age=300");
+        return res.send(file.buffer);
+    } catch (error) { next(error); }
 };
 
 const getDeletedProjects = async (req, res, next) => {
@@ -223,4 +262,4 @@ const restoreProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getProject, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject };
+module.exports = { getProjects, getProject, getProjectMedia, getProjectMediaFile, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject };

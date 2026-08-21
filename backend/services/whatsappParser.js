@@ -60,6 +60,14 @@ const parseWhatsappCommand = (text) => {
         };
     }
 
+    const controlInstallation = field(value, "تركيب لوحة الكنترول") || field(value, "تركيب الكنترول");
+    if (controlInstallation) return { type: "control-installation", value: controlInstallation };
+
+    const switches = field(value, "نوع المفاتيح") || field(value, "المفاتيح");
+    const main = field(value, "الرئيسي");
+    const branches = field(value, "الفرعيات");
+    if (switches || main || branches) return { type: "copper-details", switches, main, branches };
+
     if (/^STARCO\s+FINISH$/i.test(firstLine)) return { type: "finish" };
     if (/^STARCO\s+(?:DELETE|CANCEL)$/i.test(firstLine)) return { type: "delete" };
     return null;
