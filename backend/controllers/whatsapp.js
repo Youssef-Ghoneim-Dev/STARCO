@@ -26,7 +26,9 @@ const loadWhatsappTemplates = async () => {
 const panelExample = `STARCO PANEL
 السمك المطلوب: 0.7, 1, 1.5
 نوع اللوحة: عادية
+اختر نوعًا واحدًا: عادية / نمطي / دفن / وتربروف
 هل يوجد نحاس: لا
+اكتب: نعم أو لا
 تفاصيل إضافية: اكتب التفاصيل هنا`;
 
 const panelInstructions = (templates) => [
@@ -321,7 +323,10 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             startedByMessageId: inboundMessage.id,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return `تم فتح جلسة التعديل. هذا المشروع يحتوي على ${editSession.targetPanelCount} لوحة. اختر اللوحة التي تريد تعديلها بإرسال رسالة مثل:\n\nرقم اللوحة: 1`;
+        return [
+            `تم فتح جلسة التعديل. هذا المشروع يحتوي على ${editSession.targetPanelCount} لوحة. اختر رقم اللوحة التي تريد تعديلها. مثال: رقم اللوحة: 1`,
+            "رقم اللوحة:"
+        ];
     }
 
     const session = await getActiveSession(senderPhone);
@@ -348,10 +353,24 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (!targetProject) return "تعذر العثور على المشروع المطلوب تعديله.";
 
         const pendingPanel = session.panels.find((panel) => panel.targetPanelIndex === command.panelNumber);
-        const panel = pendingPanel || targetProject.panels[command.panelNumber - 1];
+        const existingProjectPanel = targetProject.panels[command.panelNumber - 1];
+        const panel = pendingPanel || {
+            localPanelKey: crypto.randomUUID(),
+            sourceMessageId: inboundMessage.id,
+            panelName: existingProjectPanel.panelName,
+            targetPanelIndex: command.panelNumber,
+            requestedThicknesses: existingProjectPanel.thickness || [],
+            panelType: existingProjectPanel.panelType || "",
+            hasCopper: existingProjectPanel.hasCopper,
+            details: existingProjectPanel.additionalDetails || ""
+        };
+        const nextPanels = pendingPanel
+            ? session.panels
+            : [...session.panels, panel];
         await sessions.updateById(session._id, {
+            panels: nextPanels,
             selectedPanelIndex: command.panelNumber,
-            activePanelKey: pendingPanel?.localPanelKey || null,
+            activePanelKey: panel.localPanelKey,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
         return editPanelReply(panel, command.panelNumber);
@@ -482,6 +501,14 @@ const handleIncomingMessage = async (message, value) => {
         await sessions.updateById(activeSession._id, {
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
+        return;
+    }
+
+    if (activeSession?.mode === "edit") {
+        await sendSafeText(
+            senderPhone,
+            "حدد رقم اللوحة أولًا برسالة مثل: رقم اللوحة: 1، ثم أرسل الصور أو التسجيلات الخاصة بها."
+        );
         return;
     }
 
