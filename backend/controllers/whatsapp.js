@@ -39,7 +39,7 @@ const copperDetailsTemplate = `نوع المفاتيح:
 const normalizePanelType = (value) => {
     const normalized = String(value || "").trim().toLowerCase().replace(/[أإآ]/g, "ا");
     if (["كنترول", "control"].includes(normalized)) return "كنترول";
-    if (["واتربروف", "وتر بروف", "waterproof"].includes(normalized)) return "واتربروف";
+    if (["وتربروف", "واتربروف", "وتر بروف", "waterproof"].includes(normalized)) return "وتربروف";
     if (["نمطي", "standard"].includes(normalized)) return "نمطي";
     // الأنواع الجديدة التي يضيفها Owner Manager تظل مقبولة في WhatsApp؛
     // ربطها بكتالوج الإعدادات يتم بالاسم المخصص لها.

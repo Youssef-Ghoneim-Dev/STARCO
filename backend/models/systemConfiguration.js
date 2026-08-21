@@ -1,6 +1,7 @@
 const dbconfig = require("../DB/config");
 const collectionName = "systemConfiguration";
 const schema = require("../DB/schema/systemConfiguration");
+const { panelTypeDefaults } = require("../utils/panelTypeDefaults");
 
 const get = async () => {
     const connection = await dbconfig.openconnection(
@@ -8,7 +9,36 @@ const get = async () => {
         schema
     );
 
-    return await connection.findOne({});
+    const rawConfig = await connection.findOne({}).lean();
+    if (!rawConfig) return null;
+    if (!Array.isArray(rawConfig.panelTypes) || rawConfig.panelTypes.length === 0) {
+        return connection.findByIdAndUpdate(
+            rawConfig._id,
+            { $set: { panelTypes: JSON.parse(JSON.stringify(panelTypeDefaults)) } },
+            { new: true }
+        );
+    }
+    const defaultsByKey = new Map(panelTypeDefaults.map((type) => [type.key, type]));
+    const normalizedTypes = rawConfig.panelTypes.map((type) => {
+        const fallback = defaultsByKey.get(type.key);
+        if (!fallback) return type;
+        const parts = (type.parts || []).map((part) => (
+            type.key === "ont" && part.key === "shared" && part.name === "المشترك"
+                ? { ...part, name: "حمل مشترك" }
+                : part
+        ));
+        return {
+            ...type,
+            name: type.key === "waterproof" && type.name === "واتربروف" ? "وتربروف" : type.name,
+            whatsappType: type.key === "waterproof" && type.whatsappType === "واتربروف" ? "وتربروف" : type.whatsappType,
+            additionalParts: Array.isArray(type.additionalParts) ? type.additionalParts : fallback.additionalParts,
+            parts
+        };
+    });
+    if (JSON.stringify(rawConfig.panelTypes) !== JSON.stringify(normalizedTypes)) {
+        return connection.findByIdAndUpdate(rawConfig._id, { $set: { panelTypes: normalizedTypes } }, { new: true });
+    }
+    return connection.findOne({});
 };
 
 const update = async (config) => {

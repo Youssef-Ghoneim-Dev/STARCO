@@ -65,6 +65,7 @@ module.exports = new mongoose.Schema({
             key: { type: String, required: true },
             name: { type: String, required: true },
             whatsappType: { type: String, default: "" },
+            additionalParts: [{ type: String }],
             prices: {
                 manufacturing: { type: Number, default: 0 }, locks: { type: Number, default: 0 },
                 hinges: { type: Number, default: 0 }, transport: { type: Number, default: 0 },
