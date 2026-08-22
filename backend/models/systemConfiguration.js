@@ -18,10 +18,11 @@ const get = async () => {
     }
     if (!Array.isArray(rawConfig.copperConfiguration?.catalog) || rawConfig.copperConfiguration.catalog.length === 0) {
         migration.copperConfiguration = cloneCopperConfigurationDefaults();
-    } else if (!rawConfig.copperConfiguration?.weightFormula) {
+    } else if (!rawConfig.copperConfiguration?.weightFormula || rawConfig.copperConfiguration?.pricePerKg == null) {
         migration.copperConfiguration = {
             ...rawConfig.copperConfiguration,
-            weightFormula: cloneCopperConfigurationDefaults().weightFormula
+            weightFormula: rawConfig.copperConfiguration?.weightFormula || cloneCopperConfigurationDefaults().weightFormula,
+            pricePerKg: rawConfig.copperConfiguration?.pricePerKg ?? cloneCopperConfigurationDefaults().pricePerKg
         };
     }
     if (Object.keys(migration).length > 0) {

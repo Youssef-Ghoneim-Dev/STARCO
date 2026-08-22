@@ -1,4 +1,5 @@
 const copperConfigurationDefaults = {
+    pricePerKg: 0,
     catalog: [
         { key: "2000", name: "2000 أمبير", amperage: 2000, width: 120, thickness: 10 },
         { key: "1500", name: "1500 أمبير", amperage: 1500, width: 100, thickness: 10 },

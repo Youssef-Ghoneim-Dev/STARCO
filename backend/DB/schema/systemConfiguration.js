@@ -83,6 +83,7 @@ module.exports = new mongoose.Schema({
 
     copperConfiguration: {
         type: new mongoose.Schema({
+            pricePerKg: { type: Number, default: 0 },
             catalog: [{
                 key: { type: String, required: true },
                 name: { type: String, required: true },
