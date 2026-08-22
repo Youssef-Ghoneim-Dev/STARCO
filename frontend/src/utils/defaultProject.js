@@ -1,0 +1,46 @@
+export const defaultProject = () => ({
+    client: {
+        name: "",
+        type: "person",
+        profitPercentage: "",
+    },
+    status: "pending",
+    panels: [
+        {
+            panelName: "لوحة 1",
+            parts: [
+                { name: "العلبة", quantity: 1 },
+                { name: "الجنب", quantity: 2 },
+                { name: "المراية", quantity: 1 },
+                { name: "الجلسة", quantity: 1 },
+                { name: "الجريدة", quantity: 2 },
+                { name: "باب 1", quantity: 1 },
+                { name: "باب 2", quantity: 1 },
+            ],
+            prices: {
+                manufacturing: "",
+                locks: "",
+                hinges: "",
+                transport: "",
+                screws: "",
+                stretch: "",
+                carton: "",
+                copper: "",
+                fiber: "",
+                rakam: "",
+                fuse: "",
+                additionalPrice: "",
+            },
+            copper: {
+                enabled: false,
+                pricePerKg: "",
+                earthPrice: "",
+                groundPrice: "",
+                main: { optionKey: "", length: "", barCount: 1 },
+                branches: [],
+            },
+            thickness: [],
+        },
+    ],
+    isDeleted: false,
+});

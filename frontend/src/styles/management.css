@@ -1,0 +1,245 @@
+.management-page {
+    max-width: 1050px;
+    margin: 0 auto;
+}
+
+.management-heading {
+    margin-bottom: 24px;
+}
+
+.management-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.management-heading h1 {
+    margin: 0;
+    color: var(--text);
+    font-size: 32px;
+}
+
+.management-heading p {
+    margin: 8px 0 0;
+    color: var(--text-light);
+}
+
+.management-primary-btn,
+.management-row button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px 18px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+}
+
+.recycle-bin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.management-row .permanent-delete-btn,
+.management-confirmation-actions .permanent-delete-btn {
+    background: #b42318;
+    color: #fff;
+}
+
+.management-row .permanent-delete-btn:hover,
+.management-confirmation-actions .permanent-delete-btn:hover {
+    background: #8f1c13;
+}
+
+.recycle-bin-tabs { display: flex; gap: 10px; margin: 0 0 22px; }
+.recycle-bin-tabs button { border: 1px solid var(--border); background: #fff; color: var(--text-light); border-radius: 10px; padding: 10px 18px; font: inherit; cursor: pointer; }
+.recycle-bin-tabs button.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.delete-project-confirmation {
+    direction: rtl;
+    text-align: right;
+}
+
+.delete-project-confirmation p {
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.8;
+}
+
+.management-confirmation-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.management-confirmation-actions button {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 11px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.management-cancel-btn {
+    background: #eef2f7;
+    color: var(--text);
+}
+
+.management-primary-btn:disabled,
+.management-row button:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.management-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 420px;
+    height: 48px;
+    padding: 0 14px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text-light);
+}
+
+.management-search input {
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+}
+
+.management-list {
+    display: grid;
+    gap: 12px;
+}
+
+.management-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.management-row h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 19px;
+}
+
+.management-row p {
+    margin: 6px 0 0;
+    color: var(--text-light);
+}
+
+.management-empty {
+    padding: 42px 20px;
+    color: var(--text-light);
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.management-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(10, 23, 39, .45);
+}
+
+.management-modal {
+    width: min(100%, 480px);
+    display: grid;
+    gap: 14px;
+    padding: 24px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .2);
+}
+
+.management-modal-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.management-modal-heading h2 {
+    margin: 0;
+    color: var(--text);
+}
+
+.management-icon-btn {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 10px;
+    background: #eef2f7;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.management-modal label {
+    display: grid;
+    gap: 7px;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.management-modal input,
+.management-modal select {
+    min-height: 46px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 12px;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+}
+
+@media (max-width: 600px) {
+
+    .management-heading-actions,
+    .management-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .management-primary-btn,
+    .management-row button {
+        width: 100%;
+    }
+
+    .recycle-bin-actions {
+        flex-direction: column;
+    }
+
+    .management-search {
+        max-width: none;
+    }
+}

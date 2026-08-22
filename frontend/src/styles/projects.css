@@ -1,0 +1,524 @@
+.projects-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 30px;
+
+}
+
+.projects-header h1 {
+
+    font-size: 34px;
+
+    color: var(--text);
+
+}
+
+.projects-header p {
+
+    margin-top: 8px;
+
+    color: var(--text-light);
+
+}
+
+.new-project-btn {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 14px 22px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    cursor: pointer;
+
+    background: var(--primary);
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+}
+
+.projects-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
+    gap: 24px;
+
+}
+
+.project-card {
+
+    background: white;
+
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+
+    transition: .25s;
+
+    direction: rtl;
+
+    text-align: right;
+
+}
+
+.project-card:hover {
+
+    transform: translateY(-4px);
+
+    box-shadow: 0 15px 40px rgba(0, 0, 0, .08);
+
+}
+
+.project-image {
+
+    position: relative;
+
+}
+
+.project-image img {
+
+    width: 100%;
+
+    height: 190px;
+
+    object-fit: cover;
+
+    display: block;
+
+}
+
+.delete-project-btn {
+
+    position: absolute;
+
+    top: 12px;
+
+    right: 12px;
+
+    width: 36px;
+
+    height: 36px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: white;
+
+    color: #ef4444;
+
+    cursor: pointer;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-size: 18px;
+
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .15);
+
+}
+
+.project-body {
+
+    padding: 18px;
+
+}
+
+.project-body h3 {
+
+    margin: 0;
+
+    font-size: 20px;
+
+    color: var(--text);
+
+}
+
+.project-title-row {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-bottom: 18px;
+
+}
+
+.project-status-badge {
+
+    flex: 0 0 auto;
+
+    padding: 7px 10px;
+
+    border-radius: 9px;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    line-height: 1.2;
+
+}
+
+.project-status-badge.in-progress {
+
+    background: #e8f2ff;
+
+    color: #2563a8;
+
+}
+
+.project-status-badge.pending {
+
+    background: #fff4d6;
+
+    color: #9a6700;
+
+}
+
+.project-status-badge.completed {
+
+    background: #e8f8ef;
+
+    color: #18794e;
+
+}
+
+.project-date {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    color: var(--text-light);
+
+    font-size: 14px;
+
+    margin-bottom: 10px;
+
+}
+
+.project-client-badge {
+
+    position: absolute;
+
+    right: 16px;
+
+    bottom: 16px;
+
+    max-width: calc(100% - 32px);
+
+    box-sizing: border-box;
+
+    padding: 7px 5px;
+
+    border-radius: 5px;
+
+    background: #355f7a;
+
+    color: #fff;
+
+    font-size: 10px;
+
+    unicode-bidi: plaintext;
+
+}
+
+.project-card h3,
+.panel-name-text {
+
+    unicode-bidi: plaintext;
+
+}
+
+.panel-tab {
+    border: none;
+    background: transparent;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.panel-tab.active {
+    color: white;
+}
+
+.panel-tab-wrapper {
+    padding: 12px;
+    border-radius: 12px;
+    background: #eef3fb;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.panel-tab-wrapper.active {
+    background: var(--primary);
+
+    color: #fff;
+}
+
+.panel-tab-wrapper.active .delete-panel-btn {
+    color: #ff5858;
+}
+
+.delete-panel-btn {
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    margin-bottom: 2px;
+}
+
+.delete-panel-btn:hover {
+    opacity: 0.7;
+}
+
+.empty-projects {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    height: 300px;
+
+    font-size: 18px;
+
+    color: var(--text-light);
+
+}
+
+@media(max-width:768px) {
+
+    .projects-header {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 18px;
+
+    }
+
+    .projects-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+
+@media (max-width:949px) {
+
+    .projects-header-actions {
+
+        width: 100%;
+
+        flex-wrap: wrap;
+
+    }
+
+    .new-project-link {
+
+        order: -1;
+
+        width: 100%;
+
+    }
+
+    .new-project-btn {
+
+        width: 100%;
+
+        justify-content: center;
+
+    }
+
+    .projects-search,
+    .projects-filter {
+
+        flex: 1 1 220px;
+
+        min-width: 0;
+
+    }
+
+    .projects-search input,
+    .projects-filter select {
+
+        min-width: 0;
+
+        width: 100%;
+
+    }
+
+}
+
+.projects-header-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+.projects-search,
+.projects-filter {
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 14px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    background: #fff;
+
+    color: var(--text-light);
+
+}
+
+.projects-search input,
+.projects-filter select {
+
+    min-width: 150px;
+
+    border: 0;
+
+    outline: 0;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font: inherit;
+
+}
+
+@media (max-width: 600px) {
+
+    .projects-header {
+
+        gap: 14px;
+
+        margin-bottom: 20px;
+
+    }
+
+    .projects-header-actions {
+
+        gap: 10px;
+
+    }
+
+    .new-project-link {
+
+        flex-basis: 100%;
+
+        width: auto;
+
+    }
+
+    .new-project-btn {
+
+        width: auto;
+
+        padding: 10px 14px;
+
+        border-radius: 10px;
+
+        font-size: 13px;
+
+    }
+
+    .projects-search {
+
+        flex: 1 1 0;
+
+        min-width: 0;
+
+    }
+
+    .projects-filter {
+
+        position: relative;
+
+        flex: 0 0 48px;
+
+        width: 48px;
+
+        padding: 0;
+
+        justify-content: center;
+
+    }
+
+    .projects-filter select {
+
+        position: absolute;
+
+        inset: 0;
+
+        width: 100%;
+
+        min-width: 0;
+
+        opacity: 0;
+
+        cursor: pointer;
+
+    }
+
+    .projects-filter svg {
+
+        pointer-events: none;
+
+    }
+
+}

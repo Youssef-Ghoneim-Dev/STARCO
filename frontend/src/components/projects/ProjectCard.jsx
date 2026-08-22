@@ -1,0 +1,98 @@
+import {
+  HiOutlineTrash,
+  HiOutlineCalendar,
+  HiOutlineClock,
+} from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+
+import { deleteProject } from "../../services/projectsAPI";
+import projectImage from "../../assets/images/1.svg";
+
+const formatProjectDate = (dateValue) => {
+  const date = new Date(dateValue);
+  const hours = Math.floor((Date.now() - date.getTime()) / 3_600_000);
+  const days = Math.floor(hours / 24);
+
+  if (hours < 1) return "منذ أقل من ساعة";
+  if (hours < 24) return `منذ ${hours} ساعة`;
+  if (days <= 7) return `منذ ${days} يوم`;
+
+  return new Intl.DateTimeFormat("ar-EG", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }).format(date);
+};
+
+const statusDetails = {
+  inProgress: { label: "قيد التنفيذ", className: "in-progress" },
+  pending: { label: "قيد الانتظار", className: "pending" },
+  completed: { label: "مكتمل", className: "completed" },
+};
+
+function ProjectCard({ project, setProjects }) {
+  const navigate = useNavigate();
+  const firstPanelName = project.panels?.[0]?.panelName?.trim();
+  const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
+  const projectStatus = statusDetails[project.status] || statusDetails.pending;
+  const handleOpen = () => {
+    navigate(`/projects/${project._id}`);
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+
+    try {
+      await deleteProject(project._id);
+
+      toast.success("Project deleted successfully");
+      setProjects((prev) => prev.filter((item) => item._id !== project._id));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    }
+  };
+  return (
+    <div className="project-card" onClick={handleOpen}>
+      <div className="project-image">
+        <img src={projectImage} alt="Project" />
+
+        <div className="project-client-badge" dir="auto">
+          {clientPrefix} / {project.client?.name}
+        </div>
+
+        <button className="delete-project-btn" onClick={handleDelete}>
+          <HiOutlineTrash />
+        </button>
+      </div>
+
+      <div className="project-body">
+        <div className="project-title-row">
+          <h3 dir="auto">
+            {project.client?.name}
+            {firstPanelName ? ` (${firstPanelName})` : ""}
+          </h3>
+          <span className={`project-status-badge ${projectStatus.className}`}>
+            {projectStatus.label}
+          </span>
+        </div>
+
+        <div className="project-date">
+          <HiOutlineCalendar />
+
+          <span>
+            أُنشئ: {formatProjectDate(project.createdAt)}
+          </span>
+        </div>
+
+        <div className="project-date">
+          <HiOutlineClock />
+
+          <span>
+            آخر تعديل: {formatProjectDate(project.updatedAt)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ProjectCard;

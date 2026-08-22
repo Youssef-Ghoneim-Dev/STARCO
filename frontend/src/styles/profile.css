@@ -1,0 +1,117 @@
+.profile-page {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.profile-heading {
+    margin-bottom: 24px;
+}
+
+.profile-heading h1 {
+    color: var(--text);
+    font-size: 32px;
+}
+
+.profile-heading p {
+    margin-top: 8px;
+    color: var(--text-light);
+}
+
+.profile-card {
+    display: grid;
+    gap: 10px;
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.profile-avatar {
+    width: 76px;
+    height: 76px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.profile-card label {
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.profile-card input {
+    min-height: 48px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 14px;
+    color: var(--text);
+    background: #fff;
+    font: inherit;
+    outline: none;
+}
+
+.profile-card input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 93, 156, .1);
+}
+
+.profile-card input[readonly] {
+    color: var(--text-light);
+    background: #f5f7fa;
+    cursor: default;
+}
+
+.profile-help {
+    margin: 0 0 8px;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.profile-card button {
+    border: 0;
+    border-radius: 12px;
+    padding: 13px 24px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+}
+
+.profile-card button:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.profile-card .profile-back-btn {
+    background: #eef2f7;
+    color: var(--text);
+}
+
+@media (max-width: 600px) {
+    .profile-card {
+        padding: 20px;
+    }
+
+    .profile-actions {
+        display: grid;
+    }
+
+    .profile-card button {
+        width: 100%;
+    }
+}

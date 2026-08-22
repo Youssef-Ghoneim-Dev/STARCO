@@ -1,11 +1,79 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+    --primary: #355f7a;
+    --primary-hover: #1c5b84;
+    --secondary: #0F172A;
+    --acade: #a1cada;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --background: #F5F7FA;
+    --surface: #FFFFFF;
+    --text: #1F2937;
+    --text-light: #6B7280;
+    --border: #D9E1EC;
+    --radius: 18px;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .12);
+    --transition: .25s;
+}
+
+@font-face {
+    font-family: "Tajawal";
+    src: url("./assets/fonts/Tajawal-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Tajawal";
+    src: url("./assets/fonts/Tajawal-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Tajawal";
+    src: url("./assets/fonts/Tajawal-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Tajawal";
+    src: url("./assets/fonts/Tajawal-Black.ttf") format("truetype");
+    font-weight: 900;
+    font-style: normal;
+}
+
+* {
+    font-family: "Tajawal", sans-serif;
+    font-weight: 700;
+    margin: 0;
+    padding: 0;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #355f7a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #1c5b84;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-track:hover {
+    background: #e0e0e0;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
