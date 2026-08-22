@@ -71,13 +71,21 @@ const getProfile = async (req, res, next) => {
             _id: req.decodedToken.id
         });
 
+        if (!user) {
+            return res.status(404).json({
+                status: "error",
+                message: "Account no longer exists"
+            });
+        }
+
         return res.status(200).json({
             id: user._id,
             name: user.name,
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
-            approved: user.approved
+            approved: user.approved,
+            isDeleted: user.isDeleted
         });
 
     } catch (error) {
