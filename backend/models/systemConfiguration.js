@@ -2,6 +2,7 @@ const dbconfig = require("../DB/config");
 const collectionName = "systemConfiguration";
 const schema = require("../DB/schema/systemConfiguration");
 const { panelTypeDefaults } = require("../utils/panelTypeDefaults");
+const { cloneCopperConfigurationDefaults } = require("../utils/copperDefaults");
 
 const get = async () => {
     const connection = await dbconfig.openconnection(
@@ -11,12 +12,20 @@ const get = async () => {
 
     const rawConfig = await connection.findOne({}).lean();
     if (!rawConfig) return null;
+    const migration = {};
     if (!Array.isArray(rawConfig.panelTypes) || rawConfig.panelTypes.length === 0) {
-        return connection.findByIdAndUpdate(
-            rawConfig._id,
-            { $set: { panelTypes: JSON.parse(JSON.stringify(panelTypeDefaults)) } },
-            { new: true }
-        );
+        migration.panelTypes = JSON.parse(JSON.stringify(panelTypeDefaults));
+    }
+    if (!Array.isArray(rawConfig.copperConfiguration?.catalog) || rawConfig.copperConfiguration.catalog.length === 0) {
+        migration.copperConfiguration = cloneCopperConfigurationDefaults();
+    } else if (!rawConfig.copperConfiguration?.weightFormula) {
+        migration.copperConfiguration = {
+            ...rawConfig.copperConfiguration,
+            weightFormula: cloneCopperConfigurationDefaults().weightFormula
+        };
+    }
+    if (Object.keys(migration).length > 0) {
+        return connection.findByIdAndUpdate(rawConfig._id, { $set: migration }, { new: true });
     }
     const defaultsByKey = new Map(panelTypeDefaults.map((type) => [type.key, type]));
     const normalizedTypes = rawConfig.panelTypes.map((type) => {

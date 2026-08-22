@@ -69,6 +69,24 @@ const panelSchema = new mongoose.Schema({
         branches: { type: String, default: "" }
     },
 
+    copper: {
+        enabled: { type: Boolean, default: false },
+        pricePerKg: { type: Number, default: null },
+        earthPrice: { type: Number, default: null },
+        groundPrice: { type: Number, default: null },
+        main: {
+            optionKey: { type: String, default: "" },
+            length: { type: Number, default: null },
+            barCount: { type: Number, default: 1 }
+        },
+        branches: [{
+            branchId: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
+            optionKey: { type: String, default: "" },
+            direction: { type: String, enum: ["one", "two"], default: "one" },
+            barCount: { type: Number, default: 1 }
+        }]
+    },
+
     parts: [panelPartSchema],
 
     prices: {

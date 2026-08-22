@@ -48,6 +48,24 @@ module.exports = (req, res, next) => {
                     branches: joi.string().allow("").optional()
                 }).optional(),
 
+                copper: joi.object({
+                    enabled: joi.boolean().optional(),
+                    pricePerKg: joi.number().min(0).allow(null).optional(),
+                    earthPrice: joi.number().min(0).allow(null).optional(),
+                    groundPrice: joi.number().min(0).allow(null).optional(),
+                    main: joi.object({
+                        optionKey: joi.string().allow("").optional(),
+                        length: joi.number().min(0).allow(null).optional(),
+                        barCount: joi.number().min(1).optional()
+                    }).optional(),
+                    branches: joi.array().items(joi.object({
+                        branchId: joi.string().optional(),
+                        optionKey: joi.string().allow("").optional(),
+                        direction: joi.string().valid("one", "two").optional(),
+                        barCount: joi.number().min(1).optional()
+                    })).optional()
+                }).optional(),
+
                 parts: joi.array().items(
 
                     joi.object({

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { defaults } = require("../../utils/whatsappTemplates");
 const { panelTypeDefaults } = require("../../utils/panelTypeDefaults");
+const { cloneCopperConfigurationDefaults } = require("../../utils/copperDefaults");
 
 module.exports = new mongoose.Schema({
     sheetPrice: {
@@ -78,6 +79,25 @@ module.exports = new mongoose.Schema({
             }]
         }, { _id: false })],
         default: () => panelTypeDefaults
+    },
+
+    copperConfiguration: {
+        type: new mongoose.Schema({
+            catalog: [{
+                key: { type: String, required: true },
+                name: { type: String, required: true },
+                amperage: { type: Number, required: true },
+                width: { type: Number, required: true },
+                thickness: { type: Number, required: true }
+            }],
+            barCounts: [{ type: Number }],
+            branchLengths: {
+                oneDirection: { type: Number, default: 150 },
+                twoDirections: { type: Number, default: 300 }
+            },
+            weightFormula: { type: String, default: "Length * BarCount * Width * Thickness / 1000000" }
+        }, { _id: false }),
+        default: () => cloneCopperConfigurationDefaults()
     },
 
     whatsappTemplates: {

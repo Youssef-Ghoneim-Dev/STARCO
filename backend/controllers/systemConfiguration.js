@@ -69,6 +69,7 @@ const update = async (req, res, next) => {
         if (!isOwnerManager(req)) {
             const currentConfig = await models.get();
             updateData.panelTypes = sanitizeEngineerPanelTypes(currentConfig?.panelTypes || [], updateData.panelTypes || []);
+            updateData.copperConfiguration = currentConfig?.copperConfiguration;
         }
         const config = await models.update(updateData);
 
