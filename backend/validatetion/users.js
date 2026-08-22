@@ -4,7 +4,7 @@ module.exports = (req, res, next) => {
     const user = { ...req.body };
     const validate = joi.object(
         {
-            name: joi.string().min(3).max(20).pattern(/^[a-zA-Z\ ]{3,20}$/).required(),
+            name: joi.string().min(3).max(50).pattern(/^[a-zA-Z\u0600-\u06FF\ ]{3,50}$/).required(),
             email: joi.string().email().min(8).max(30).required(),
             password: joi.string().min(8).max(15).pattern(/^[a-zA-Z0-9#*$&@]{8,15}$/),
             phoneNumber: joi.string()

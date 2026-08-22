@@ -11,6 +11,7 @@ const CheckuserToken = require("../midelwers/Users/CheckUserToken");
 
 usersrouter.post("/login", loginvalidatetion, auth.login);
 usersrouter.post("/register", uservalidatetion, auth.register);
+usersrouter.post("/google", auth.googleLogin);
 
 
 usersrouter.get("/admin", authMw, CheckuserToken, manger.getUsers);
