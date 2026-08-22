@@ -206,10 +206,31 @@ const restoreUser = async (req, res, next) => {
     }
 }
 
+const deleteUserForever = async (req, res, next) => {
+    try {
+        const manager = req.decodedToken;
+        const userId = req.params.id;
+        if (manager.role !== "OwnerManager") {
+            return res.status(403).json({ status: "error", message: "you are not admin" });
+        }
+        if (String(manager.id) === String(userId)) {
+            return res.status(400).json({ status: "error", message: "You cannot permanently delete your own account." });
+        }
+        const result = await models.deleteForever({ _id: userId, isDeleted: true });
+        if (result === null) {
+            return res.status(404).json({ status: "error", message: "Deleted user not found." });
+        }
+        return res.status(200).json({ status: "ok", message: "user permanently deleted" });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getUsers,
     updateUser,
     deleteUser,
     restoreUser,
+    deleteUserForever,
     getDeletedUsers
 }

@@ -17,6 +17,7 @@ usersrouter.post("/google", auth.googleLogin);
 usersrouter.get("/admin", authMw, CheckuserToken, manger.getUsers);
 usersrouter.get("/admin/deleted", authMw, CheckuserToken, manger.getDeletedUsers);
 usersrouter.put("/admin/:id", authMw, CheckuserToken, uservalidatetion, manger.updateUser);
+usersrouter.delete("/admin/:id/permanent", authMw, CheckuserToken, manger.deleteUserForever);
 usersrouter.delete("/admin/:id", authMw, CheckuserToken, manger.deleteUser);
 usersrouter.patch("/admin/:id", authMw, CheckuserToken, manger.restoreUser);
 
