@@ -22,9 +22,11 @@ usersrouter.delete("/admin/:id", authMw, CheckuserToken, manger.deleteUser);
 usersrouter.patch("/admin/:id", authMw, CheckuserToken, manger.restoreUser);
 
 
-usersrouter.get("/profile", authMw, CheckuserToken, profile.getProfile);
-usersrouter.put("/profile", authMw, CheckuserToken, profileValidation, profile.UpdateProfile);
-usersrouter.delete("/profile", authMw, CheckuserToken, profile.DeleteProfile);
+// Pending accounts may open and edit their own profile while all work routes
+// remain protected by CheckuserToken.
+usersrouter.get("/profile", authMw, profile.getProfile);
+usersrouter.put("/profile", authMw, profileValidation, profile.UpdateProfile);
+usersrouter.delete("/profile", authMw, profile.DeleteProfile);
 
 
 usersrouter.get("/approval", authMw, CheckuserToken, approval.getPendingUsers);
