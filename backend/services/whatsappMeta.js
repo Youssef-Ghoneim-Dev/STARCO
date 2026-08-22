@@ -53,6 +53,23 @@ const markMessageAsRead = (messageId) => requestMeta("/messages", {
     message_id: messageId
 });
 
+// Meta's contacts endpoint resolves a phone number to a WhatsApp ID without
+// sending a message. A number without a `wa_id` is not registered on WhatsApp.
+const lookupWhatsAppPhoneNumber = async (phoneNumber) => {
+    const phone = normalizePhoneNumber(phoneNumber);
+    const payload = await requestMeta("/contacts", {
+        blocking: "wait",
+        force_check: true,
+        contacts: [phone]
+    });
+
+    const contact = Array.isArray(payload?.contacts)
+        ? payload.contacts.find((item) => normalizePhoneNumber(item.input) === phone) || payload.contacts[0]
+        : null;
+
+    return { phoneNumber: phone, isWhatsApp: Boolean(contact?.wa_id), waId: contact?.wa_id || null };
+};
+
 const downloadMedia = async (mediaId) => {
     const { accessToken, apiVersion } = getConfig();
     const metadataResponse = await fetch(`https://graph.facebook.com/${apiVersion}/${mediaId}`, {
@@ -95,6 +112,7 @@ const isValidWebhookSignature = (rawBody, signature) => {
 module.exports = {
     sendTextMessage,
     sendTemplateMessage,
+    lookupWhatsAppPhoneNumber,
     markMessageAsRead,
     downloadMedia,
     isValidWebhookSignature

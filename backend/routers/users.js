@@ -13,7 +13,6 @@ usersrouter.post("/login", loginvalidatetion, auth.login);
 usersrouter.post("/register", uservalidatetion, auth.register);
 usersrouter.post("/google", auth.googleLogin);
 
-
 usersrouter.get("/admin", authMw, CheckuserToken, manger.getUsers);
 usersrouter.get("/admin/deleted", authMw, CheckuserToken, manger.getDeletedUsers);
 usersrouter.put("/admin/:id", authMw, CheckuserToken, uservalidatetion, manger.updateUser);

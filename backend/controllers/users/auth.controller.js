@@ -2,6 +2,28 @@ const models = require("../../models/users")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { OAuth2Client } = require("google-auth-library");
+const { normalizePhoneNumber } = require("../../utils/phoneNumber");
+const { lookupWhatsAppPhoneNumber } = require("../../services/whatsappMeta");
+
+const requireWhatsAppNumber = async (phoneNumber) => {
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+    if (!/^\d{8,15}$/.test(normalizedPhoneNumber)) {
+        throw Object.assign(new Error("Enter a valid WhatsApp phone number."), { statusCode: 400 });
+    }
+
+    let lookup;
+    try {
+        lookup = await lookupWhatsAppPhoneNumber(normalizedPhoneNumber);
+    } catch (error) {
+        throw Object.assign(new Error("Could not check the WhatsApp number. Please try again."), { statusCode: 503 });
+    }
+
+    if (!lookup.isWhatsApp) {
+        throw Object.assign(new Error("This phone number is not registered on WhatsApp."), { statusCode: 400 });
+    }
+
+    return normalizedPhoneNumber;
+};
 
 const issueSession = (res, user) => {
     const token = jwt.sign({ id: user._id, name: user.name, email: user.email, role: user.role }, process.env.TOKEN_KEY);
@@ -23,6 +45,7 @@ const register = async (req, res, next) => {
                 message: `email ${user.email} is added before`,
             })
         };
+        user.phoneNumber = await requireWhatsAppNumber(user.phoneNumber);
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(user.password, salt)
         user.password = hashedPassword
@@ -81,7 +104,8 @@ const googleLogin = async (req, res, next) => {
             if (!allowedRoles.includes(req.body.role) || !req.body.phoneNumber) {
                 return res.status(400).json({ status: "error", message: "أكمل رقم الهاتف والدور أولًا لإنشاء الحساب عبر Google." });
             }
-            await models.add_one({ name: profile.name || profile.email.split("@")[0], email: profile.email.toLowerCase(), phoneNumber: req.body.phoneNumber, role: req.body.role, password: null, googleId: profile.sub, authProvider: "google" });
+            const phoneNumber = await requireWhatsAppNumber(req.body.phoneNumber);
+            await models.add_one({ name: profile.name || profile.email.split("@")[0], email: profile.email.toLowerCase(), phoneNumber, role: req.body.role, password: null, googleId: profile.sub, authProvider: "google" });
             user = await models.select_one({ email: profile.email.toLowerCase() });
         }
         if (user.isDeleted) return res.status(403).json({ status: "error", message: "Your account has been deleted" });
