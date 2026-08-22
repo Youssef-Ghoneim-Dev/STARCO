@@ -26,7 +26,10 @@ const requestMeta = async (path, body) => {
 
     const payload = await response.json();
     if (!response.ok) {
-        throw new Error(payload?.error?.message || "WhatsApp API request failed");
+        const error = new Error(payload?.error?.message || "WhatsApp API request failed");
+        error.statusCode = response.status;
+        error.metaCode = payload?.error?.code;
+        throw error;
     }
 
     return payload;
@@ -52,23 +55,6 @@ const markMessageAsRead = (messageId) => requestMeta("/messages", {
     status: "read",
     message_id: messageId
 });
-
-// Meta's contacts endpoint resolves a phone number to a WhatsApp ID without
-// sending a message. A number without a `wa_id` is not registered on WhatsApp.
-const lookupWhatsAppPhoneNumber = async (phoneNumber) => {
-    const phone = normalizePhoneNumber(phoneNumber);
-    const payload = await requestMeta("/contacts", {
-        blocking: "wait",
-        force_check: true,
-        contacts: [phone]
-    });
-
-    const contact = Array.isArray(payload?.contacts)
-        ? payload.contacts.find((item) => normalizePhoneNumber(item.input) === phone) || payload.contacts[0]
-        : null;
-
-    return { phoneNumber: phone, isWhatsApp: Boolean(contact?.wa_id), waId: contact?.wa_id || null };
-};
 
 const downloadMedia = async (mediaId) => {
     const { accessToken, apiVersion } = getConfig();
@@ -112,7 +98,6 @@ const isValidWebhookSignature = (rawBody, signature) => {
 module.exports = {
     sendTextMessage,
     sendTemplateMessage,
-    lookupWhatsAppPhoneNumber,
     markMessageAsRead,
     downloadMedia,
     isValidWebhookSignature

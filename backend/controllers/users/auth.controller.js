@@ -3,25 +3,12 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { OAuth2Client } = require("google-auth-library");
 const { normalizePhoneNumber } = require("../../utils/phoneNumber");
-const { lookupWhatsAppPhoneNumber } = require("../../services/whatsappMeta");
 
-const requireWhatsAppNumber = async (phoneNumber) => {
+const requirePhoneNumber = (phoneNumber) => {
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
     if (!/^\d{8,15}$/.test(normalizedPhoneNumber)) {
-        throw Object.assign(new Error("Enter a valid WhatsApp phone number."), { statusCode: 400 });
+        throw Object.assign(new Error("Enter a valid phone number."), { statusCode: 400 });
     }
-
-    let lookup;
-    try {
-        lookup = await lookupWhatsAppPhoneNumber(normalizedPhoneNumber);
-    } catch (error) {
-        throw Object.assign(new Error("Could not check the WhatsApp number. Please try again."), { statusCode: 503 });
-    }
-
-    if (!lookup.isWhatsApp) {
-        throw Object.assign(new Error("This phone number is not registered on WhatsApp."), { statusCode: 400 });
-    }
-
     return normalizedPhoneNumber;
 };
 
@@ -45,7 +32,7 @@ const register = async (req, res, next) => {
                 message: `email ${user.email} is added before`,
             })
         };
-        user.phoneNumber = await requireWhatsAppNumber(user.phoneNumber);
+        user.phoneNumber = requirePhoneNumber(user.phoneNumber);
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(user.password, salt)
         user.password = hashedPassword
@@ -104,7 +91,7 @@ const googleLogin = async (req, res, next) => {
             if (!allowedRoles.includes(req.body.role) || !req.body.phoneNumber) {
                 return res.status(400).json({ status: "error", message: "أكمل رقم الهاتف والدور أولًا لإنشاء الحساب عبر Google." });
             }
-            const phoneNumber = await requireWhatsAppNumber(req.body.phoneNumber);
+            const phoneNumber = requirePhoneNumber(req.body.phoneNumber);
             await models.add_one({ name: profile.name || profile.email.split("@")[0], email: profile.email.toLowerCase(), phoneNumber, role: req.body.role, password: null, googleId: profile.sub, authProvider: "google" });
             user = await models.select_one({ email: profile.email.toLowerCase() });
         }
