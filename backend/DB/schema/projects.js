@@ -83,6 +83,7 @@ const panelSchema = new mongoose.Schema({
             branchId: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
             optionKey: { type: String, default: "" },
             direction: { type: String, enum: ["one", "two"], default: "one" },
+            length: { type: Number, default: null },
             barCount: { type: Number, default: 1 }
         }]
     },

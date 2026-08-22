@@ -62,6 +62,7 @@ module.exports = (req, res, next) => {
                         branchId: joi.string().optional(),
                         optionKey: joi.string().allow("").optional(),
                         direction: joi.string().valid("one", "two").optional(),
+                        length: joi.number().min(0).allow(null).optional(),
                         barCount: joi.number().min(1).optional()
                     })).optional()
                 }).optional(),
