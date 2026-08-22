@@ -1,7 +1,7 @@
 const models = require("../models/clients")
 
 const canManageClients = (req) =>
-    req.decodedToken.role === "OwnerManager" || req.decodedToken.role === "Engineer";
+    req.user?.role === "OwnerManager" || req.user?.role === "Engineer";
 
 const rejectUnauthorized = (res) => res.status(403).json({
     status: "error",

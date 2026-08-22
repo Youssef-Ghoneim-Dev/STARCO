@@ -3,7 +3,9 @@ const jwt = require("jsonwebtoken");
 const { getWhatsappTemplates: normalizeWhatsappTemplates, isValidTemplates } = require("../utils/whatsappTemplates");
 const googleDrive = require("../services/googleDrive");
 
-const isOwnerManager = (req) => req.decodedToken.role === "OwnerManager";
+// CheckUserToken refreshes req.user from MongoDB. Using the JWT role here made
+// permissions stale after a user's role was edited by Owner Manager.
+const isOwnerManager = (req) => req.user?.role === "OwnerManager";
 
 const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
     const requestedByKey = new Map(requestedTypes.map((type) => [type.key, type]));
@@ -35,8 +37,8 @@ const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
 const get = async (req, res, next) => {
     try {
         if (
-            req.decodedToken.role !== "OwnerManager" &&
-            req.decodedToken.role !== "Engineer"
+            req.user?.role !== "OwnerManager" &&
+            req.user?.role !== "Engineer"
         ) {
             return res.status(403).json({
                 status: "error",
@@ -55,8 +57,8 @@ const get = async (req, res, next) => {
 const update = async (req, res, next) => {
     try {
         if (
-            req.decodedToken.role !== "OwnerManager" &&
-            req.decodedToken.role !== "Engineer"
+            req.user?.role !== "OwnerManager" &&
+            req.user?.role !== "Engineer"
         ) {
             return res.status(403).json({
                 status: "error",
