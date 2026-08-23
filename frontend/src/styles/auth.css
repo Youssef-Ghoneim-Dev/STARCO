@@ -572,14 +572,46 @@
 }
 
 .google-login-shell {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: min(100%, 300px);
+    height: 46px;
     min-height: 46px;
 }
 
-.google-login-shell > div { display: flex; justify-content: center; width: 100%; }
-.google-login-shell iframe { height: 46px !important; cursor: pointer; }
+.google-login-visual {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid #d6dce5;
+    border-radius: 999px;
+    background: #fff;
+    color: #253858;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(38, 57, 90, .08);
+    pointer-events: none;
+}
+
+.google-login-visual svg { color: #4285f4; font-size: 17px; }
+
+.google-login-shell > div {
+    position: absolute !important;
+    inset: 0;
+    z-index: 2;
+    width: 100% !important;
+    height: 46px !important;
+    opacity: .01;
+    cursor: pointer;
+}
+
+.google-login-shell iframe { width: 100% !important; height: 46px !important; cursor: pointer; }
 
 /* The mobile rule previously forced a short fixed height, which pushed the
    label to the bottom once the button received vertical padding. */
