@@ -97,7 +97,7 @@ const updateOwnedProject = async (projectId, engineerId, updates) => {
             _id: projectId,
             isDeleted: false,
             engineerId,
-            status: "inProgress"
+            status: { $in: ["inProgress", "editing"] }
         },
         { ...updates, updatedAt: Date.now() },
         { new: true, runValidators: true }

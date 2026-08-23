@@ -13,14 +13,17 @@ const panelSchema = new mongoose.Schema({
     copperDetails: {
         switches: { type: String, default: "" },
         main: { type: String, default: "" },
-        branches: { type: String, default: "" }
+        mainKey: { type: String, default: "" },
+        branches: { type: String, default: "" },
+        notes: { type: String, default: "" },
+        branchGroups: [{ id: { type: String, default: "" }, optionKey: { type: String, default: "" }, count: { type: Number, default: 1 } }]
     }
 }, { _id: false });
 
 const schema = new mongoose.Schema({
     senderPhone: { type: String, required: true },
     marketingRepId: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
-    mode: { type: String, enum: ["create", "edit"], default: "create" },
+    mode: { type: String, enum: ["create", "edit", "media"], default: "create" },
     targetProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "projects", default: null },
     targetPanelCount: { type: Number, default: 0 },
     selectedPanelIndex: { type: Number, default: null },

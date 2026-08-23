@@ -37,6 +37,7 @@ projectsRouter.get("/:id/media", authMw, CheckUserToken, projectController.getPr
 projectsRouter.get("/:id/media/:mediaId/file", authMw, CheckUserToken, projectController.getProjectMediaFile);
 projectsRouter.post("/:id/media", authMw, CheckUserToken, upload.single("file"), projectController.uploadProjectMedia);
 projectsRouter.delete("/:id/media/:mediaId", authMw, CheckUserToken, projectController.deleteProjectMedia);
+projectsRouter.get("/:id/media/whatsapp-link", authMw, CheckUserToken, projectController.getProjectMediaWhatsappLink);
 
 projectsRouter.get(
     "/:id",

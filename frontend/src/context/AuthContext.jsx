@@ -90,7 +90,10 @@ export function AuthProvider({ children }) {
         setDeleted(true);
         setAccountStatus("deleted");
         setStatusMessage("Your account is no longer available.");
-      } else {
+      } else if ([401, 403].includes(error?.response?.status)) {
+        // Only an actual authentication refusal ends the local session.
+        // A backend redeploy can briefly produce 5xx/network responses and
+        // must never log every active user out.
         localStorage.removeItem("token");
         setUser(null);
         setPending(false);

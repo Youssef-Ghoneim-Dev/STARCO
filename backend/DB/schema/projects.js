@@ -66,7 +66,14 @@ const panelSchema = new mongoose.Schema({
     copperDetails: {
         switches: { type: String, default: "" },
         main: { type: String, default: "" },
-        branches: { type: String, default: "" }
+        mainKey: { type: String, default: "" },
+        branches: { type: String, default: "" },
+        notes: { type: String, default: "" },
+        branchGroups: [{
+            id: { type: String, default: "" },
+            optionKey: { type: String, default: "" },
+            count: { type: Number, default: 1 }
+        }]
     },
 
     copper: {
@@ -81,6 +88,7 @@ const panelSchema = new mongoose.Schema({
         },
         branches: [{
             branchId: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
+            branchGroupId: { type: String, default: "" },
             optionKey: { type: String, default: "" },
             direction: { type: String, enum: ["one", "two"], default: "one" },
             length: { type: Number, default: null },

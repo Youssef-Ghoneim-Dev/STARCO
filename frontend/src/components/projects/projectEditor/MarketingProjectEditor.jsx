@@ -1,8 +1,10 @@
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import StyledSelect from "../../common/StyledSelect";
 import PanelsTabs from "./PanelsTabs";
 import WhatsappProjectData from "./WhatsappProjectData";
 import { useProject } from "../../../context/ProjectContext";
+import { resolveCopperConfiguration } from "../../../utils/copperDefaults";
 
 const toThicknesses = (value) => String(value || "")
   .split(",")
@@ -10,6 +12,7 @@ const toThicknesses = (value) => String(value || "")
   .filter(Boolean);
 
 function MarketingProjectEditor() {
+  const navigate = useNavigate();
   const {
     project,
     activePanel,
@@ -22,6 +25,9 @@ function MarketingProjectEditor() {
   } = useProject();
   const panel = project.panels?.[activePanel] || project.panels?.[0] || {};
   const panelTypes = systemConfig?.panelTypes || [];
+  const copperConfiguration = resolveCopperConfiguration(systemConfig?.copperConfiguration);
+  const amperageOptions = (copperConfiguration.catalog || []).map((item) => ({ value: item.key, label: item.name }));
+  const branchGroups = Array.isArray(panel.copperDetails?.branchGroups) ? panel.copperDetails.branchGroups : [];
 
   const patchPanel = (patch) => updatePanel(activePanel, (current) => ({ ...current, ...patch }));
   const chooseType = (key) => {
@@ -32,37 +38,61 @@ function MarketingProjectEditor() {
   const setCopperDetail = (field, value) => patchPanel({
     copperDetails: { ...(panel.copperDetails || {}), [field]: value },
   });
+  const setBranchGroups = (nextGroups) => {
+    const validGroups = nextGroups.map((group) => ({
+      id: group.id || `branch-group-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      optionKey: group.optionKey || "",
+      count: Math.max(1, Number(group.count) || 1),
+    }));
+    const branches = validGroups.flatMap((group) => Array.from({ length: group.count }, (_, index) => ({
+      branchId: `${group.id}-${index + 1}`,
+      branchGroupId: group.id,
+      optionKey: group.optionKey,
+      direction: "one",
+      barCount: 1,
+    })));
+    patchPanel({
+      copperDetails: { ...(panel.copperDetails || {}), branchGroups: validGroups },
+      copper: { ...(panel.copper || {}), enabled: true, main: { ...(panel.copper?.main || {}), optionKey: panel.copperDetails?.mainKey || "" }, branches },
+    });
+  };
+  const setCopperMain = (optionKey) => {
+    const option = copperConfiguration.catalog?.find((item) => item.key === optionKey);
+    patchPanel({
+      copperDetails: { ...(panel.copperDetails || {}), mainKey: optionKey, main: option?.name || "" },
+      copper: { ...(panel.copper || {}), enabled: true, main: { ...(panel.copper?.main || {}), optionKey } },
+    });
+  };
   const save = async () => {
     const result = await saveProject();
-    if (result.success) toast.success("تم حفظ بيانات المشروع.");
+    if (result.success) {
+      toast.success("تم حفظ بيانات المشروع.");
+      navigate("/projects");
+    }
     else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
   };
 
   return <section className="marketing-project-editor" dir="rtl">
-    <div className="marketing-editor-heading">
-      <div><h2>بيانات المشروع</h2><p>أضف بيانات طلب العميل ومرفقاته. عرض السعر مخصص للمهندس.</p></div>
-      <button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ بيانات المشروع"}</button>
-    </div>
+    <div className="marketing-editor-heading"><div><h2>بيانات المشروع</h2><p>أضف بيانات طلب العميل ومرفقاته. عرض السعر مخصص للمهندس.</p></div></div>
 
     <section className="project-editor-card marketing-client-card">
       <label>اسم العميل<input value={project.client?.name || ""} onChange={(event) => updateClient({ name: event.target.value })} placeholder="اكتب اسم العميل" /></label>
-      <label>نوع العميل<StyledSelect value={project.client?.type || "person"} onChange={(value) => updateClient({ type: value })} options={[{ value: "person", label: "فرد" }, { value: "company", label: "شركة" }]} /></label>
     </section>
 
     <PanelsTabs readOnly={false} />
     <section className="project-editor-card marketing-panel-card">
-      <div className="marketing-panel-title"><h3>بيانات {panel.panelName || `اللوحة ${activePanel + 1}`}</h3>{activePanel > 0 && <button type="button" className="delete-panel-data-btn" onClick={() => deletePanel(activePanel)}>حذف اللوحة</button>}</div>
+      <div className="marketing-panel-title"><h3>بيانات اللوحة {activePanel + 1}</h3>{activePanel > 0 && <button type="button" className="delete-panel-data-btn" onClick={() => deletePanel(activePanel)}>حذف اللوحة</button>}</div>
       <div className="marketing-data-grid">
-        <label>اسم اللوحة<input value={panel.panelName || ""} onChange={(event) => patchPanel({ panelName: event.target.value })} /></label>
         <label>السمك المطلوب<input value={(panel.thickness || []).join(", ")} onChange={(event) => patchPanel({ thickness: toThicknesses(event.target.value) })} placeholder="0.7, 1, 1.5" /></label>
         <label>نوع اللوحة<StyledSelect value={panel.panelTypeKey || ""} placeholder="اختر نوع اللوحة" onChange={chooseType} options={panelTypes.map((type) => ({ value: type.key, label: type.name }))} /></label>
         <label>هل يوجد نحاس<StyledSelect value={panel.hasCopper === true ? "yes" : panel.hasCopper === false ? "no" : ""} placeholder="اختر الإجابة" onChange={(value) => patchPanel({ hasCopper: value === "yes" })} options={[{ value: "yes", label: "نعم" }, { value: "no", label: "لا" }]} /></label>
       </div>
       {panel.panelTypeKey === "control" && <label className="marketing-full-field">تركيب لوحة الكنترول<input value={panel.controlInstallation || ""} onChange={(event) => patchPanel({ controlInstallation: event.target.value })} placeholder="دفن أو عادية" /></label>}
-      {panel.hasCopper === true && <div className="marketing-copper-fields"><h3>بيانات النحاس</h3><div className="marketing-data-grid"><label>نوع المفاتيح<input value={panel.copperDetails?.switches || ""} onChange={(event) => setCopperDetail("switches", event.target.value)} /></label><label>الرئيسي<input value={panel.copperDetails?.main || ""} onChange={(event) => setCopperDetail("main", event.target.value)} /></label><label>الفرعيات<input value={panel.copperDetails?.branches || ""} onChange={(event) => setCopperDetail("branches", event.target.value)} placeholder="مثال: 4 × 600 أمبير" /></label></div></div>}
+      {panel.hasCopper === true && <div className="marketing-copper-fields"><h3>بيانات النحاس</h3><div className="marketing-data-grid"><label>نوع المفاتيح<StyledSelect value={panel.copperDetails?.switches || ""} placeholder="اختر النوع" onChange={(value) => setCopperDetail("switches", value)} options={[{ value: "My Nature", label: "My Nature" }, { value: "Molded", label: "Molded" }]} /></label><label>الرئيسي<StyledSelect value={panel.copperDetails?.mainKey || panel.copper?.main?.optionKey || ""} placeholder="اختر الأمبير" onChange={setCopperMain} options={amperageOptions} /></label></div><div className="marketing-branches"><div className="marketing-branches-heading"><h4>المفاتيح الفرعية</h4><button type="button" onClick={() => setBranchGroups([...branchGroups, { id: `branch-group-${Date.now()}`, optionKey: "", count: 1 }])}>+ إضافة فرعي</button></div>{branchGroups.map((group, index) => <div className="marketing-branch-row" key={group.id || index}><strong>فرعي {index + 1}</strong><StyledSelect value={group.optionKey || ""} placeholder="اختر الأمبير" onChange={(optionKey) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, optionKey } : entry))} options={amperageOptions} /><label>العدد<input type="number" min="1" step="1" value={group.count || 1} onChange={(event) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: event.target.value } : entry))} /></label><button type="button" className="delete-panel-data-btn" onClick={() => setBranchGroups(branchGroups.filter((_, current) => current !== index))}>حذف</button></div>)}</div><label className="marketing-full-field">تفاصيل إضافية للنحاس<textarea value={panel.copperDetails?.notes || ""} onChange={(event) => setCopperDetail("notes", event.target.value)} placeholder="اكتب أي تفاصيل خاصة بالنحاس" /></label></div>}
       <label className="marketing-full-field">تفاصيل إضافية<textarea value={panel.additionalDetails || ""} onChange={(event) => patchPanel({ additionalDetails: event.target.value })} placeholder="اكتب أي تفاصيل إضافية" /></label>
     </section>
     <WhatsappProjectData editable />
+    <div className="marketing-save-actions"><button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ بيانات المشروع"}</button></div>
   </section>;
 }
 

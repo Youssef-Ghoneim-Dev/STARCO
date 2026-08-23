@@ -34,7 +34,8 @@ const panelExample = `STARCO PANEL
 
 const copperDetailsTemplate = `نوع المفاتيح:
 الرئيسي:
-الفرعيات:`;
+الفرعيات:
+تفاصيل إضافية للنحاس:`;
 
 const normalizePanelType = (value) => {
     const normalized = String(value || "").trim().toLowerCase().replace(/[أإآ]/g, "ا");
@@ -256,7 +257,7 @@ const attachMessagesToProject = async (session, project) => {
     const panelMap = new Map(
         session.panels.map((panel, index) => [
             panel.localPanelKey,
-            session.mode === "edit"
+            ["edit", "media"].includes(session.mode)
                 ? project.panels[panel.targetPanelIndex - 1]?.panelId
                 : project.panels[index]?.panelId
         ])
@@ -303,6 +304,33 @@ const notifyAssignedEngineerOfMarketingEdit = async (project) => {
 };
 
 const finishSession = async (session, inboundMessage) => {
+    if (session.mode === "media") {
+        const targetProject = await projects.select_one({
+            _id: session.targetProjectId,
+            marketingId: session.marketingRepId,
+            isDeleted: false
+        });
+        if (!targetProject) return { error: "تعذر العثور على المشروع أو لا تملك صلاحية إضافة المرفقات إليه." };
+
+        const sessionMessages = await messages.findBySession(session._id);
+        const unuploadedMedia = sessionMessages.filter((message) => message.media?.providerMediaId && !message.media?.storageFileId);
+        if (unuploadedMedia.length) {
+            const failedUploads = unuploadedMedia.filter((message) => message.status === "media_upload_failed").length;
+            return failedUploads
+                ? { error: `تعذر رفع ${failedUploads} ملف إلى التخزين. لم يتم حفظ المرفقات.` }
+                : { waiting: unuploadedMedia.length };
+        }
+        const finalizingSession = await sessions.claimForFinalization(session._id);
+        if (!finalizingSession) return { finalizing: true };
+        await attachMessagesToProject(finalizingSession, targetProject);
+        await sessions.updateById(finalizingSession._id, {
+            status: "finished",
+            finishedByMessageId: inboundMessage.id,
+            createdProjectId: targetProject._id,
+            activePanelKey: null
+        });
+        return { project: targetProject, mediaOnly: true };
+    }
     if (!session.panels.length) {
         return { error: "لا يمكن إنهاء المشروع قبل إرسال لوحة واحدة على الأقل." };
     }
@@ -376,7 +404,9 @@ const completeRequestedFinishIfReady = async (sessionId) => {
 
     const result = await finishSession(session, { id: session.finishRequestedByMessageId });
     if (result.project) {
-        const replies = session.mode === "edit"
+        const replies = session.mode === "media"
+            ? ["تم حفظ الصور والتسجيلات في المشروع بنجاح. ارجع إلى صفحة المشروع في الموقع وستجدها مضافة."]
+            : session.mode === "edit"
             ? [projectUpdatedReply(result.project)]
             : projectCreatedReply(result.project);
         for (const body of replies) {
@@ -389,6 +419,41 @@ const completeRequestedFinishIfReady = async (sessionId) => {
 
 const handleCommand = async ({ command, senderPhone, marketer, inboundMessage }) => {
     const templates = await loadWhatsappTemplates();
+
+    if (command.type === "media") {
+        if (await getActiveSession(senderPhone)) {
+            return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة STARCO FINISH أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
+        }
+        const targetProject = await projects.select_one({ _id: command.projectId, marketingId: marketer._id, isDeleted: false });
+        if (!targetProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
+            return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
+        }
+        const targetPanel = targetProject.panels[command.panelNumber - 1];
+        const mediaPanel = {
+            localPanelKey: crypto.randomUUID(),
+            sourceMessageId: inboundMessage.id,
+            panelName: targetPanel.panelName || `لوحة ${command.panelNumber}`,
+            targetPanelIndex: command.panelNumber,
+            requestedThicknesses: [],
+            panelType: targetPanel.panelType || "",
+            hasCopper: targetPanel.hasCopper,
+            details: ""
+        };
+        await sessions.create({
+            senderPhone,
+            marketingRepId: marketer._id,
+            mode: "media",
+            targetProjectId: targetProject._id,
+            targetPanelCount: targetProject.panels.length,
+            selectedPanelIndex: command.panelNumber,
+            activePanelKey: mediaPanel.localPanelKey,
+            panels: [mediaPanel],
+            startedByMessageId: inboundMessage.id,
+            expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
+        });
+        return "تم فتح استقبال المرفقات للوحة المحددة. أرسل الآن الصور والتسجيلات الصوتية، ثم أرسل كلمة STARCO FINISH كما هي لحفظها في المشروع.";
+    }
 
     if (command.type === "start") {
         const validationError = validateStart(command);
@@ -515,7 +580,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return ["يرجى ملء نوع المفاتيح والرئيسي والفرعيات كلها.", copperDetailsTemplate];
         }
         const nextPanels = session.panels.map((panel, index) => index === panelIndex
-            ? { ...(panel.toObject?.() || panel), copperDetails: { switches: command.switches, main: command.main, branches: command.branches } }
+            ? { ...(panel.toObject?.() || panel), copperDetails: { switches: command.switches, main: command.main, branches: command.branches, notes: command.notes || "" } }
             : panel
         );
         await sessions.updateById(session._id, { panels: nextPanels, expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000) });
@@ -581,15 +646,20 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const result = await finishSession(latestSession, inboundMessage);
         if (result.error) return result.error;
         if (result.waiting) {
-            return session.mode === "edit"
+            return session.mode === "media"
+                ? `جاري رفع ${result.waiting} ملف. سيتم حفظ المرفقات تلقائيًا فور اكتمال الرفع.`
+                : session.mode === "edit"
                 ? `جاري رفع ${result.waiting} ملف. سيتم حفظ التعديلات وإرسال الرابط تلقائيًا فور اكتمال الرفع.`
                 : `جاري رفع ${result.waiting} ملف. سيتم إنشاء المشروع وإرسال الرابط تلقائيًا فور اكتمال الرفع.`;
         }
         if (result.finalizing) {
-            return session.mode === "edit"
+            return session.mode === "media"
+                ? "جاري حفظ المرفقات، وستظهر في صفحة المشروع خلال لحظات."
+                : session.mode === "edit"
                 ? "جاري حفظ التعديلات، وسيصل إليك الرابط تلقائيًا خلال لحظات."
                 : "جاري إنشاء المشروع، وسيصل إليك الرابط تلقائيًا خلال لحظات.";
         }
+        if (session.mode === "media") return "تم حفظ الصور والتسجيلات في المشروع بنجاح. ارجع إلى صفحة المشروع في الموقع وستجدها مضافة.";
         return session.mode === "edit"
             ? projectUpdatedReply(result.project)
             : projectCreatedReply(result.project);

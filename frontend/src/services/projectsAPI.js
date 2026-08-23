@@ -38,6 +38,11 @@ export const startProjectEditing = (id) => api.post(`/projects/${id}/start-editi
 
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
 
+export const getProjectMediaWhatsappLink = (id, panelId) => api.get(
+    `/projects/${id}/media/whatsapp-link`,
+    { params: { panelId } },
+);
+
 export const getProjectMediaFile = (projectId, mediaId) => api.get(
     `/projects/${projectId}/media/${mediaId}/file`,
     { responseType: "blob" }

@@ -45,6 +45,11 @@ const parseWhatsappCommand = (text) => {
         };
     }
 
+    const mediaMatch = firstLine.match(/^STARCO\s+MEDIA\s+#?([a-f\d]{24})\s+PANEL\s+(\d+)$/i);
+    if (mediaMatch) {
+        return { type: "media", projectId: mediaMatch[1], panelNumber: parsePanelNumber(mediaMatch[2]) };
+    }
+
     const selectionMatch = firstLine.match(/^\s*رقم\s+اللوحة\s*(?::|：|-)?\s*(.+?)\s*$/i);
     if (selectionMatch) {
         return { type: "panel-selection", panelNumber: parsePanelNumber(selectionMatch[1]) };
@@ -71,7 +76,8 @@ const parseWhatsappCommand = (text) => {
     const switches = field(value, "نوع المفاتيح") || field(value, "المفاتيح");
     const main = field(value, "الرئيسي");
     const branches = field(value, "الفرعيات");
-    if (switches || main || branches) return { type: "copper-details", switches, main, branches };
+    const notes = field(value, "تفاصيل إضافية للنحاس") || field(value, "تفاصيل النحاس");
+    if (switches || main || branches || notes) return { type: "copper-details", switches, main, branches, notes };
 
     if (/^STARCO\s+FINISH$/i.test(firstLine)) return { type: "finish" };
     if (/^STARCO\s+(?:DELETE|CANCEL)$/i.test(firstLine)) return { type: "delete" };

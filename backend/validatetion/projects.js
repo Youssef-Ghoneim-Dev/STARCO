@@ -45,7 +45,14 @@ module.exports = (req, res, next) => {
                 copperDetails: joi.object({
                     switches: joi.string().allow("").optional(),
                     main: joi.string().allow("").optional(),
-                    branches: joi.string().allow("").optional()
+                    mainKey: joi.string().allow("").optional(),
+                    branches: joi.string().allow("").optional(),
+                    notes: joi.string().allow("").optional(),
+                    branchGroups: joi.array().items(joi.object({
+                        id: joi.string().allow("").optional(),
+                        optionKey: joi.string().allow("").optional(),
+                        count: joi.number().integer().min(1).optional()
+                    })).optional()
                 }).optional(),
 
                 copper: joi.object({
@@ -60,6 +67,7 @@ module.exports = (req, res, next) => {
                     }).optional(),
                     branches: joi.array().items(joi.object({
                         branchId: joi.string().optional(),
+                        branchGroupId: joi.string().allow("").optional(),
                         optionKey: joi.string().allow("").optional(),
                         direction: joi.string().valid("one", "two").optional(),
                         length: joi.number().min(0).allow(null).optional(),

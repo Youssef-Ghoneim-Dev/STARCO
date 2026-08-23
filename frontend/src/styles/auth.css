@@ -549,7 +549,28 @@
 .auth-btn { height: auto; min-height: 0; margin-top: 12px; padding: 22px 20px; line-height: 1.2; border-radius: 14px; }
 
 @media (max-width: 850px) {
-    .auth-card { height: 100%; min-height: 0; }
+    .auth-page {
+        height: auto;
+        min-height: 100vh;
+        max-height: none;
+        overflow: auto;
+    }
+
+    .auth-container {
+        height: auto;
+        min-height: 0;
+    }
+
+    .auth-card {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .auth-body {
+        overflow: visible;
+        padding: 20px 4px 24px 0;
+    }
 }
 
 @media (max-width: 500px) {

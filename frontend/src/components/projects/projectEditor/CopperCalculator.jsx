@@ -46,7 +46,18 @@ function CopperCalculator() {
   const barCountOptions = barCounts.map((count) => ({ value: count, label: String(count) }));
   const directionOptions = [{ value: "one", label: "اتجاه واحد" }, { value: "two", label: "اتجاهين" }];
   const updateMain = (field, value) => updateCopper((current) => ({ ...current, enabled: true, main: { ...(current.main || {}), [field]: value } }));
-  const updateBranch = (index, field, value) => updateCopper((current) => ({ ...current, enabled: true, branches: (current.branches || []).map((branch, currentIndex) => currentIndex === index ? { ...branch, [field]: value } : branch) }));
+  const updateBranch = (index, field, value) => updateCopper((current) => {
+    const groupId = current.branches?.[index]?.branchGroupId;
+    return {
+      ...current,
+      enabled: true,
+      branches: (current.branches || []).map((branch, currentIndex) =>
+        currentIndex === index || (field === "direction" && groupId && branch.branchGroupId === groupId)
+          ? { ...branch, [field]: value }
+          : branch
+      )
+    };
+  });
 
   if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg ?? configuration.pricePerKg ?? "" }))}>+ إضافة نحاس للوحة</button></div>;
 

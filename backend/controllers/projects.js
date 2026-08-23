@@ -59,6 +59,23 @@ const editableMarketingProjectData = (body = {}, existingProject) => {
             || defaultPanel;
         const currentObject = current.toObject?.() || current;
 
+        const incomingCopperDetails = incoming.copperDetails || {};
+        const branchGroups = Array.isArray(incomingCopperDetails.branchGroups)
+            ? incomingCopperDetails.branchGroups.map((group, groupIndex) => ({
+                id: String(group.id || `branch-group-${groupIndex + 1}`).slice(0, 100),
+                optionKey: String(group.optionKey || "").slice(0, 100),
+                count: Math.max(1, Math.min(100, Number(group.count) || 1))
+            }))
+            : (currentObject.copperDetails?.branchGroups || []);
+        const branchRows = branchGroups.flatMap((group) => Array.from({ length: group.count }, (_, branchIndex) => ({
+            branchId: `${group.id}-${branchIndex + 1}`,
+            branchGroupId: group.id,
+            optionKey: group.optionKey,
+            direction: "one",
+            barCount: 1
+        })));
+        const selectedMainKey = String(incomingCopperDetails.mainKey || incoming.copper?.main?.optionKey || currentObject.copperDetails?.mainKey || "").slice(0, 100);
+
         return {
             ...currentObject,
             panelId: currentObject.panelId || incoming.panelId,
@@ -72,8 +89,17 @@ const editableMarketingProjectData = (body = {}, existingProject) => {
             copperDetails: {
                 switches: String(incoming.copperDetails?.switches || ""),
                 main: String(incoming.copperDetails?.main || ""),
-                branches: String(incoming.copperDetails?.branches || "")
-            }
+                mainKey: selectedMainKey,
+                branches: String(incoming.copperDetails?.branches || ""),
+                notes: String(incoming.copperDetails?.notes || ""),
+                branchGroups
+            },
+            copper: incoming.hasCopper === true ? {
+                ...(currentObject.copper?.toObject?.() || currentObject.copper || {}),
+                enabled: true,
+                main: { ...(currentObject.copper?.main?.toObject?.() || currentObject.copper?.main || {}), optionKey: selectedMainKey },
+                branches: branchRows
+            } : { ...(currentObject.copper?.toObject?.() || currentObject.copper || {}), enabled: false, branches: [] }
         };
     });
 
@@ -418,6 +444,31 @@ const deleteProjectMedia = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+const getProjectMediaWhatsappLink = async (req, res, next) => {
+    try {
+        if (!isMarketer(req.user)) {
+            return res.status(403).json({ status: "error", message: "إرسال المرفقات عبر WhatsApp متاح للمندوب فقط." });
+        }
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project || !(await marketerOwnsProject(req.user, project))) {
+            return res.status(404).json({ status: "error", message: "المشروع غير موجود أو لا تملك صلاحية الوصول إليه." });
+        }
+        const panelIndex = project.panels.findIndex((panel) => String(panel.panelId) === String(req.query.panelId || ""));
+        if (panelIndex < 0) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
+
+        const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, "");
+        if (!businessPhone) {
+            return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
+        }
+        const text = `STARCO MEDIA #${project._id} PANEL ${panelIndex + 1}`;
+        return res.status(200).json({
+            status: "ok",
+            text,
+            url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}`
+        });
+    } catch (error) { next(error); }
+};
+
 const completeProject = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
@@ -502,4 +553,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, addProject, updateProject, startProjectEditing, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
