@@ -47,6 +47,8 @@ function AuthInput({
                     {getIcon()}
                 </span>
 
+                {name === "phoneNumber" && <span className="phone-country-prefix">+20</span>}
+
                 <input
                     id={name}
                     name={name}
@@ -55,7 +57,7 @@ function AuthInput({
                     onChange={onChange}
                     placeholder={placeholder}
                     dir="ltr"
-                    autoComplete="off"
+                    autoComplete={name === "phoneNumber" ? "tel-national" : "off"}
                     required
                 />
 

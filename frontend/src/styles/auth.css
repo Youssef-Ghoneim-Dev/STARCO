@@ -506,6 +506,21 @@
 
 }
 
+.input-wrapper:has(.phone-country-prefix) input {
+    padding-left: 96px;
+}
+
+.phone-country-prefix {
+    position: absolute;
+    left: 47px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #526174;
+    font-size: 14px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
 .auth-select { direction: ltr; text-align: left; }
 
 .google-auth { width: 100%; display: grid; justify-items: center; gap: 10px; margin-top: 2px; }
@@ -557,30 +572,14 @@
 }
 
 .google-login-shell {
-    position: relative;
-    height: 46px;
-}
-
-.google-login-shell > span {
-    position: absolute;
-    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    border: 1px solid #d6dce5;
-    border-radius: 999px;
-    background: #fff;
-    color: #253858;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 2px 6px rgba(38, 57, 90, .08);
-    pointer-events: none;
+    min-height: 46px;
 }
 
-.google-login-shell > span svg { color: #4285f4; font-size: 17px; }
-.google-login-shell > div { position: absolute; inset: 0; opacity: 0; }
-.google-login-shell iframe { height: 46px !important; }
+.google-login-shell > div { display: flex; justify-content: center; width: 100%; }
+.google-login-shell iframe { height: 46px !important; cursor: pointer; }
 
 /* The mobile rule previously forced a short fixed height, which pushed the
    label to the bottom once the button received vertical padding. */
