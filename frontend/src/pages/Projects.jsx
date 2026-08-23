@@ -43,9 +43,10 @@ function Projects() {
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ar-EG");
     const statusPriority = {
-      inProgress: 0,
-      pending: 1,
-      completed: 2,
+      editing: 0,
+      inProgress: 1,
+      pending: 2,
+      completed: 3,
     };
 
     return projects.filter((project) => {

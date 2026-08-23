@@ -34,6 +34,8 @@ export const completeProject = (id) => {
     return api.post(`/projects/${id}/complete`);
 };
 
+export const startProjectEditing = (id) => api.post(`/projects/${id}/start-editing`);
+
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
 
 export const getProjectMediaFile = (projectId, mediaId) => api.get(

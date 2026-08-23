@@ -62,6 +62,13 @@ projectsRouter.put(
 );
 
 projectsRouter.post(
+    "/:id/start-editing",
+    authMw,
+    CheckUserToken,
+    projectController.startProjectEditing
+);
+
+projectsRouter.post(
     "/:id/complete",
     authMw,
     CheckUserToken,

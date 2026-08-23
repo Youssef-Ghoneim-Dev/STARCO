@@ -18,6 +18,7 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
           <select value={status} onChange={(event) => onStatusChange(event.target.value)}>
             <option value="all">All statuses</option>
             <option value="pending">Pending</option>
+            <option value="editing">Editing</option>
             <option value="inProgress">In progress</option>
             <option value="completed">Completed</option>
           </select>

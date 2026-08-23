@@ -345,6 +345,11 @@
 
 }
 
+.project-status-badge.editing {
+    background: #fff4e5;
+    color: #b54708;
+}
+
 @media (max-width:949px) {
 
     .projects-header-actions {

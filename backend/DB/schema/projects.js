@@ -168,6 +168,7 @@ module.exports = new mongoose.Schema({
         enum: [
             "pending",
             "inProgress",
+            "editing",
             "completed"
         ],
         default: "pending"

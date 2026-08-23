@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
         }).optional(),
 
         status: joi.string()
-            .valid("pending", "inProgress", "completed")
+            .valid("pending", "inProgress", "editing", "completed")
             .optional(),
         prices: joi.object({
             sheetPrice: joi.number().allow(null).optional(),

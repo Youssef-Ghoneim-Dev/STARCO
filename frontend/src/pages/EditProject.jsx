@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProjectInfo from "../components/projects/projectEditor/ProjectInfo";
@@ -27,6 +28,23 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "" }) {
   </>;
 }
 
+function StartEditingPanel({ isMarketer }) {
+  const { beginEditing, savingProject } = useProject();
+  const [starting, setStarting] = useState(false);
+  const startEditing = async () => {
+    setStarting(true);
+    const result = await beginEditing();
+    setStarting(false);
+    if (result.success) toast.success(result.notification || "تم تحويل المشروع إلى وضع التعديل.");
+    else toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
+  };
+  return <section className="start-editing-panel" dir="rtl">
+    <h2>{isMarketer ? "هل تريد تعديل بيانات المشروع؟" : "هذا المشروع مكتمل"}</h2>
+    <p>{isMarketer ? "اضغط للبدء في تعديل البيانات والمرفقات. سيتم إشعار المهندس المسؤول بالمشروع." : "حوّل المشروع إلى وضع التعديل لتعديل التسعير أو بيانات اللوحات. سيتم إشعار المندوب."}</p>
+    <button type="button" className="start-editing-btn" disabled={starting || savingProject} onClick={startEditing}>{starting ? "جاري التحويل..." : "التحويل إلى وضع Editing"}</button>
+  </section>;
+}
+
 function ProjectWorkspace({ readOnly, isMarketer }) {
   const { project } = useProject();
   const [tab, setTab] = useState("project-data");
@@ -41,9 +59,10 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       : "";
 
   if (isMarketer) {
-    if (isCompleted) return <div className="project-read-only-notice" dir="rtl">هذا المشروع مكتمل، لذلك بياناته للعرض فقط.</div>;
+    if (isCompleted) return <StartEditingPanel isMarketer />;
     return <MarketingProjectEditor />;
   }
+  if (isCompleted && !readOnly) return <StartEditingPanel />;
   if (!isWhatsappProject) return <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />;
   return <>
     <div className="whatsapp-project-tabs" dir="rtl">

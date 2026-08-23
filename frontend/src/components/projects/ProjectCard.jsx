@@ -25,6 +25,7 @@ const formatProjectDate = (dateValue) => {
 };
 
 const statusDetails = {
+  editing: { label: "قيد التعديل", className: "editing" },
   inProgress: { label: "قيد التنفيذ", className: "in-progress" },
   pending: { label: "قيد الانتظار", className: "pending" },
   completed: { label: "مكتمل", className: "completed" },

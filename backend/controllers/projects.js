@@ -26,6 +26,17 @@ const marketerOwnsProject = async (user, project) => {
     return sameId(session?.marketingRepId, user._id);
 };
 
+const getProjectMarketer = async (project) => {
+    let marketerId = project.marketingId;
+    if (!marketerId && project.whatsappSessionId) {
+        const session = await whatsappSessions.findById(project.whatsappSessionId);
+        marketerId = session?.marketingRepId || null;
+    }
+    return marketerId
+        ? userModels.select_one({ _id: marketerId, approved: true, isDeleted: false })
+        : null;
+};
+
 const editableProjectData = (body = {}) => {
     const data = {};
     if (body.client) data.client = body.client;
@@ -279,7 +290,7 @@ const updateProject = async (req, res, next) => {
         if (!isOwner(req.user) && !sameId(existingProject.engineerId, req.user._id)) {
             return projectAlreadyClaimed(res, existingProject);
         }
-        if (existingProject.status !== "inProgress") {
+        if (!["inProgress", "editing"].includes(existingProject.status)) {
             return res.status(409).json({ status: "error", message: "لا يمكن تعديل مشروع مكتمل." });
         }
 
@@ -292,6 +303,53 @@ const updateProject = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+const startProjectEditing = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+
+        const marketerRequested = isMarketer(req.user);
+        const marketerOwns = marketerRequested && await marketerOwnsProject(req.user, project);
+        const technicalOwns = isOwner(req.user) || (isEngineer(req.user) && sameId(project.engineerId, req.user._id));
+        if (!marketerOwns && !technicalOwns) {
+            return res.status(403).json({ status: "error", message: "لا تملك صلاحية تحويل هذا المشروع إلى وضع التعديل." });
+        }
+
+        if (project.status !== "completed" && project.status !== "editing") {
+            return res.status(409).json({ status: "error", message: "هذا المشروع قابل للتعديل بالفعل." });
+        }
+
+        const editingProject = project.status === "editing"
+            ? project
+            : await projectModels.update({ id: project._id, status: "editing", updatedAt: Date.now() });
+        const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+        const workUrl = `${frontendUrl}/projects/${project._id}`;
+        let notification = "تم تحويل المشروع إلى وضع التعديل.";
+
+        if (project.status === "completed") {
+            try {
+                if (marketerRequested && project.engineerId) {
+                    const engineer = await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false });
+                    if (engineer?.phoneNumber) {
+                        await sendTextMessage(engineer.phoneNumber, `قام المندوب بطلب تعديل المشروع الخاص بالعميل: ${project.client?.name || "غير محدد"}.\nتم تحويله إلى حالة Editing.\nالرابط: ${workUrl}`);
+                        notification = "تم تحويل المشروع إلى وضع التعديل وإشعار المهندس المسؤول.";
+                    }
+                } else if (!marketerRequested) {
+                    const marketer = await getProjectMarketer(project);
+                    if (marketer?.phoneNumber) {
+                        await sendTextMessage(marketer.phoneNumber, `تم تحويل مشروعك الخاص بالعميل: ${project.client?.name || "غير محدد"} إلى حالة Editing.\nيمكنك الآن تعديل بيانات المشروع ومرفقاته.\nالرابط: ${workUrl}`);
+                        notification = "تم تحويل المشروع إلى وضع التعديل وإشعار المندوب.";
+                    }
+                }
+            } catch (error) {
+                notification = "تم تحويل المشروع إلى وضع التعديل، لكن تعذر إرسال إشعار WhatsApp.";
+            }
+        }
+
+        return res.status(200).json({ status: "ok", message: "تم تحويل المشروع إلى وضع التعديل.", notification, project: editingProject });
+    } catch (error) { next(error); }
 };
 
 const uploadProjectMedia = async (req, res, next) => {
@@ -382,8 +440,8 @@ const completeProject = async (req, res, next) => {
             updatedAt: Date.now()
         });
         let notification = "لم يتم إرسال رسالة؛ لا يوجد مسوّق مرتبط بالمشروع.";
-        if (completedProject?.marketingId) {
-            const marketer = await userModels.select_one({ _id: completedProject.marketingId, approved: true, isDeleted: false });
+        {
+            const marketer = await getProjectMarketer(completedProject);
             if (marketer?.phoneNumber) {
                 const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
                 const previewUrl = `${frontendUrl}/client-project/${completedProject._id}?key=${clientPreviewToken}`;
@@ -444,4 +502,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, addProject, updateProject, startProjectEditing, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

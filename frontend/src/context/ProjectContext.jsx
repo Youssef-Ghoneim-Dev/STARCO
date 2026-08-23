@@ -7,7 +7,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completeProject, getProject, updateProject } from "../services/projectsAPI";
+import { completeProject, getProject, startProjectEditing, updateProject } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
@@ -666,6 +666,16 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       setSavingProject(false);
     }
   }, [prices, project, projectId, readOnly]);
+  const beginEditing = useCallback(async () => {
+    try {
+      const { data } = await startProjectEditing(projectId);
+      setProject((current) => ({ ...current, status: data.project?.status || "editing" }));
+      setPreventAutoSave(false);
+      return { success: true, notification: data.notification };
+    } catch (error) {
+      return { success: false, message: getSaveErrorMessage(error) };
+    }
+  }, [projectId]);
   const canDeletePart = (part, parts) => {
     if (part.name.startsWith("باب")) {
       const doors = parts.filter((p) => p.name.startsWith("باب"));
@@ -736,6 +746,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         updatePriceField,
         updateCopper,
         saveProject,
+        beginEditing,
         canDeletePart,
         deletePart,
         deletePanel,

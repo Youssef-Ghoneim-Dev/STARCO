@@ -1246,6 +1246,12 @@
 .project-media-delete { position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #fff; background: #dc2626; cursor: pointer; box-shadow: 0 3px 10px rgb(127 29 29 / 28%); }
 .project-media-delete:hover { background: #b91c1c; }
 .project-audio-item .project-media-delete { top: 50%; transform: translateY(-50%); }
+.start-editing-panel { max-width: 680px; margin: 36px auto; padding: 30px; border: 1px solid #f5d3a7; border-radius: 18px; background: #fffbf5; text-align: right; }
+.start-editing-panel h2 { margin: 0 0 10px; color: #8c4b07; }
+.start-editing-panel p { margin: 0 0 20px; color: #6b5a45; line-height: 1.8; }
+.start-editing-btn { border: 0; border-radius: 10px; padding: 12px 18px; background: #b45309; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.start-editing-btn:hover { background: #92400e; }
+.start-editing-btn:disabled { opacity: .65; cursor: wait; }
 
 @media (max-width: 700px) {
   .marketing-editor-heading { align-items: flex-start; flex-direction: column; }
