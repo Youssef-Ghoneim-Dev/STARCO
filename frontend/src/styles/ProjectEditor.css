@@ -454,8 +454,8 @@
 }
 
 .pdf-choice-dialog {
-    width: min(440px, 100%);
-    padding: 28px;
+    width: min(380px, 100%);
+    padding: 22px;
     border-radius: 20px;
     background: #fff;
     direction: rtl;
@@ -1057,9 +1057,7 @@
 
 .add-part-modal {
 
-    width: 380px;
-
-    max-width: 90%;
+    width: min(350px, calc(100vw - 40px));
 
     background: #fff;
 
@@ -1239,10 +1237,13 @@
 .marketing-editor-heading p { margin-top: 6px; color: var(--text-light); }
 .marketing-client-card, .marketing-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .marketing-client-card label, .marketing-data-grid label, .marketing-full-field { display: flex; flex-direction: column; gap: 7px; font-weight: 700; color: var(--text); }
+.marketing-thickness-field { display: flex; flex-direction: column; gap: 7px; font-weight: 700; color: var(--text); }
+.marketing-thickness-field .thickness-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.marketing-thickness-field .thickness-item { padding: 10px; font-weight: 500; }
 .marketing-client-card input, .marketing-data-grid input, .marketing-full-field input, .marketing-full-field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; font: inherit; background: #fff; }
 .marketing-full-field { margin-top: 16px; }
 .marketing-full-field textarea { min-height: 92px; resize: vertical; }
-.marketing-copper-fields { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.marketing-copper-fields { margin-top: 26px; padding: 22px; border: 1px solid #dbe7ef; border-radius: 16px; background: #fbfdff; }
 .marketing-copper-fields h3 { margin: 0 0 12px; }
 .marketing-branches { margin-top: 18px; display: grid; gap: 12px; }
 .marketing-branches-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -1258,14 +1259,15 @@
 .marketing-upload-control { display: inline-flex; align-items: center; justify-content: center; margin-top: 16px; padding: 11px 16px; border: 1px dashed var(--primary); border-radius: 10px; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; background: #fff; }
 .marketing-upload-control:disabled { opacity: .65; cursor: wait; }
 .media-choice-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 20px; background: rgb(15 23 42 / 48%); }
-.media-choice-dialog { width: min(100%, 520px); padding: 24px; border-radius: 18px; background: #fff; box-shadow: 0 20px 60px rgb(15 23 42 / 28%); }
+.media-choice-dialog { width: min(360px, calc(100vw - 40px)); padding: 20px; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px rgb(15 23 42 / 28%); }
 .media-choice-dialog h3, .media-choice-dialog p { margin: 0; }
 .media-choice-dialog p { margin-top: 8px; color: var(--text-light); }
 .media-choice-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
 .media-choice-actions button { min-height: 48px; border: 1px solid var(--border); border-radius: 11px; background: #f8fafc; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .media-choice-actions .media-choice-whatsapp { border-color: #16a34a; background: #16a34a; color: #fff; }
 .media-choice-note { margin-top: 16px; padding: 12px; border-radius: 10px; background: #fff7dd; color: #7a4b00; font-size: 14px; line-height: 1.7; }
-.media-choice-cancel { display: block; margin: 16px auto 0; border: 0; background: transparent; color: var(--text-light); font: inherit; cursor: pointer; }
+.media-choice-cancel { display: block; width: 100%; min-height: 44px; margin: 14px auto 0; border: 0; border-radius: 10px; background: #fee2e2; color: #b91c1c; font: inherit; font-weight: 700; cursor: pointer; }
+.media-choice-cancel:hover { background: #fecaca; }
 .marketing-save-actions { display: flex; justify-content: flex-start; padding-top: 4px; }
 .project-media-item { position: relative; }
 .project-media-delete { position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #fff; background: #dc2626; cursor: pointer; box-shadow: 0 3px 10px rgb(127 29 29 / 28%); }

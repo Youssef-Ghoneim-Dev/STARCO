@@ -15,6 +15,8 @@ const isMarketer = (user) => user.role === "Marketer";
 const canWorkOnProjects = (user) => isOwner(user) || isEngineer(user);
 const canUseRecycleBin = (user) => ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(user.role);
 const sameId = (first, second) => String(first || "") === String(second || "");
+const MARKETER_EDIT_STATUSES = ["marketingDraft", "editingByMarketing"];
+const TECHNICAL_EDIT_STATUSES = ["inProgress", "editing", "editingByEngineer", "editingByOwner"];
 
 // Older WhatsApp projects may have been created before marketingId was saved
 // on the project.  Their WhatsApp session still has the correct marketer ID,
@@ -139,6 +141,8 @@ const getProjects = async (req, res, next) => {
                 { marketingId: req.user._id },
                 ...(sessionIds.length ? [{ whatsappSessionId: { $in: sessionIds } }] : [])
             ];
+        } else if (isEngineer(req.user)) {
+            condition.status = { $nin: ["marketingDraft", "editingByMarketing"] };
         } else if (!canWorkOnProjects(req.user) && req.user.role !== "MarketingManager") {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع." });
         }
@@ -284,7 +288,7 @@ const addProject = async (req, res, next) => {
             }],
             engineerId: isMarketer(req.user) ? null : req.user._id,
             marketingId: isMarketer(req.user) ? req.user._id : null,
-            status: isMarketer(req.user) ? "pending" : "inProgress",
+            status: isMarketer(req.user) ? "marketingDraft" : "inProgress",
             source: isMarketer(req.user) ? "marketing" : "manual"
         };
         const project = await projectModels.create(newProject);
@@ -303,8 +307,8 @@ const updateProject = async (req, res, next) => {
             if (!(await marketerOwnsProject(req.user, existingProject))) {
                 return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
             }
-            if (existingProject.status === "completed") {
-                return res.status(409).json({ status: "error", message: "لا يمكن تعديل بيانات مشروع مكتمل." });
+            if (!MARKETER_EDIT_STATUSES.includes(existingProject.status)) {
+                return res.status(409).json({ status: "error", message: "هذا المشروع ليس مفتوحًا لتعديل المندوب الآن." });
             }
             const project = await projectModels.update({
                 id: projectId,
@@ -316,8 +320,8 @@ const updateProject = async (req, res, next) => {
         if (!isOwner(req.user) && !sameId(existingProject.engineerId, req.user._id)) {
             return projectAlreadyClaimed(res, existingProject);
         }
-        if (!["inProgress", "editing"].includes(existingProject.status)) {
-            return res.status(409).json({ status: "error", message: "لا يمكن تعديل مشروع مكتمل." });
+        if (!TECHNICAL_EDIT_STATUSES.includes(existingProject.status)) {
+            return res.status(409).json({ status: "error", message: "هذا المشروع غير مفتوح للتعديل الفني الآن." });
         }
 
         const updates = editableProjectData(req.body);
@@ -343,13 +347,14 @@ const startProjectEditing = async (req, res, next) => {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية تحويل هذا المشروع إلى وضع التعديل." });
         }
 
-        if (project.status !== "completed" && project.status !== "editing") {
-            return res.status(409).json({ status: "error", message: "هذا المشروع قابل للتعديل بالفعل." });
+        if (project.status !== "completed") {
+            return res.status(409).json({ status: "error", message: "هذا المشروع مفتوح بالفعل لدى مستخدم آخر أو ما زال قيد العمل." });
         }
 
-        const editingProject = project.status === "editing"
-            ? project
-            : await projectModels.update({ id: project._id, status: "editing", updatedAt: Date.now() });
+        const editingStatus = marketerRequested
+            ? "editingByMarketing"
+            : isOwner(req.user) ? "editingByOwner" : "editingByEngineer";
+        const editingProject = await projectModels.update({ id: project._id, status: editingStatus, updatedAt: Date.now() });
         const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
         const workUrl = `${frontendUrl}/projects/${project._id}`;
         let notification = "تم تحويل المشروع إلى وضع التعديل.";
@@ -378,6 +383,24 @@ const startProjectEditing = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+const submitMarketingProject = async (req, res, next) => {
+    try {
+        if (!isMarketer(req.user)) {
+            return res.status(403).json({ status: "error", message: "إرسال المشروع للمهندس متاح للمندوب فقط." });
+        }
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!(await marketerOwnsProject(req.user, project))) {
+            return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
+        }
+        if (!MARKETER_EDIT_STATUSES.includes(project.status)) {
+            return res.status(409).json({ status: "error", message: "هذا المشروع أُرسل بالفعل للمهندس أو يعمل عليه شخص آخر." });
+        }
+        const submittedProject = await projectModels.update({ id: project._id, status: "pending", updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: "تم إرسال المشروع للمهندس للمراجعة.", project: submittedProject });
+    } catch (error) { next(error); }
+};
+
 const uploadProjectMedia = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
@@ -385,8 +408,8 @@ const uploadProjectMedia = async (req, res, next) => {
         if (!isMarketer(req.user) || !(await marketerOwnsProject(req.user, project))) {
             return res.status(403).json({ status: "error", message: "إضافة المرفقات متاحة للمندوب صاحب المشروع فقط." });
         }
-        if (project.status === "completed") {
-            return res.status(409).json({ status: "error", message: "لا يمكن إضافة مرفقات إلى مشروع مكتمل." });
+        if (!MARKETER_EDIT_STATUSES.includes(project.status)) {
+            return res.status(409).json({ status: "error", message: "لا يمكن إضافة مرفقات لأن المشروع ليس مفتوحًا لتعديل المندوب." });
         }
         if (!req.file) return res.status(400).json({ status: "error", message: "اختر صورة أو تسجيلًا صوتيًا أولًا." });
         const panel = (project.panels || []).find((item) => String(item.panelId) === String(req.body.panelId));
@@ -433,7 +456,7 @@ const deleteProjectMedia = async (req, res, next) => {
         if (!isMarketer(req.user) || !(await marketerOwnsProject(req.user, project))) {
             return res.status(403).json({ status: "error", message: "حذف المرفقات متاح للمندوب صاحب المشروع فقط." });
         }
-        if (project.status === "completed") return res.status(409).json({ status: "error", message: "لا يمكن حذف مرفقات من مشروع مكتمل." });
+        if (!MARKETER_EDIT_STATUSES.includes(project.status)) return res.status(409).json({ status: "error", message: "لا يمكن حذف مرفقات لأن المشروع ليس مفتوحًا لتعديل المندوب." });
 
         const records = await whatsappMessages.findAllByProject(project._id);
         const record = records.find((item) => String(item._id) === String(req.params.mediaId));
@@ -478,6 +501,9 @@ const completeProject = async (req, res, next) => {
         }
         if (project.status === "completed") {
             return res.status(200).json({ status: "ok", message: "المشروع مكتمل بالفعل.", project });
+        }
+        if (!TECHNICAL_EDIT_STATUSES.includes(project.status)) {
+            return res.status(409).json({ status: "error", message: "لا يمكن إتمام المشروع قبل فتحه للتعديل الفني." });
         }
 
         const projectForClientSync = project.toObject();
@@ -553,4 +579,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

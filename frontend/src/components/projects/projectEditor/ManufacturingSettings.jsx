@@ -1,5 +1,6 @@
 import { useProject } from "../../../context/ProjectContext";
 import CopperCalculator from "./CopperCalculator";
+import { THICKNESS_OPTIONS } from "../../../utils/thicknessOptions";
 
 function ManufacturingSettings() {
   const { project, activePanel, updateThickness, updatePriceField } =
@@ -18,19 +19,6 @@ function ManufacturingSettings() {
     { key: "fiber", label: "فيبر" },
     { key: "rakam", label: "ريكام" },
     { key: "fuse", label: "فيوز" },
-  ];
-  const thicknessOptions = [
-    "0.6",
-    "0.7",
-    "0.8",
-    "0.9",
-    "1",
-    "1.25",
-    "1.5",
-    "1.8",
-    "2",
-    "2.5",
-    "3",
   ];
 
   return (
@@ -88,7 +76,7 @@ function ManufacturingSettings() {
         <label>سمك الصاج</label>
 
         <div className="thickness-grid">
-          {thicknessOptions.map((item) => (
+          {THICKNESS_OPTIONS.map((item) => (
             <label key={item} className="thickness-item">
               <input
                 type="checkbox"

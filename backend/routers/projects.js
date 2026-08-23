@@ -70,6 +70,13 @@ projectsRouter.post(
 );
 
 projectsRouter.post(
+    "/:id/submit",
+    authMw,
+    CheckUserToken,
+    projectController.submitMarketingProject
+);
+
+projectsRouter.post(
     "/:id/complete",
     authMw,
     CheckUserToken,

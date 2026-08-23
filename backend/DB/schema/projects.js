@@ -174,6 +174,10 @@ module.exports = new mongoose.Schema({
     status: {
         type: String,
         enum: [
+            "marketingDraft",
+            "editingByMarketing",
+            "editingByEngineer",
+            "editingByOwner",
             "pending",
             "inProgress",
             "editing",

@@ -39,8 +39,8 @@ function StartEditingPanel({ isMarketer }) {
     else toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
   };
   return <section className="start-editing-panel" dir="rtl">
-    <h2>{isMarketer ? "هل تريد تعديل بيانات المشروع؟" : "هذا المشروع مكتمل"}</h2>
-    <p>{isMarketer ? "اضغط للبدء في تعديل البيانات والمرفقات. سيتم إشعار المهندس المسؤول بالمشروع." : "حوّل المشروع إلى وضع التعديل لتعديل التسعير أو بيانات اللوحات. سيتم إشعار المندوب."}</p>
+    <h2>{isMarketer ? "هل تريد تعديل بيانات المشروع؟" : "تعديل مشروع مكتمل"}</h2>
+    <p>{isMarketer ? "المشروع ظاهر لك الآن للعرض فقط. ابدأ التعديل عندما تكون مستعدًا، وسيُحجز لك وحدك حتى ترسله للمهندس." : "المشروع ظاهر لك الآن للعرض فقط. ابدأ التعديل عندما تكون مستعدًا، وسيُحجز لك وحدك أثناء العمل."}</p>
     <button type="button" className="start-editing-btn" disabled={starting || savingProject} onClick={startEditing}>{starting ? "جاري التحويل..." : "التحويل إلى وضع Editing"}</button>
   </section>;
 }
@@ -50,7 +50,9 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const [tab, setTab] = useState("project-data");
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
-  const editorReadOnly = readOnly || isCompleted;
+  const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
+  const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
+  const editorReadOnly = readOnly || !technicalCanEdit;
 
   const readOnlyMessage = !readOnly && isCompleted
     ? "هذا المشروع مكتمل، لذلك هو للعرض فقط ولا يمكن تعديل تسعيره أو ملف PDF الخاص به."
@@ -59,11 +61,20 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       : "";
 
   if (isMarketer) {
-    if (isCompleted) return <StartEditingPanel isMarketer />;
-    return <MarketingProjectEditor />;
+    if (marketerCanEdit) return <MarketingProjectEditor />;
+    const message = isCompleted
+      ? "هذا المشروع مكتمل. يمكنك مراجعة بياناته، ولتغييرها اضغط تحويل المشروع إلى وضع التعديل."
+      : "هذا المشروع أُرسل للمهندس أو يعمل عليه حاليًا، لذلك بياناته للعرض فقط.";
+    return <>
+      <div className="project-read-only-notice" dir="rtl">{message}</div>
+      <fieldset className="project-read-only-fieldset" disabled><MarketingProjectEditor /></fieldset>
+      {isCompleted && <StartEditingPanel isMarketer />}
+    </>;
   }
-  if (isCompleted && !readOnly) return <StartEditingPanel />;
-  if (!isWhatsappProject) return <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />;
+  if (!isWhatsappProject) return <>
+    <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />
+    {isCompleted && !readOnly && <StartEditingPanel />}
+  </>;
   return <>
     <div className="whatsapp-project-tabs" dir="rtl">
       <button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button>
@@ -71,6 +82,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     </div>
     {isCompleted && <div className="project-read-only-notice" dir="rtl">هذا المشروع مكتمل، لذلك هو للعرض فقط ولا يمكن تعديل تسعيره أو ملف PDF الخاص به.</div>}
     {tab === "project-data" ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnly ? readOnlyMessage : ""} />}
+    {isCompleted && !readOnly && <StartEditingPanel />}
   </>;
 }
 

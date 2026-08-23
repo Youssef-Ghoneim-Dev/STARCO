@@ -36,6 +36,8 @@ export const completeProject = (id) => {
 
 export const startProjectEditing = (id) => api.post(`/projects/${id}/start-editing`);
 
+export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
+
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
 
 export const getProjectMediaWhatsappLink = (id, panelId) => api.get(

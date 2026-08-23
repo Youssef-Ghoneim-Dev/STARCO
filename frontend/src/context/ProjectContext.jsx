@@ -7,7 +7,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completeProject, getProject, startProjectEditing, updateProject } from "../services/projectsAPI";
+import { completeProject, getProject, startProjectEditing, submitMarketingProject as submitMarketingProjectRequest, updateProject } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
@@ -676,6 +676,25 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
   }, [projectId]);
+  const submitMarketingProject = useCallback(async () => {
+    if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
+    if (!project.client.name?.trim()) return { success: false, message: "يرجى تحديد اسم العميل قبل إرسال المشروع." };
+    setSavingProject(true);
+    setSaveProjectError(null);
+    try {
+      await updateProject(projectId, prepareProjectForSaving(project, prices));
+      const { data } = await submitMarketingProjectRequest(projectId);
+      setProject((current) => ({ ...current, status: data.project?.status || "pending" }));
+      setPreventAutoSave(true);
+      return { success: true, message: data.message };
+    } catch (error) {
+      const message = getSaveErrorMessage(error);
+      setSaveProjectError(message);
+      return { success: false, message };
+    } finally {
+      setSavingProject(false);
+    }
+  }, [prices, project, projectId, readOnly]);
   const canDeletePart = (part, parts) => {
     if (part.name.startsWith("باب")) {
       const doors = parts.filter((p) => p.name.startsWith("باب"));
@@ -746,6 +765,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         updatePriceField,
         updateCopper,
         saveProject,
+        submitMarketingProject,
         beginEditing,
         canDeletePart,
         deletePart,
