@@ -38,9 +38,11 @@ const copperDetailsTemplate = `نوع المفاتيح:
 
 const normalizePanelType = (value) => {
     const normalized = String(value || "").trim().toLowerCase().replace(/[أإآ]/g, "ا");
+    const compact = normalized.replace(/[.\-\s_]/g, "");
     if (["كنترول", "control"].includes(normalized)) return "كنترول";
     if (["وتربروف", "واتربروف", "وتر بروف", "waterproof"].includes(normalized)) return "وتربروف";
     if (["نمطي", "standard"].includes(normalized)) return "نمطي";
+    if (["ont", "اونت"].includes(compact)) return "O.N.T";
     // الأنواع الجديدة التي يضيفها Owner Manager تظل مقبولة في WhatsApp؛
     // ربطها بكتالوج الإعدادات يتم بالاسم المخصص لها.
     return String(value || "").trim();
@@ -48,7 +50,7 @@ const normalizePanelType = (value) => {
 
 const panelTypeKeyFor = (panelType, panelTypes = []) =>
     panelTypes.find((item) => item.whatsappType === panelType)?.key
-    || ({ "كنترول": "control", "واتربروف": "waterproof", "نمطي": "standard" }[panelType] || "");
+    || ({ "كنترول": "control", "واتربروف": "waterproof", "نمطي": "standard", "O.N.T": "ont" }[panelType] || "");
 
 const panelRegistrationReply = (panel, session) => session.mode === "edit"
     ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`

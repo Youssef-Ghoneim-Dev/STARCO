@@ -159,10 +159,18 @@ const hydratePanel = (panel, index, systemConfig) => {
   const basePanel = createPanel(index + 1, systemConfig);
   const incomingPanel = panel || {};
   const incomingPrices = incomingPanel.prices || {};
+  const normalizedType = String(incomingPanel.panelType || "").toLowerCase().replace(/[.\-\s_]/g, "");
+  const inferredType = (systemConfig?.panelTypes || []).find((type) =>
+    type.key === incomingPanel.panelTypeKey
+    || String(type.name || "").toLowerCase().replace(/[.\-\s_]/g, "") === normalizedType
+    || (normalizedType === "ont" && type.key === "ont")
+  );
 
   return normalizePanelThickness({
     ...basePanel,
     ...incomingPanel,
+    panelTypeKey: incomingPanel.panelTypeKey || inferredType?.key || "",
+    panelType: inferredType?.name || incomingPanel.panelType || "",
     panelName: incomingPanel.panelName || basePanel.panelName,
     parts:
       Array.isArray(incomingPanel.parts) && incomingPanel.parts.length > 0
@@ -707,6 +715,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         showAllPrices,
         setShowAllPrices,
         updateClient,
+        updatePanel,
         updatePrices,
         updatePartField,
         addPart,

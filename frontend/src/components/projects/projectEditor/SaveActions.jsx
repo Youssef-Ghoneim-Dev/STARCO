@@ -82,11 +82,11 @@ function SaveActions() {
   }, [project, prices]);
   const canSubmit = validationErrors.length === 0;
 
-  const saveAndReturnToProjects = async ({ complete = false } = {}) => {
+  const saveCurrentProject = async ({ complete = false, returnToProjects = false } = {}) => {
     const result = await saveProject({ complete });
     if (result.success) {
-      toast.success(complete ? "تم إتمام المشروع." : "تم حفظ المشروع.");
-      navigate("/projects");
+      toast.success(complete ? "تم إتمام المشروع وإرسال إشعار للمندوب." : "تم حفظ التعديلات.");
+      if (returnToProjects) navigate("/projects");
       return true;
     } else {
       toast.error(
@@ -97,7 +97,11 @@ function SaveActions() {
   };
 
   const handleSave = async () => {
-    await saveAndReturnToProjects({ complete: true });
+    await saveCurrentProject();
+  };
+
+  const handleComplete = async () => {
+    await saveCurrentProject({ complete: true, returnToProjects: true });
   };
 
   const generatePdf = async () => {
@@ -143,7 +147,7 @@ function SaveActions() {
       return;
     }
 
-    const saved = await saveAndReturnToProjects();
+    const saved = await saveCurrentProject();
     if (!saved) {
       previewWindow?.close();
       return;
@@ -157,7 +161,7 @@ function SaveActions() {
     if (!pdf) return;
 
     const filename = getProjectPdfFilename(project);
-    const saved = await saveAndReturnToProjects();
+    const saved = await saveCurrentProject();
     if (!saved) return;
 
     const url = URL.createObjectURL(pdf);
@@ -197,7 +201,15 @@ function SaveActions() {
           onClick={handleSave}
           disabled={!canSubmit || savingProject || generatingPdf}
         >
-          {savingProject ? "جاري الحفظ..." : "حفظ المشروع"}
+          {savingProject ? "جاري الحفظ..." : "حفظ التعديلات"}
+        </button>
+        <button
+          className="complete-project-btn"
+          type="button"
+          onClick={handleComplete}
+          disabled={!canSubmit || savingProject || generatingPdf}
+        >
+          إتمام المشروع وإرسال رابط المعاينة
         </button>
       </div>
       {!canSubmit && (
@@ -216,7 +228,7 @@ function SaveActions() {
         >
           <div className="pdf-choice-dialog">
             <h2 id="pdf-choice-title">معاينة PDF</h2>
-            <p>هل تود حفظ المشروع أم رؤية ملف PDF فقط؟</p>
+            <p>هل تريد حفظ التعديلات قبل فتح ملف PDF أم رؤية الملف فقط؟</p>
             <div className="pdf-choice-actions">
               <button
                 className="secondary-btn"
@@ -232,7 +244,7 @@ function SaveActions() {
                 onClick={handleSaveAndPreview}
                 disabled={generatingPdf || savingProject}
               >
-                حفظ المشروع
+                حفظ التعديلات والمعاينة
               </button>
             </div>
             <button

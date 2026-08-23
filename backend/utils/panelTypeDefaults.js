@@ -53,7 +53,7 @@ const panelTypeDefaults = [
         ]
     },
     {
-        key: "ont", name: "O.N.T", whatsappType: "نمطي", additionalParts: ["الجلسة", "حمل مشترك"], prices: { manufacturing: 150, locks: 10, hinges: 3, transport: 35, screws: 0, stretch: 0, carton: 20 },
+        key: "ont", name: "O.N.T", whatsappType: "نمطي", additionalParts: ["الجلسة", "حامل مشترك"], prices: { manufacturing: 150, locks: 10, hinges: 3, transport: 35, screws: 0, stretch: 0, carton: 20 },
         parts: [
             part("box", "العلبة", "Length", "Width + (Depth + 15 * 2)"),
             part("side", "الجنب", "Width + 40", "Depth + 45", 2),

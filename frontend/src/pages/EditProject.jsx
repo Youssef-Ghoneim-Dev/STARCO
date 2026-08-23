@@ -8,6 +8,7 @@ import PanelEditor from "../components/projects/projectEditor/PanelEditor";
 import SaveActions from "../components/projects/projectEditor/SaveActions";
 import { ProjectProvider, useProject } from "../context/ProjectContext";
 import WhatsappProjectData from "../components/projects/projectEditor/WhatsappProjectData";
+import MarketingProjectEditor from "../components/projects/projectEditor/MarketingProjectEditor";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ProjectEditor.css";
 
@@ -26,10 +27,10 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "" }) {
   </>;
 }
 
-function ProjectWorkspace({ readOnly }) {
+function ProjectWorkspace({ readOnly, isMarketer }) {
   const { project } = useProject();
   const [tab, setTab] = useState("project-data");
-  const isWhatsappProject = project?.source === "whatsapp";
+  const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
   const editorReadOnly = readOnly || isCompleted;
 
@@ -39,6 +40,10 @@ function ProjectWorkspace({ readOnly }) {
       ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
       : "";
 
+  if (isMarketer) {
+    if (isCompleted) return <div className="project-read-only-notice" dir="rtl">هذا المشروع مكتمل، لذلك بياناته للعرض فقط.</div>;
+    return <MarketingProjectEditor />;
+  }
   if (!isWhatsappProject) return <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />;
   return <>
     <div className="whatsapp-project-tabs" dir="rtl">
@@ -53,13 +58,14 @@ function ProjectWorkspace({ readOnly }) {
 function EditProject() {
   const { id } = useParams();
   const { user } = useAuth();
-  const readOnly = !["OwnerManager", "Engineer"].includes(user?.role);
+  const isMarketer = user?.role === "Marketer";
+  const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(user?.role);
 
   return (
     <ProjectProvider projectId={id} readOnly={readOnly}>
       <DashboardLayout notAllowed={false}>
         <div className="project-editor-page">
-          <ProjectWorkspace readOnly={readOnly} />
+          <ProjectWorkspace readOnly={readOnly} isMarketer={isMarketer} />
         </div>
       </DashboardLayout>
     </ProjectProvider>

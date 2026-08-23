@@ -1,0 +1,54 @@
+.client-project-preview,
+.client-preview-state {
+  min-height: 100dvh;
+  background: #eef3f8;
+}
+
+.client-preview-header {
+  min-height: 68px;
+  padding: 12px clamp(18px, 4vw, 56px);
+  background: #09233f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 2px 10px rgb(6 27 47 / 18%);
+}
+
+.client-preview-header div { display: grid; gap: 2px; }
+.client-preview-header strong { font-size: 18px; letter-spacing: .2px; }
+.client-preview-header span,
+.client-preview-header p { margin: 0; color: #c9d8e8; font-size: 13px; }
+.client-preview-header p { border: 1px solid rgb(201 216 232 / 65%); border-radius: 999px; padding: 5px 12px; }
+
+.client-preview-frame {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 68px);
+  border: 0;
+  background: #fff;
+}
+
+.client-preview-state {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: #132d47;
+}
+
+.client-preview-state > div {
+  width: min(100%, 420px);
+  padding: 36px 28px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(18 45 71 / 10%);
+}
+
+.client-preview-state h1 { margin: 12px 0 8px; font-size: 22px; }
+.client-preview-state p { margin: 0; color: #65758a; }
+.client-preview-error h1 { color: #b42318; }
+.client-preview-spinner { width: 30px; height: 30px; display: inline-block; border: 3px solid #d5e2ed; border-top-color: #1f5f85; border-radius: 50%; animation: client-preview-spin .8s linear infinite; }
+
+@keyframes client-preview-spin { to { transform: rotate(360deg); } }

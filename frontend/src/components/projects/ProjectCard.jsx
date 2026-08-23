@@ -5,6 +5,7 @@ import {
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 import { deleteProject } from "../../services/projectsAPI";
 import projectImage from "../../assets/images/1.svg";
@@ -31,6 +32,7 @@ const statusDetails = {
 
 function ProjectCard({ project, setProjects }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const firstPanelName = project.panels?.[0]?.panelName?.trim();
   const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
   const projectStatus = statusDetails[project.status] || statusDetails.pending;
@@ -59,9 +61,9 @@ function ProjectCard({ project, setProjects }) {
           {clientPrefix} / {project.client?.name}
         </div>
 
-        <button className="delete-project-btn" onClick={handleDelete}>
+        {["OwnerManager", "Engineer"].includes(user?.role) && <button className="delete-project-btn" onClick={handleDelete}>
           <HiOutlineTrash />
-        </button>
+        </button>}
       </div>
 
       <div className="project-body">

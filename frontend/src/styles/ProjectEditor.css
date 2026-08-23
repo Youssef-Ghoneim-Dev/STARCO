@@ -357,7 +357,7 @@
 
     display: grid;
 
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 
     gap: 16px;
 
@@ -397,8 +397,31 @@
 
 }
 
+.complete-project-btn {
+
+    width: 100%;
+
+    min-height: 50px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    background: #15803d;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    font: inherit;
+
+    font-weight: 700;
+
+}
+
 .primary-btn:disabled,
-.secondary-btn:disabled {
+.secondary-btn:disabled,
+.complete-project-btn:disabled {
     cursor: not-allowed;
     opacity: 0.55;
 }
@@ -1203,3 +1226,24 @@
     cursor: pointer;
 }
 @media (max-width: 760px) { .panel-setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.marketing-project-editor { display: flex; flex-direction: column; gap: 24px; }
+.marketing-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.marketing-editor-heading h2, .marketing-editor-heading p, .marketing-panel-title h3 { margin: 0; }
+.marketing-editor-heading p { margin-top: 6px; color: var(--text-light); }
+.marketing-client-card, .marketing-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.marketing-client-card label, .marketing-data-grid label, .marketing-full-field { display: flex; flex-direction: column; gap: 7px; font-weight: 700; color: var(--text); }
+.marketing-client-card input, .marketing-data-grid input, .marketing-full-field input, .marketing-full-field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; font: inherit; background: #fff; }
+.marketing-full-field { margin-top: 16px; }
+.marketing-full-field textarea { min-height: 92px; resize: vertical; }
+.marketing-copper-fields { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.marketing-copper-fields h3 { margin: 0 0 12px; }
+.marketing-panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.delete-panel-data-btn { border: 0; border-radius: 8px; background: #fff1f2; color: #be123c; padding: 9px 12px; cursor: pointer; font: inherit; }
+.marketing-upload-control { display: inline-flex; align-items: center; justify-content: center; margin-top: 16px; padding: 11px 16px; border: 1px dashed var(--primary); border-radius: 10px; color: var(--primary); font-weight: 700; cursor: pointer; }
+.marketing-upload-control input { display: none; }
+
+@media (max-width: 700px) {
+  .marketing-editor-heading { align-items: flex-start; flex-direction: column; }
+  .marketing-client-card, .marketing-data-grid { grid-template-columns: 1fr; }
+}

@@ -31,6 +31,20 @@ const add_one = async (project) => {
     return await openconnection.insertOne(project);
 };
 
+const findClientPreview = async (projectId, clientPreviewToken) => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        projectSchema
+    );
+
+    return openconnection.findOne({
+        _id: projectId,
+        clientPreviewToken,
+        status: "completed",
+        isDeleted: false
+    });
+};
+
 const create = async (project) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -128,6 +142,7 @@ const deleteForever = async (projectId) => {
 module.exports = {
     select_one,
     selectall,
+    findClientPreview,
     add_one,
     create,
     update_whatsapp_project,

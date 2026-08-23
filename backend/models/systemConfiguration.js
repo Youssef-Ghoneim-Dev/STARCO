@@ -33,8 +33,8 @@ const get = async () => {
         const fallback = defaultsByKey.get(type.key);
         if (!fallback) return type;
         const parts = (type.parts || []).map((part) => (
-            type.key === "ont" && part.key === "shared" && part.name === "المشترك"
-                ? { ...part, name: "حمل مشترك" }
+            type.key === "ont" && part.key === "shared" && ["المشترك", "حمل مشترك"].includes(part.name)
+                ? { ...part, name: "حامل مشترك" }
                 : part
         ));
         return {

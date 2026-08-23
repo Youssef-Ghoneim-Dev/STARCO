@@ -8,6 +8,10 @@ export const getProject = (id) => {
     return api.get(`/projects/${id}`);
 };
 
+export const getClientProjectPreview = (id, key) => {
+    return api.get(`/projects/client/${id}`, { params: { key } });
+};
+
 export const deleteProject = (id) => {
     return api.delete(`/projects/${id}`);
 };
@@ -36,3 +40,10 @@ export const getProjectMediaFile = (projectId, mediaId) => api.get(
     `/projects/${projectId}/media/${mediaId}/file`,
     { responseType: "blob" }
 );
+
+export const uploadProjectMedia = (projectId, panelId, file) => {
+    const formData = new FormData();
+    formData.append("panelId", panelId);
+    formData.append("file", file);
+    return api.post(`/projects/${projectId}/media`, formData);
+};

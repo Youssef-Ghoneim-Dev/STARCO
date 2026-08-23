@@ -16,6 +16,7 @@ import Configuration from "./pages/Configuration";
 import Profile from "./pages/Profile";
 import Clients from "./pages/Clients";
 import DeletedProjects from "./pages/DeletedProjects";
+import ClientProjectPreview from "./pages/ClientProjectPreview";
 
 function App() {
   return (
@@ -53,6 +54,8 @@ function App() {
         }}
       />
       <Routes>
+        <Route path="/client-project/:id" element={<ClientProjectPreview />} />
+
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
 

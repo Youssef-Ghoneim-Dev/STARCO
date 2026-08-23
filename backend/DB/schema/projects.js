@@ -174,8 +174,15 @@ module.exports = new mongoose.Schema({
     },
     source: {
         type: String,
-        enum: ["manual", "whatsapp"],
+        enum: ["manual", "whatsapp", "marketing"],
         default: "manual"
+    },
+    // This is a separate, unguessable key for the client-facing preview link.
+    // It is never used to grant dashboard access.
+    clientPreviewToken: {
+        type: String,
+        default: null,
+        select: false
     },
     whatsappSessionId: {
         type: mongoose.Schema.Types.ObjectId,

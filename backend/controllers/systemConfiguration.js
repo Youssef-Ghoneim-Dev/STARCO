@@ -36,6 +36,16 @@ const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
 
 const get = async (req, res, next) => {
     try {
+        if (req.user?.role === "Marketer") {
+            const config = await models.get();
+            return res.status(200).json({
+                panelTypes: (config?.panelTypes || []).map((type) => ({
+                    key: type.key,
+                    name: type.name,
+                    whatsappType: type.whatsappType
+                }))
+            });
+        }
         if (
             req.user?.role !== "OwnerManager" &&
             req.user?.role !== "Engineer"
