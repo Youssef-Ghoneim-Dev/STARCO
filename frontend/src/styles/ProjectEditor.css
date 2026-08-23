@@ -1242,6 +1242,10 @@
 .delete-panel-data-btn { border: 0; border-radius: 8px; background: #fff1f2; color: #be123c; padding: 9px 12px; cursor: pointer; font: inherit; }
 .marketing-upload-control { display: inline-flex; align-items: center; justify-content: center; margin-top: 16px; padding: 11px 16px; border: 1px dashed var(--primary); border-radius: 10px; color: var(--primary); font-weight: 700; cursor: pointer; }
 .marketing-upload-control input { display: none; }
+.project-media-item { position: relative; }
+.project-media-delete { position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #fff; background: #dc2626; cursor: pointer; box-shadow: 0 3px 10px rgb(127 29 29 / 28%); }
+.project-media-delete:hover { background: #b91c1c; }
+.project-audio-item .project-media-delete { top: 50%; transform: translateY(-50%); }
 
 @media (max-width: 700px) {
   .marketing-editor-heading { align-items: flex-start; flex-direction: column; }

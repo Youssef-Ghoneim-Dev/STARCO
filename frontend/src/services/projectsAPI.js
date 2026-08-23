@@ -47,3 +47,7 @@ export const uploadProjectMedia = (projectId, panelId, file) => {
     formData.append("file", file);
     return api.post(`/projects/${projectId}/media`, formData);
 };
+
+export const deleteProjectMedia = (projectId, mediaId) => api.delete(
+    `/projects/${projectId}/media/${mediaId}`,
+);

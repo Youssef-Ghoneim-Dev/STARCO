@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
-import { IoPause, IoPlay } from "react-icons/io5";
+import { IoPause, IoPlay, IoTrashOutline } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useProject } from "../../../context/ProjectContext";
-import { getProjectMedia, getProjectMediaFile, uploadProjectMedia } from "../../../services/projectsAPI";
+import { deleteProjectMedia, getProjectMedia, getProjectMediaFile, uploadProjectMedia } from "../../../services/projectsAPI";
 
 const ReadOnlyField = ({ label, value }) => <label className="whatsapp-readonly-field"><span>{label}</span><input value={value || "—"} disabled /></label>;
 
@@ -36,10 +36,11 @@ function AudioPlayer({ url, shouldPlay, onStart, onEnded }) {
   </div>;
 }
 
-function MediaItem({ item, url, onOpen, audioProps }) {
+function MediaItem({ item, url, onOpen, audioProps, onDelete }) {
   if (!url) return <p className="whatsapp-media-loading">جاري تحميل المرفق...</p>;
-  if (item.type === "image") return <button type="button" className="whatsapp-image-thumb" onClick={onOpen}><img src={url} alt="مرفق من المندوب" /></button>;
-  if (item.type === "audio") return <AudioPlayer url={url} {...audioProps} />;
+  const removeButton = onDelete && <button type="button" className="project-media-delete" onClick={onDelete} aria-label="حذف المرفق"><IoTrashOutline /></button>;
+  if (item.type === "image") return <div className="project-media-item"><button type="button" className="whatsapp-image-thumb" onClick={onOpen}><img src={url} alt="مرفق من المندوب" /></button>{removeButton}</div>;
+  if (item.type === "audio") return <div className="project-media-item project-audio-item"><AudioPlayer url={url} {...audioProps} />{removeButton}</div>;
   return <p className="whatsapp-media-loading">نوع المرفق غير مدعوم للعرض.</p>;
 }
 
@@ -96,13 +97,23 @@ function WhatsappProjectData({ editable = false }) {
       toast.error(error?.response?.data?.message || "تعذر رفع أحد المرفقات.");
     } finally { setUploading(false); }
   };
+  const removeMedia = async (item) => {
+    if (!window.confirm("هل تريد حذف هذا المرفق؟")) return;
+    try {
+      await deleteProjectMedia(project._id, item.id);
+      setMedia((current) => current.filter((entry) => entry.id !== item.id));
+      toast.success("تم حذف المرفق.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "تعذر حذف المرفق.");
+    }
+  };
   return <section className="whatsapp-project-data" dir="rtl">
     <div className="whatsapp-data-heading"><h2>مرفقات المشروع</h2><p>{editable ? "أضف الصور والتسجيلات الخاصة باللوحة الحالية." : "الصور والتسجيلات التي أضيفت إلى المشروع."}</p></div>
     {!editable && <><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع اللوحة" value={panel.panelType} /><ReadOnlyField label="هل يوجد نحاس" value={panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : ""} />{panel.panelType === "كنترول" && <ReadOnlyField label="تركيب لوحة الكنترول" value={panel.controlInstallation} />}<ReadOnlyField label="تفاصيل إضافية" value={panel.additionalDetails} /></div>
     {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main} /><ReadOnlyField label="الفرعيات" value={copper.branches} /></div></div>}</>}
     <div className="whatsapp-media-accordions">
-      <details open><summary>صور المشروع <b>{images.length}</b></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
-      <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
+      <details open><summary>صور المشروع <b>{images.length}</b></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => removeMedia(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
+      <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => removeMedia(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
       {mediaError && <p className="whatsapp-media-error">{mediaError}</p>}
     </div>
     {editable && <label className="marketing-upload-control">{uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}<input type="file" accept="image/*,audio/*" multiple disabled={uploading} onChange={uploadFiles} /></label>}

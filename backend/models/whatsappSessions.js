@@ -8,6 +8,7 @@ const findActiveByPhone = (senderPhone) =>
     getModel().findOne({ senderPhone, status: "collecting" });
 
 const findById = (id) => getModel().findById(id);
+const findByMarketer = (marketingRepId) => getModel().find({ marketingRepId }).select("_id");
 const claimForFinalization = (id) => getModel().findOneAndUpdate(
     { _id: id, status: "collecting" },
     { status: "finalizing" },
@@ -20,6 +21,7 @@ const updateById = (id, update) => getModel().findByIdAndUpdate(id, update, { ne
 module.exports = {
     findActiveByPhone,
     findById,
+    findByMarketer,
     claimForFinalization,
     create,
     updateById

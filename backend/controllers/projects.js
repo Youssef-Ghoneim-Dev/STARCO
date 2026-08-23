@@ -6,6 +6,7 @@ const systemConfiguration = require("../models/systemConfiguration");
 const { sendTextMessage } = require("../services/whatsappMeta");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
+const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
 
 const isOwner = (user) => user.role === "OwnerManager";
@@ -14,6 +15,16 @@ const isMarketer = (user) => user.role === "Marketer";
 const canWorkOnProjects = (user) => isOwner(user) || isEngineer(user);
 const canUseRecycleBin = (user) => ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(user.role);
 const sameId = (first, second) => String(first || "") === String(second || "");
+
+// Older WhatsApp projects may have been created before marketingId was saved
+// on the project.  Their WhatsApp session still has the correct marketer ID,
+// so retain access through that relation rather than hiding valid projects.
+const marketerOwnsProject = async (user, project) => {
+    if (sameId(project.marketingId, user._id)) return true;
+    if (!project.whatsappSessionId) return false;
+    const session = await whatsappSessions.findById(project.whatsappSessionId);
+    return sameId(session?.marketingRepId, user._id);
+};
 
 const editableProjectData = (body = {}) => {
     const data = {};
@@ -85,7 +96,12 @@ const getProjects = async (req, res, next) => {
     try {
         const condition = { isDeleted: false };
         if (req.user.role === "Marketer") {
-            condition.marketingId = req.user._id;
+            const sessions = await whatsappSessions.findByMarketer(req.user._id);
+            const sessionIds = sessions.map((session) => session._id);
+            condition.$or = [
+                { marketingId: req.user._id },
+                ...(sessionIds.length ? [{ whatsappSessionId: { $in: sessionIds } }] : [])
+            ];
         } else if (!canWorkOnProjects(req.user) && req.user.role !== "MarketingManager") {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع." });
         }
@@ -136,7 +152,7 @@ const getProject = async (req, res, next) => {
 
         if (isOwner(req.user)) return res.status(200).json(project);
         if (req.user.role === "Marketer") {
-            if (!sameId(project.marketingId, req.user._id)) {
+            if (!(await marketerOwnsProject(req.user, project))) {
                 return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
             }
             return res.status(200).json(project);
@@ -152,14 +168,14 @@ const getProject = async (req, res, next) => {
 };
 
 const canReadProject = (user, project) => isOwner(user)
-    || (user.role === "Marketer" && sameId(project.marketingId, user._id))
     || (isEngineer(user) && sameId(project.engineerId, user._id));
 
 const getProjectMedia = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-        if (!canReadProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض مرفقات المشروع." });
+        const marketerCanRead = req.user.role === "Marketer" && await marketerOwnsProject(req.user, project);
+        if (!canReadProject(req.user, project) && !marketerCanRead) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض مرفقات المشروع." });
         const records = await whatsappMessages.findByProject(project._id);
         return res.status(200).json(records.map((record) => ({
             id: record._id,
@@ -177,7 +193,8 @@ const getProjectMediaFile = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project) return res.status(404).end();
-        if (!canReadProject(req.user, project)) return res.sendStatus(403);
+        const marketerCanRead = req.user.role === "Marketer" && await marketerOwnsProject(req.user, project);
+        if (!canReadProject(req.user, project) && !marketerCanRead) return res.sendStatus(403);
         const records = await whatsappMessages.findByProject(project._id);
         const record = records.find((item) => String(item._id) === req.params.mediaId);
         if (!record?.media?.storageFileId) return res.sendStatus(404);
@@ -246,7 +263,7 @@ const updateProject = async (req, res, next) => {
         const existingProject = await projectModels.select_one({ _id: projectId, isDeleted: false });
         if (!existingProject) return res.status(404).json({ status: "error", message: `project id ${projectId} not found` });
         if (isMarketer(req.user)) {
-            if (!sameId(existingProject.marketingId, req.user._id)) {
+            if (!(await marketerOwnsProject(req.user, existingProject))) {
                 return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
             }
             if (existingProject.status === "completed") {
@@ -281,7 +298,7 @@ const uploadProjectMedia = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-        if (!isMarketer(req.user) || !sameId(project.marketingId, req.user._id)) {
+        if (!isMarketer(req.user) || !(await marketerOwnsProject(req.user, project))) {
             return res.status(403).json({ status: "error", message: "إضافة المرفقات متاحة للمندوب صاحب المشروع فقط." });
         }
         if (project.status === "completed") {
@@ -322,6 +339,24 @@ const uploadProjectMedia = async (req, res, next) => {
             mimeType: record.media.mimeType,
             fileSize: record.media.fileSize
         });
+    } catch (error) { next(error); }
+};
+
+const deleteProjectMedia = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!isMarketer(req.user) || !(await marketerOwnsProject(req.user, project))) {
+            return res.status(403).json({ status: "error", message: "حذف المرفقات متاح للمندوب صاحب المشروع فقط." });
+        }
+        if (project.status === "completed") return res.status(409).json({ status: "error", message: "لا يمكن حذف مرفقات من مشروع مكتمل." });
+
+        const records = await whatsappMessages.findAllByProject(project._id);
+        const record = records.find((item) => String(item._id) === String(req.params.mediaId));
+        if (!record) return res.status(404).json({ status: "error", message: "المرفق غير موجود." });
+        if (record.media?.storageFileId) await deleteStoredFile(record.media.storageFileId);
+        await whatsappMessages.deleteById(record._id);
+        return res.status(200).json({ status: "ok", message: "تم حذف المرفق." });
     } catch (error) { next(error); }
 };
 
@@ -409,4 +444,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, addProject, updateProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

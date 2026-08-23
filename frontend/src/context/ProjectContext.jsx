@@ -244,6 +244,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   });
   const [activePanel, setActivePanel] = useState(0);
   const [loadingProject, setLoadingProject] = useState(true);
+  const [projectLoadError, setProjectLoadError] = useState("");
   const [savingProject, setSavingProject] = useState(false);
   const [saveProjectError, setSaveProjectError] = useState(null);
   const [showWeight, setShowWeight] = useState(false);
@@ -268,6 +269,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     const loadSavedProject = async () => {
         setLoadingProject(true);
         try {
+          setProjectLoadError("");
           const { data } = await getProject(projectId);
           if (!mounted) return;
 
@@ -291,6 +293,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           setPreventAutoSave(data.status === "completed" || !needsWhatsappBackfill(data, savedConfig));
         } catch (error) {
           console.error("Failed to load project:", error);
+          if (mounted) {
+            setProjectLoadError(getSaveErrorMessage(error));
+          }
         } finally {
           if (mounted) setLoadingProject(false);
         }
@@ -700,6 +705,12 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       </div>
     );
   }
+  if (projectLoadError) {
+    return <div className="route-loading project-load-error" dir="rtl">
+      <h2>تعذر فتح المشروع</h2>
+      <p>{projectLoadError}</p>
+    </div>;
+  }
   return (
     <ProjectContext.Provider
       value={{
@@ -708,6 +719,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         activePanel,
         setActivePanel,
         loadingProject,
+        projectLoadError,
         savingProject,
         saveProjectError,
         showWeight,

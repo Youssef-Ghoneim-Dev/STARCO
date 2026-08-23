@@ -19,6 +19,7 @@ const findByProject = (projectId) => getModel().find({
 }).sort({ createdAt: 1 });
 const findAllByProject = (projectId) => getModel().find({ projectId });
 const deleteByProject = (projectId) => getModel().deleteMany({ projectId });
+const deleteById = (id) => getModel().findByIdAndDelete(id);
 
 module.exports = {
     findByProviderMessageId,
@@ -28,5 +29,6 @@ module.exports = {
     findBySession,
     findByProject,
     findAllByProject,
-    deleteByProject
+    deleteByProject,
+    deleteById
 };
