@@ -264,6 +264,10 @@
     background: transparent;
     padding: 0 12px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
 }
 
 .panel-tab.active {
@@ -278,6 +282,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 6px;
+    line-height: 1;
 }
 
 .panel-tab-wrapper.active {
@@ -302,7 +308,8 @@
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    margin-bottom: 2px;
+    margin: 0;
+    padding: 0;
 }
 
 .delete-panel-btn:hover {

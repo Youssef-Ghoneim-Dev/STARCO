@@ -12,8 +12,21 @@ module.exports = (req, res, next) => {
         }).optional(),
 
         status: joi.string()
-            .valid("pending", "inProgress", "editing", "completed")
+            .valid("marketingDraft", "editingByMarketing", "editingByEngineer", "editingByOwner", "pending", "inProgress", "editing", "completed")
             .optional(),
+        clientNameReview: joi.object({
+            enteredName: joi.string().allow("").max(100).optional(),
+            resolved: joi.boolean().optional(),
+            resolution: joi.string().valid("", "existing", "new").optional(),
+            candidates: joi.array().items(joi.object({
+                _id: joi.any().optional(),
+                clientId: joi.any().allow(null).optional(),
+                name: joi.string().allow("").max(100).optional(),
+                type: joi.string().valid("person", "company").optional(),
+                profitPercentage: joi.number().min(0).max(100).optional(),
+                similarity: joi.number().min(0).max(100).optional()
+            })).optional()
+        }).allow(null).optional(),
         prices: joi.object({
             sheetPrice: joi.number().allow(null).optional(),
             paintPrice: joi.number().allow(null).optional(),
@@ -49,6 +62,7 @@ module.exports = (req, res, next) => {
                     branches: joi.string().allow("").optional(),
                     notes: joi.string().allow("").optional(),
                     branchGroups: joi.array().items(joi.object({
+                        _id: joi.any().optional(),
                         id: joi.string().allow("").optional(),
                         optionKey: joi.string().allow("").optional(),
                         count: joi.number().integer().min(1).optional()
@@ -66,6 +80,7 @@ module.exports = (req, res, next) => {
                         barCount: joi.number().min(1).optional()
                     }).optional(),
                     branches: joi.array().items(joi.object({
+                        _id: joi.any().optional(),
                         branchId: joi.string().optional(),
                         branchGroupId: joi.string().allow("").optional(),
                         optionKey: joi.string().allow("").optional(),

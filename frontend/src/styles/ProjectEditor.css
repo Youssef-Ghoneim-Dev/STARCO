@@ -288,8 +288,7 @@
 .client-match-card button { border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; cursor: pointer; background: var(--primary); color: #fff; }
 .client-match-card button:last-child { background: #fff; color: #667085; border: 1px solid var(--border); }
 .marketing-client-search { position: relative; }
-.marketing-client-suggestions { inset: calc(100% - 26px) 0 auto; }
-.marketing-client-search-hint { margin: 8px 0 0; color: #667085; font-size: 13px; line-height: 1.6; }
+.marketing-client-suggestions { inset: calc(100% + 6px) 0 auto; }
 
 .panels-tabs {
 
@@ -415,6 +414,10 @@
     color: #fff;
 
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
 
     font: inherit;
 
@@ -1262,7 +1265,7 @@
 .marketing-upload-control { display: inline-flex; align-items: center; justify-content: center; margin-top: 16px; padding: 11px 16px; border: 1px dashed var(--primary); border-radius: 10px; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; background: #fff; }
 .marketing-upload-control:disabled { opacity: .65; cursor: wait; }
 .media-choice-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 20px; background: rgb(15 23 42 / 48%); }
-.media-choice-dialog { width: min(360px, calc(100vw - 40px)); padding: 20px; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px rgb(15 23 42 / 28%); }
+.media-choice-dialog { box-sizing: border-box; width: min(86vw, 420px); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 20px; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px rgb(15 23 42 / 28%); }
 .media-choice-dialog h3, .media-choice-dialog p { margin: 0; }
 .media-choice-dialog p { margin-top: 8px; color: var(--text-light); }
 .media-choice-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
@@ -1271,6 +1274,9 @@
 .media-choice-note { margin-top: 16px; padding: 12px; border-radius: 10px; background: #fff7dd; color: #7a4b00; font-size: 14px; line-height: 1.7; }
 .media-choice-cancel { display: block; width: 100%; min-height: 44px; margin: 14px auto 0; border: 0; border-radius: 10px; background: #fee2e2; color: #b91c1c; font: inherit; font-weight: 700; cursor: pointer; }
 .media-choice-cancel:hover { background: #fecaca; }
+.media-delete-actions { display: flex; gap: 10px; margin-top: 18px; }
+.media-delete-actions button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: #eef2f6; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.media-delete-actions .media-delete-confirm { background: #dc2626; color: #fff; }
 .marketing-save-actions { display: flex; justify-content: flex-start; padding-top: 4px; }
 .project-media-item { position: relative; }
 .project-media-delete { position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #fff; background: #dc2626; cursor: pointer; box-shadow: 0 3px 10px rgb(127 29 29 / 28%); }

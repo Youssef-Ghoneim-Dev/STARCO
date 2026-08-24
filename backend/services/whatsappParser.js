@@ -79,7 +79,7 @@ const parseWhatsappCommand = (text) => {
     const notes = field(value, "تفاصيل إضافية للنحاس") || field(value, "تفاصيل النحاس");
     if (switches || main || branches || notes) return { type: "copper-details", switches, main, branches, notes };
 
-    if (/^STARCO\s+FINISH$/i.test(firstLine)) return { type: "finish" };
+    if (/^(?:STARCO\s+FINISH|FINISH|تم|تمام|خلصت)$/i.test(firstLine)) return { type: "finish" };
     if (/^STARCO\s+(?:DELETE|CANCEL)$/i.test(firstLine)) return { type: "delete" };
     return null;
 };

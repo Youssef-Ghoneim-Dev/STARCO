@@ -55,6 +55,8 @@ function WhatsappProjectData({ editable = false }) {
   const [uploadRefresh, setUploadRefresh] = useState(0);
   const [showUploadChoice, setShowUploadChoice] = useState(false);
   const [openingWhatsapp, setOpeningWhatsapp] = useState(false);
+  const [mediaToDelete, setMediaToDelete] = useState(null);
+  const [deletingMedia, setDeletingMedia] = useState(false);
   const uploadInputRef = useRef(null);
   useEffect(() => {
     if (!project?._id) return;
@@ -100,15 +102,17 @@ function WhatsappProjectData({ editable = false }) {
       toast.error(error?.response?.data?.message || "تعذر رفع أحد المرفقات.");
     } finally { setUploading(false); }
   };
-  const removeMedia = async (item) => {
-    if (!window.confirm("هل تريد حذف هذا المرفق؟")) return;
+  const removeMedia = async () => {
+    if (!mediaToDelete) return;
+    setDeletingMedia(true);
     try {
-      await deleteProjectMedia(project._id, item.id);
-      setMedia((current) => current.filter((entry) => entry.id !== item.id));
+      await deleteProjectMedia(project._id, mediaToDelete.id);
+      setMedia((current) => current.filter((entry) => entry.id !== mediaToDelete.id));
+      setMediaToDelete(null);
       toast.success("تم حذف المرفق.");
     } catch (error) {
       toast.error(error?.response?.data?.message || "تعذر حذف المرفق.");
-    }
+    } finally { setDeletingMedia(false); }
   };
   const chooseLocalUpload = () => {
     setShowUploadChoice(false);
@@ -129,11 +133,12 @@ function WhatsappProjectData({ editable = false }) {
     {!editable && <><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع اللوحة" value={panel.panelType} /><ReadOnlyField label="هل يوجد نحاس" value={panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : ""} />{panel.panelType === "كنترول" && <ReadOnlyField label="تركيب لوحة الكنترول" value={panel.controlInstallation} />}<ReadOnlyField label="تفاصيل إضافية" value={panel.additionalDetails} /></div>
     {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main} /><ReadOnlyField label="الفرعيات" value={copper.branches} /></div></div>}</>}
     <div className="whatsapp-media-accordions">
-      <details open><summary>صور المشروع <b>{images.length}</b></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => removeMedia(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
-      <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => removeMedia(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
+      <details open><summary>صور المشروع <b>{images.length}</b></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
+      <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
       {mediaError && <p className="whatsapp-media-error">{mediaError}</p>}
     </div>
-    {editable && <><input ref={uploadInputRef} className="marketing-upload-input" type="file" accept="image/*,audio/*" multiple disabled={uploading} onChange={uploadFiles} /><button type="button" className="marketing-upload-control" onClick={() => setShowUploadChoice(true)} disabled={uploading}>{uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}</button>{showUploadChoice && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog"><h3>إضافة مرفقات المشروع</h3><p>اختر طريقة الإضافة المناسبة لك.</p><div className="media-choice-actions"><button type="button" onClick={chooseLocalUpload}>من مساحة التخزين</button><button type="button" className="media-choice-whatsapp" onClick={chooseWhatsappUpload} disabled={openingWhatsapp}>{openingWhatsapp ? "جاري فتح WhatsApp..." : "عن طريق WhatsApp"}</button></div><div className="media-choice-note"><strong>مهم:</strong> عند اختيار WhatsApp سيفتح لك نص جاهز. لا تحذف ولا تغيّر أي حرف منه؛ أرسله كما هو، ثم أرسل الصور أو التسجيلات وأرسل <b>STARCO FINISH</b>.</div><button type="button" className="media-choice-cancel" onClick={() => setShowUploadChoice(false)} disabled={openingWhatsapp}>إلغاء</button></div></div>}</>}
+    {editable && <><input ref={uploadInputRef} className="marketing-upload-input" type="file" accept="image/*,audio/*" multiple disabled={uploading} onChange={uploadFiles} /><button type="button" className="marketing-upload-control" onClick={() => setShowUploadChoice(true)} disabled={uploading}>{uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}</button>{showUploadChoice && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog"><h3>إضافة مرفقات المشروع</h3><p>اختر طريقة الإضافة المناسبة لك.</p><div className="media-choice-actions"><button type="button" onClick={chooseLocalUpload}>من مساحة التخزين</button><button type="button" className="media-choice-whatsapp" onClick={chooseWhatsappUpload} disabled={openingWhatsapp}>{openingWhatsapp ? "جاري فتح WhatsApp..." : "عن طريق WhatsApp"}</button></div><div className="media-choice-note"><strong>مهم:</strong> عند اختيار WhatsApp سيفتح لك نص جاهز. لا تحذف ولا تغيّر أي حرف منه؛ أرسله كما هو، ثم أرسل الصور أو التسجيلات، وبعد الانتهاء أرسل: <b>تم</b> أو <b>تمام</b> أو <b>خلصت</b>.</div><button type="button" className="media-choice-cancel" onClick={() => setShowUploadChoice(false)} disabled={openingWhatsapp}>إلغاء</button></div></div>}</>}
+    {mediaToDelete && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog media-delete-dialog"><h3>حذف المرفق</h3><p>هل تريد حذف هذا المرفق من المشروع؟</p><div className="media-delete-actions"><button type="button" onClick={() => setMediaToDelete(null)} disabled={deletingMedia}>إلغاء</button><button type="button" className="media-delete-confirm" onClick={removeMedia} disabled={deletingMedia}>{deletingMedia ? "جاري الحذف..." : "حذف"}</button></div></div></div>}
     <Lightbox open={viewerIndex !== null} close={() => setViewerIndex(null)} index={viewerIndex || 0} slides={gallerySlides} plugins={[Zoom]} zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }} />
   </section>;
 }

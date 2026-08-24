@@ -54,11 +54,11 @@ const panelTypeKeyFor = (panelType, panelTypes = []) =>
     || ({ "كنترول": "control", "واتربروف": "waterproof", "نمطي": "standard", "O.N.T": "ont" }[panelType] || "");
 
 const panelRegistrationReply = (panel, session) => session.mode === "edit"
-    ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل STARCO FINISH لحفظ التعديلات.`
+    ? `تم تجهيز تعديل لوحة ${session.selectedPanelIndex}. يمكنك اختيار لوحة أخرى برسالة: رقم اللوحة: 2، أو أرسل «تم» لحفظ التعديلات.`
     : `تم تسجيل لوحة: ${panel.panelName}. أرسل الآن كل الصور والتسجيلات والتفاصيل الخاصة بها.`;
 
 const panelInstructions = (templates) => [
-    `تم بدء المشروع بنجاح. أرسل بيانات اللوحة بالشكل التالي، ثم أرسل الصور والتسجيلات الخاصة بها. عند إنهاء جميع اللوحات أرسل: STARCO FINISH\n\nمثال:\n${panelExample}`,
+    `تم بدء المشروع بنجاح. أرسل بيانات اللوحة بالشكل التالي، ثم أرسل الصور والتسجيلات الخاصة بها. عند إنهاء جميع اللوحات أرسل: تم\n\nمثال:\n${panelExample}`,
     templates.panel
 ];
 
@@ -422,7 +422,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
 
     if (command.type === "media") {
         if (await getActiveSession(senderPhone)) {
-            return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة STARCO FINISH أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
+            return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
         const targetProject = await projects.select_one({ _id: command.projectId, marketingId: marketer._id, isDeleted: false });
         if (!targetProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
@@ -452,14 +452,14 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             startedByMessageId: inboundMessage.id,
             expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
         });
-        return "تم فتح استقبال المرفقات للوحة المحددة. أرسل الآن الصور والتسجيلات الصوتية، ثم أرسل كلمة STARCO FINISH كما هي لحفظها في المشروع.";
+        return "تم فتح استقبال المرفقات للوحة المحددة. أرسل الآن الصور والتسجيلات الصوتية، ثم أرسل «تم» أو «تمام» أو «خلصت» لحفظها في المشروع.";
     }
 
     if (command.type === "start") {
         const validationError = validateStart(command);
         if (validationError) return [`${validationError}\n\nمثال:\nSTARCO START\nاسم العميل: شركة ستاركو`, templates.startProject];
         if (await getActiveSession(senderPhone)) {
-            return "لديك مشروع مفتوح بالفعل. أرسل STARCO FINISH لإنهائه أو STARCO DELETE لحذف الجلسة الحالية.";
+            return "لديك مشروع مفتوح بالفعل. أرسل «تم» لإنهائه أو STARCO DELETE لحذف الجلسة الحالية.";
         }
 
         const session = await sessions.create({
@@ -645,20 +645,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const latestSession = await sessions.findById(session._id);
         const result = await finishSession(latestSession, inboundMessage);
         if (result.error) return result.error;
-        if (result.waiting) {
-            return session.mode === "media"
-                ? `جاري رفع ${result.waiting} ملف. سيتم حفظ المرفقات تلقائيًا فور اكتمال الرفع.`
-                : session.mode === "edit"
-                ? `جاري رفع ${result.waiting} ملف. سيتم حفظ التعديلات وإرسال الرابط تلقائيًا فور اكتمال الرفع.`
-                : `جاري رفع ${result.waiting} ملف. سيتم إنشاء المشروع وإرسال الرابط تلقائيًا فور اكتمال الرفع.`;
-        }
-        if (result.finalizing) {
-            return session.mode === "media"
-                ? "جاري حفظ المرفقات، وستظهر في صفحة المشروع خلال لحظات."
-                : session.mode === "edit"
-                ? "جاري حفظ التعديلات، وسيصل إليك الرابط تلقائيًا خلال لحظات."
-                : "جاري إنشاء المشروع، وسيصل إليك الرابط تلقائيًا خلال لحظات.";
-        }
+        if (result.waiting || result.finalizing) return [];
         if (session.mode === "media") return "تم حفظ الصور والتسجيلات في المشروع بنجاح. ارجع إلى صفحة المشروع في الموقع وستجدها مضافة.";
         return session.mode === "edit"
             ? projectUpdatedReply(result.project)
@@ -684,6 +671,20 @@ const handleIncomingMessage = async (message, value) => {
     }
 
     if (command) {
+        try {
+            await messages.create({
+                providerMessageId: message.id,
+                direction: "inbound",
+                sessionId: activeSession?._id || null,
+                senderPhone,
+                type: "text",
+                text: text || null,
+                status: "command_received"
+            });
+        } catch (error) {
+            if (error?.code === 11000) return;
+            throw error;
+        }
         const reply = await handleCommand({ command, senderPhone, marketer, inboundMessage: message });
         for (const body of normalizeReplies(reply)) {
             await sendSafeText(senderPhone, body);

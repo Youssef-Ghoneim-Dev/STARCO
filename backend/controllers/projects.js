@@ -419,7 +419,7 @@ const submitMarketingProject = async (req, res, next) => {
         }
         const clientNameReview = await buildClientNameReview(project.client);
         const submittedProject = await projectModels.update({ id: project._id, status: "pending", clientNameReview, updatedAt: Date.now() });
-        return res.status(200).json({ status: "ok", message: "تم إرسال المشروع للمهندس للمراجعة.", project: submittedProject });
+        return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", project: submittedProject });
     } catch (error) { next(error); }
 };
 
