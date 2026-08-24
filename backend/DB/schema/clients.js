@@ -1,7 +1,7 @@
 const { string } = require("joi")
 const mongoose = require("mongoose")
 module.exports = new mongoose.Schema({
-    name: { type: String, required: true , unique: true },
+    name: { type: String, required: true },
     type: {
         type: String, enum: [
             "person",

@@ -11,6 +11,12 @@ clientsrouter.get(
     clientController.search
 );
 clientsrouter.get(
+    "/similar",
+    authMw,
+    CheckuserToken,
+    clientController.findSimilar
+);
+clientsrouter.get(
     "/",
     authMw,
     CheckuserToken,

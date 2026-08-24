@@ -170,6 +170,18 @@ module.exports = new mongoose.Schema({
             default: 0
         }
     },
+    clientNameReview: {
+        enteredName: { type: String, default: "" },
+        resolved: { type: Boolean, default: false },
+        resolution: { type: String, enum: ["", "existing", "new"], default: "" },
+        candidates: [{
+            clientId: { type: mongoose.Schema.Types.ObjectId, default: null },
+            name: { type: String, default: "" },
+            type: { type: String, enum: ["person", "company"], default: "person" },
+            profitPercentage: { type: Number, default: 0 },
+            similarity: { type: Number, default: 0 }
+        }]
+    },
 
     status: {
         type: String,

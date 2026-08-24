@@ -39,6 +39,17 @@ const search = async (name) => {
     }).limit(10);
 }
 
+const select_for_name_review = async () => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        clientSchema
+    );
+
+    return await openconnection
+        .find({}, { name: 1, type: 1, profitPercentage: 1 })
+        .sort({ name: 1 });
+};
+
 const update = async (client) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -69,6 +80,7 @@ module.exports = {
     add_one,
     select_all,
     search,
+    select_for_name_review,
     select_one,
     update,
     delete_one

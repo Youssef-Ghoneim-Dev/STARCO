@@ -57,11 +57,12 @@ const normalizeCopperForSaving = (copper = {}) => ({
 
 // الحفظ التلقائي يسمح بخانات فارغة أثناء الشغل، بينما الحفظ النهائي
 // يحول القيم الرقمية ويحتفظ بالأجزاء المكتملة فقط.
-const prepareProjectForSaving = ({ client, status, panels }, prices) => ({
+const prepareProjectForSaving = ({ client, clientNameReview, status, panels }, prices) => ({
   client: {
     ...client,
     profitPercentage: toNumber(client?.profitPercentage),
   },
+  clientNameReview,
   status,
   prices: {
     sheetPrice: toNumber(prices.sheetPrice),
@@ -188,11 +189,12 @@ const hydratePanel = (panel, index, systemConfig) => {
   });
 };
 
-const prepareProjectForAutoSaving = ({ client, status, panels }, prices) => ({
+const prepareProjectForAutoSaving = ({ client, clientNameReview, status, panels }, prices) => ({
   client: {
     ...client,
     profitPercentage: toNumber(client?.profitPercentage),
   },
+  clientNameReview,
   status,
   prices: {
     sheetPrice: toNumber(prices.sheetPrice),
@@ -336,6 +338,11 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         ...clientData,
       },
     }));
+  }, []);
+
+  const updateClientNameReview = useCallback((review) => {
+    setPreventAutoSave(false);
+    setProject((prev) => ({ ...prev, clientNameReview: review }));
   }, []);
 
   const updatePrices = useCallback((field, value) => {
@@ -756,6 +763,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         showAllPrices,
         setShowAllPrices,
         updateClient,
+        updateClientNameReview,
         updatePanel,
         updatePrices,
         updatePartField,

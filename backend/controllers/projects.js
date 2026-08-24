@@ -3,6 +3,8 @@ const userModels = require("../models/users");
 const syncClient = require("../services/syncClient");
 const defaultProject = require("../utils/defaultProject");
 const systemConfiguration = require("../models/systemConfiguration");
+const clientModels = require("../models/clients");
+const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendTextMessage } = require("../services/whatsappMeta");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
@@ -44,7 +46,24 @@ const editableProjectData = (body = {}) => {
     if (body.client) data.client = body.client;
     if (body.prices) data.prices = body.prices;
     if (body.panels) data.panels = body.panels;
+    if (body.clientNameReview) data.clientNameReview = body.clientNameReview;
     return data;
+};
+
+const buildClientNameReview = async (client) => {
+    if (!client?.name?.trim() || client?.id) return null;
+    const candidates = (await clientModels.select_for_name_review())
+        .map((existing) => ({ existing, match: compareClientNames(client.name, existing.name) }))
+        .filter(({ match }) => match.isCandidate)
+        .sort((left, right) => right.match.similarity - left.match.similarity)
+        .map(({ existing, match }) => ({
+            clientId: existing._id,
+            name: existing.name,
+            type: existing.type,
+            profitPercentage: existing.profitPercentage,
+            similarity: match.similarity
+        }));
+    return candidates.length ? { enteredName: client.name.trim(), resolved: false, resolution: "", candidates } : null;
 };
 
 // A marketer owns the request details, but never the quote.  Keep their
@@ -108,8 +127,10 @@ const editableMarketingProjectData = (body = {}, existingProject) => {
     return {
         client: {
             ...(existingProject.client.toObject?.() || existingProject.client),
+            id: body.client?.id || null,
             name: String(body.client?.name || "").slice(0, 100),
-            type: body.client?.type === "company" ? "company" : "person"
+            type: body.client?.type === "company" ? "company" : "person",
+            profitPercentage: Number(body.client?.profitPercentage) || 0
         },
         panels: panels.length ? panels : existingPanels
     };
@@ -396,7 +417,8 @@ const submitMarketingProject = async (req, res, next) => {
         if (!MARKETER_EDIT_STATUSES.includes(project.status)) {
             return res.status(409).json({ status: "error", message: "هذا المشروع أُرسل بالفعل للمهندس أو يعمل عليه شخص آخر." });
         }
-        const submittedProject = await projectModels.update({ id: project._id, status: "pending", updatedAt: Date.now() });
+        const clientNameReview = await buildClientNameReview(project.client);
+        const submittedProject = await projectModels.update({ id: project._id, status: "pending", clientNameReview, updatedAt: Date.now() });
         return res.status(200).json({ status: "ok", message: "تم إرسال المشروع للمهندس للمراجعة.", project: submittedProject });
     } catch (error) { next(error); }
 };

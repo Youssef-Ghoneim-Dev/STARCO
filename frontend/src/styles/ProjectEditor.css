@@ -287,6 +287,9 @@
 .client-match-card div { display: flex; gap: 10px; margin-top: 12px; }
 .client-match-card button { border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; cursor: pointer; background: var(--primary); color: #fff; }
 .client-match-card button:last-child { background: #fff; color: #667085; border: 1px solid var(--border); }
+.marketing-client-search { position: relative; }
+.marketing-client-suggestions { inset: calc(100% - 26px) 0 auto; }
+.marketing-client-search-hint { margin: 8px 0 0; color: #667085; font-size: 13px; line-height: 1.6; }
 
 .panels-tabs {
 

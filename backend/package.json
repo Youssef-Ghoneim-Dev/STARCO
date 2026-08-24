@@ -8,6 +8,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "migrate:roles": "node migrations/migrateEmployeeToEngineer.js",
+    "migrate:client-name-index": "node migrations/removeClientNameUniqueIndex.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -41,6 +41,21 @@
     font-weight: 600;
 }
 
+.management-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 14px;
+    border: 1px solid var(--primary);
+    border-radius: 11px;
+    background: #fff;
+    color: var(--primary);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
 .recycle-bin-actions {
     display: flex;
     flex-wrap: wrap;
@@ -222,6 +237,71 @@
     font: inherit;
 }
 
+.client-name-review {
+    width: min(100%, 620px);
+}
+
+.client-name-review-intro,
+.client-name-review-hint {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.client-name-review-intro {
+    color: var(--text);
+}
+
+.client-name-review-hint {
+    color: var(--text-light);
+}
+
+.client-name-review-list {
+    display: grid;
+    gap: 10px;
+    max-height: min(45vh, 340px);
+    overflow-y: auto;
+    padding-inline-end: 4px;
+}
+
+.client-name-review-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.client-name-review-card h3,
+.client-name-review-card p {
+    margin: 0;
+}
+
+.client-name-review-card h3 {
+    color: var(--text);
+    font-size: 16px;
+}
+
+.client-name-review-card p {
+    margin-top: 5px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.client-name-review-card span {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.client-name-review-actions {
+    justify-content: space-between;
+}
+
 @media (max-width: 600px) {
 
     .management-heading-actions,
@@ -241,5 +321,16 @@
 
     .management-search {
         max-width: none;
+    }
+
+    .client-name-review-card,
+    .client-name-review-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .client-name-review-card button,
+    .client-name-review-actions button {
+        width: 100%;
     }
 }

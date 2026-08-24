@@ -1,7 +1,10 @@
 const models = require("../models/clients")
+const { compareClientNames } = require("../utils/clientNameSimilarity");
 
 const canManageClients = (req) =>
     req.user?.role === "OwnerManager" || req.user?.role === "Engineer";
+const canSearchClients = (req) =>
+    canManageClients(req) || req.user?.role === "Marketer";
 
 const rejectUnauthorized = (res) => res.status(403).json({
     status: "error",
@@ -10,7 +13,7 @@ const rejectUnauthorized = (res) => res.status(403).json({
 
 const search = async (req, res, next) => {
     try {
-        if (!canManageClients(req)) return rejectUnauthorized(res);
+        if (!canSearchClients(req)) return rejectUnauthorized(res);
         const searchText = req.query.name;
         const clients = await models.search(searchText)
         if (clients.length === 0) {
@@ -30,6 +33,28 @@ const search = async (req, res, next) => {
         next(error)
     }
 }
+
+const findSimilar = async (req, res, next) => {
+    try {
+        if (!canSearchClients(req)) return rejectUnauthorized(res);
+
+        const name = String(req.query.name || "").trim();
+        if (name.length < 2) return res.status(200).json({ candidates: [] });
+
+        const clients = await models.select_for_name_review();
+        const candidates = clients
+            .map((client) => ({
+                ...client.toObject(),
+                ...compareClientNames(name, client.name)
+            }))
+            .filter((client) => client.isCandidate)
+            .sort((left, right) => right.similarity - left.similarity);
+
+        return res.status(200).json({ candidates });
+    } catch (error) {
+        next(error);
+    }
+};
 
 const selectAll = async (req, res, next) => {
     try {
@@ -147,6 +172,7 @@ const deleteOne = async (req, res, next) => {
 };
 module.exports = {
     search,
+    findSimilar,
     selectAll,
     selectOne,
     addOne,
