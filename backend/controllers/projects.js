@@ -15,7 +15,6 @@ const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
 
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
@@ -561,12 +560,7 @@ const getProjectMediaWhatsappLink = async (req, res, next) => {
         if (!businessPhone) {
             return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
         }
-        const mediaToken = jwt.sign({
-            purpose: "project-media",
-            projectId: String(project._id),
-            panelNumber: panelIndex + 1
-        }, process.env.TOKEN_KEY, { expiresIn: "30m" });
-        const text = `STARCO MEDIA #${project._id} PANEL ${panelIndex + 1} TOKEN ${mediaToken}`;
+        const text = `STARCO MEDIA #${project._id} PANEL ${panelIndex + 1}`;
         return res.status(200).json({
             status: "ok",
             text,

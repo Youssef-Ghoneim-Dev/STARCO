@@ -9,7 +9,7 @@ const findByProviderMessageId = (providerMessageId) =>
 
 const create = (message) => getModel().create(message);
 const updateByProviderMessageId = (providerMessageId, update) =>
-    getModel().findOneAndUpdate({ providerMessageId }, update, { new: true });
+    getModel().findOneAndUpdate({ providerMessageId }, update, { returnDocument: "after" });
 const updateManyBySession = (sessionId, update) =>
     getModel().updateMany({ sessionId }, update);
 const findBySession = (sessionId) => getModel().find({ sessionId });

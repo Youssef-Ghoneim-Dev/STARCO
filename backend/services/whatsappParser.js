@@ -45,14 +45,9 @@ const parseWhatsappCommand = (text) => {
         };
     }
 
-    const mediaMatch = firstLine.match(/^STARCO\s+MEDIA\s+#?([a-f\d]{24})\s+PANEL\s+(\d+)(?:\s+TOKEN\s+(\S+))?$/i);
+    const mediaMatch = firstLine.match(/^STARCO\s+MEDIA\s+#?([a-f\d]{24})\s+PANEL\s+(\d+)$/i);
     if (mediaMatch) {
-        return {
-            type: "media",
-            projectId: mediaMatch[1],
-            panelNumber: parsePanelNumber(mediaMatch[2]),
-            mediaToken: mediaMatch[3] || ""
-        };
+        return { type: "media", projectId: mediaMatch[1], panelNumber: parsePanelNumber(mediaMatch[2]) };
     }
 
     const selectionMatch = firstLine.match(/^\s*رقم\s+اللوحة\s*(?::|：|-)?\s*(.+?)\s*$/i);

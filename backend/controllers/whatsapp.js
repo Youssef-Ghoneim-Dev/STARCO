@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
 const users = require("../models/users");
 const projects = require("../models/projects");
 const sessions = require("../models/whatsappSessions");
@@ -90,11 +89,6 @@ const gettingStartedReplies = async () => {
 
 const canSenderAttachToProject = async (project, marketer, senderPhone) => {
     if (!project?.marketingId) return false;
-    if (sameId(project.marketingId, marketer?._id)) return true;
-
-    // More than one historical account may carry the same WhatsApp number.
-    // In that case select_marketer_by_phone can return a different record even
-    // though the sender is the phone owner of this project's marketer account.
     const projectMarketer = await users.select_one({
         _id: project.marketingId,
         role: "Marketer",
@@ -102,21 +96,12 @@ const canSenderAttachToProject = async (project, marketer, senderPhone) => {
         isDeleted: false
     });
     return Boolean(
-        projectMarketer?.phoneNumber
+        marketer
+        && sameId(marketer._id, projectMarketer?._id)
+        && normalizePhoneNumber(marketer.phoneNumber) === normalizePhoneNumber(senderPhone)
+        && projectMarketer?.phoneNumber
         && normalizePhoneNumber(projectMarketer.phoneNumber) === normalizePhoneNumber(senderPhone)
     );
-};
-
-const hasValidProjectMediaToken = (command) => {
-    if (!command.mediaToken) return false;
-    try {
-        const payload = jwt.verify(command.mediaToken, process.env.TOKEN_KEY);
-        return payload.purpose === "project-media"
-            && sameId(payload.projectId, command.projectId)
-            && Number(payload.panelNumber) === Number(command.panelNumber);
-    } catch (_error) {
-        return false;
-    }
 };
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
@@ -496,8 +481,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         }
         const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
-        const hasMediaAccess = targetProject && hasValidProjectMediaToken(command);
-        if (!targetProject || (!ownsProject && !hasMediaAccess)) {
+        if (!targetProject || !ownsProject) {
             return "لم يتم العثور على مشروع بهذا ID تابع لك.";
         }
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
@@ -833,6 +817,20 @@ const receiveWebhook = async (req, res) => {
         const changes = req.body?.entry?.flatMap((entry) => entry.changes || []) || [];
         for (const change of changes) {
             const value = change.value || {};
+            for (const status of value.statuses || []) {
+                await messages.updateByProviderMessageId(status.id, {
+                    status: status.status || "unknown",
+                    recipientPhone: status.recipient_id || null,
+                    rawPayload: status
+                });
+                if (status.status === "failed") {
+                    console.error("WhatsApp message delivery failed:", {
+                        messageId: status.id,
+                        recipient: status.recipient_id,
+                        errors: status.errors || []
+                    });
+                }
+            }
             for (const message of value.messages || []) {
                 await handleIncomingMessage(message, value);
             }

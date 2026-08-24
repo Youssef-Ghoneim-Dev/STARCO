@@ -72,9 +72,9 @@ function MarketingProjectEditor() {
     const validGroups = nextGroups.map((group) => ({
       id: group.id || `branch-group-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       optionKey: group.optionKey || "",
-      count: Math.max(1, Number(group.count) || 1),
+      count: group.count === "" ? "" : Math.max(1, Number(group.count) || 1),
     }));
-    const branches = validGroups.flatMap((group) => Array.from({ length: group.count }, (_, index) => ({
+    const branches = validGroups.flatMap((group) => Array.from({ length: Math.max(0, Number(group.count) || 0) }, (_, index) => ({
       branchId: `${group.id}-${index + 1}`,
       branchGroupId: group.id,
       optionKey: group.optionKey,
@@ -96,9 +96,7 @@ function MarketingProjectEditor() {
   const save = async () => {
     const result = await submitMarketingProject();
     if (result.success) {
-      toast.success("تم حفظ المشروع.");
       if (result.notification?.includes("تعذر")) toast.error(result.notification, { duration: 7000 });
-      else if (result.notification) toast.success(result.notification);
       navigate("/projects");
     }
     else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
@@ -133,7 +131,7 @@ function MarketingProjectEditor() {
       </div>
       {panel.panelTypeKey === "control" && <label className="marketing-full-field">تركيب لوحة الكنترول<StyledSelect value={panel.controlInstallation || ""} placeholder="اختر التركيب" onChange={(value) => patchPanel({ controlInstallation: value })} options={[{ value: "دفن", label: "دفن" }, { value: "عادية", label: "عادية" }]} /></label>}
       <label className="marketing-full-field">تفاصيل إضافية<textarea value={panel.additionalDetails || ""} onChange={(event) => patchPanel({ additionalDetails: event.target.value })} placeholder="اكتب أي تفاصيل إضافية" /></label>
-      {panel.hasCopper === true && <section className="marketing-copper-fields"><h3>بيانات النحاس</h3><div className="marketing-data-grid"><label>نوع المفاتيح<StyledSelect value={panel.copperDetails?.switches || ""} placeholder="اختر النوع" onChange={(value) => setCopperDetail("switches", value)} options={[{ value: "My Nature", label: "My Nature" }, { value: "Molded", label: "Molded" }]} /></label><label>الرئيسي<StyledSelect value={panel.copperDetails?.mainKey || panel.copper?.main?.optionKey || ""} placeholder="اختر الأمبير" onChange={setCopperMain} options={amperageOptions} /></label></div><div className="marketing-branches"><div className="marketing-branches-heading"><h4>المفاتيح الفرعية</h4><button type="button" onClick={() => setBranchGroups([...branchGroups, { id: `branch-group-${Date.now()}`, optionKey: "", count: 1 }])}>+ إضافة فرعي</button></div>{branchGroups.map((group, index) => <div className="marketing-branch-row" key={group.id || index}><strong>فرعي {index + 1}</strong><StyledSelect value={group.optionKey || ""} placeholder="اختر الأمبير" onChange={(optionKey) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, optionKey } : entry))} options={amperageOptions} /><label>العدد<input type="number" min="1" step="1" value={group.count || 1} onChange={(event) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: event.target.value } : entry))} /></label><button type="button" className="delete-panel-data-btn" onClick={() => setBranchGroups(branchGroups.filter((_, current) => current !== index))}>حذف</button></div>)}</div><label className="marketing-full-field">تفاصيل إضافية للنحاس<textarea value={panel.copperDetails?.notes || ""} onChange={(event) => setCopperDetail("notes", event.target.value)} placeholder="اكتب أي تفاصيل خاصة بالنحاس" /></label></section>}
+      {panel.hasCopper === true && <section className="marketing-copper-fields"><h3>بيانات النحاس</h3><div className="marketing-data-grid"><label>نوع المفاتيح<StyledSelect value={panel.copperDetails?.switches || ""} placeholder="اختر النوع" onChange={(value) => setCopperDetail("switches", value)} options={[{ value: "My Nature", label: "My Nature" }, { value: "Molded", label: "Molded" }]} /></label><label>الرئيسي<StyledSelect value={panel.copperDetails?.mainKey || panel.copper?.main?.optionKey || ""} placeholder="اختر الأمبير" onChange={setCopperMain} options={amperageOptions} /></label></div><div className="marketing-branches"><div className="marketing-branches-heading"><h4>المفاتيح الفرعية</h4><button type="button" onClick={() => setBranchGroups([...branchGroups, { id: `branch-group-${Date.now()}`, optionKey: "", count: 1 }])}>+ إضافة فرعي</button></div>{branchGroups.map((group, index) => <div className="marketing-branch-row" key={group.id || index}><strong>فرعي {index + 1}</strong><StyledSelect value={group.optionKey || ""} placeholder="اختر الأمبير" onChange={(optionKey) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, optionKey } : entry))} options={amperageOptions} /><label>العدد<input type="number" min="1" step="1" value={group.count ?? ""} onChange={(event) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: event.target.value } : entry))} onBlur={() => { if (group.count === "") setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: 1 } : entry)); }} /></label><button type="button" className="delete-panel-data-btn" onClick={() => setBranchGroups(branchGroups.filter((_, current) => current !== index))}>حذف</button></div>)}</div><label className="marketing-full-field">تفاصيل إضافية للنحاس<textarea value={panel.copperDetails?.notes || ""} onChange={(event) => setCopperDetail("notes", event.target.value)} placeholder="اكتب أي تفاصيل خاصة بالنحاس" /></label></section>}
     </section>
     <WhatsappProjectData editable />
     <div className="marketing-save-actions"><button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ المشروع"}</button></div>

@@ -97,7 +97,6 @@ function WhatsappProjectData({ editable = false }) {
     try {
       await Promise.all(files.map((file) => uploadProjectMedia(project._id, panel.panelId, file)));
       setUploadRefresh((value) => value + 1);
-      toast.success(files.length === 1 ? "تم رفع المرفق." : `تم رفع ${files.length} مرفقات.`);
     } catch (error) {
       toast.error(error?.response?.data?.message || "تعذر رفع أحد المرفقات.");
     } finally { setUploading(false); }
@@ -109,7 +108,6 @@ function WhatsappProjectData({ editable = false }) {
       await deleteProjectMedia(project._id, mediaToDelete.id);
       setMedia((current) => current.filter((entry) => entry.id !== mediaToDelete.id));
       setMediaToDelete(null);
-      toast.success("تم حذف المرفق.");
     } catch (error) {
       toast.error(error?.response?.data?.message || "تعذر حذف المرفق.");
     } finally { setDeletingMedia(false); }

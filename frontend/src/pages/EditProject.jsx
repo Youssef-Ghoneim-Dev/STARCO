@@ -37,8 +37,7 @@ function StartEditingPanel({ isMarketer }) {
     setStarting(true);
     const result = await beginEditing();
     setStarting(false);
-    if (result.success) toast.success(result.notification || "تم تحويل المشروع إلى وضع التعديل.");
-    else toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
+    if (!result.success) toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
   };
   return <section className="start-editing-panel" dir="rtl">
     <h2>{isMarketer ? "هل تريد تعديل بيانات المشروع؟" : "تعديل مشروع مكتمل"}</h2>

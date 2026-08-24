@@ -69,7 +69,6 @@ function SaveActions() {
     }
     const result = await saveProject({ complete: true });
     if (result.success) {
-      toast.success("تم إتمام المشروع وإرسال رابط المعاينة للمندوب.");
       navigate("/projects");
     } else toast.error(result.message || saveProjectError || "تعذر إتمام المشروع.");
   };

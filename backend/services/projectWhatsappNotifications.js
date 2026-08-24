@@ -1,4 +1,5 @@
 const { sendTemplateMessage } = require("./whatsappMeta");
+const whatsappMessages = require("../models/whatsappMessages");
 
 const templateLanguage = () => process.env.WHATSAPP_TEMPLATE_LANGUAGE || "ar_EG";
 const frontendUrl = () => String(process.env.FRONTEND_URL || "").replace(/\/$/, "");
@@ -18,16 +19,33 @@ const namedBody = (parameterNames, values) => {
     }];
 };
 
-const sendNamedTemplate = (to, templateEnvName, fallbackName, parameterNames, values) =>
-    sendTemplateMessage(
+const sendNamedTemplate = async (to, project, templateEnvName, fallbackName, parameterNames, values) => {
+    const templateName = process.env[templateEnvName] || fallbackName;
+    const result = await sendTemplateMessage(
         to,
-        process.env[templateEnvName] || fallbackName,
+        templateName,
         templateLanguage(),
         namedBody(parameterNames, values)
     );
+    const providerMessageId = result?.messages?.[0]?.id;
+    if (providerMessageId) {
+        await whatsappMessages.create({
+            providerMessageId,
+            direction: "outbound",
+            projectId: project?._id || null,
+            recipientPhone: String(to || "").replace(/\D/g, ""),
+            type: "template",
+            text: templateName,
+            status: result?.messages?.[0]?.message_status || "accepted",
+            rawPayload: result
+        }).catch((error) => console.error("Could not store WhatsApp template message:", error.message));
+    }
+    return result;
+};
 
 const sendNewProjectAssigned = (to, project, marketerName = "غير محدد") => sendNamedTemplate(
     to,
+    project,
     "WHATSAPP_TEMPLATE_NEW_PROJECT_ASSIGNED",
     "new_project_assigned",
     ["project_id", "client_name", "marketer_name", "panels_count", "project_url"],
@@ -36,6 +54,7 @@ const sendNewProjectAssigned = (to, project, marketerName = "غير محدد") =
 
 const sendProjectUpdatedReview = (to, project, marketerName = "غير محدد") => sendNamedTemplate(
     to,
+    project,
     "WHATSAPP_TEMPLATE_PROJECT_UPDATED_REVIEW",
     "project_updated_review",
     ["project_id", "client_name", "marketer_name", "project_url"],
@@ -44,6 +63,7 @@ const sendProjectUpdatedReview = (to, project, marketerName = "غير محدد")
 
 const sendProjectCompletedPreview = (to, project, previewLink) => sendNamedTemplate(
     to,
+    project,
     "WHATSAPP_TEMPLATE_PROJECT_COMPLETED_PREVIEW",
     "project_completed_preview",
     ["project_id", "client_name", "panels_count", "preview_url"],
