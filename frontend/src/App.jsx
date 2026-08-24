@@ -55,6 +55,7 @@ function App() {
       />
       <Routes>
         <Route path="/client-project/:id" element={<ClientProjectPreview />} />
+        <Route path="/p/:previewKey" element={<ClientProjectPreview />} />
 
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />

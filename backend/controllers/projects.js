@@ -209,10 +209,12 @@ const getProjects = async (req, res, next) => {
 // was sent to the marketer in the WhatsApp link.
 const getClientProjectPreview = async (req, res, next) => {
     try {
-        const token = String(req.query.key || "");
+        const token = String(req.params.key || req.query.key || "");
         if (!token) return res.status(401).json({ status: "error", message: "رابط المعاينة غير مكتمل." });
 
-        const project = await projectModels.findClientPreview(req.params.id, token);
+        const project = req.params.key
+            ? await projectModels.findClientPreviewByToken(token)
+            : await projectModels.findClientPreview(req.params.id, token);
         if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح أو انتهت صلاحيته." });
 
         const configuration = await systemConfiguration.get();
@@ -585,7 +587,9 @@ const completeProject = async (req, res, next) => {
 
         const projectForClientSync = project.toObject();
         await syncClient(projectForClientSync);
-        const clientPreviewToken = crypto.randomBytes(32).toString("hex");
+        // A compact, URL-safe 128-bit key. It is still unguessable but keeps
+        // the WhatsApp preview link short and readable.
+        const clientPreviewToken = crypto.randomBytes(16).toString("base64url");
         const completedProject = await projectModels.update({
             id: project._id,
             client: projectForClientSync.client,
@@ -598,7 +602,7 @@ const completeProject = async (req, res, next) => {
             const marketer = await getProjectMarketer(completedProject);
             if (marketer?.phoneNumber) {
                 const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-                const previewUrl = `${frontendUrl}/client-project/${completedProject._id}?key=${clientPreviewToken}`;
+                const previewUrl = `${frontendUrl}/p/${clientPreviewToken}`;
                 try {
                     await sendProjectCompletedPreview(marketer.phoneNumber, completedProject, previewUrl);
                     await projectModels.update({ id: completedProject._id, marketingCompletionNotifiedAt: new Date(), marketingCompletionNotificationError: null });

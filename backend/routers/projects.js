@@ -20,6 +20,11 @@ projectsRouter.get(
 );
 
 projectsRouter.get(
+    "/client-preview/:key",
+    projectController.getClientProjectPreview
+);
+
+projectsRouter.get(
     "",
     authMw,
     CheckUserToken,

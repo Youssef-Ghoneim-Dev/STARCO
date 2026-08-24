@@ -1,34 +1,38 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { getClientProjectPreview } from "../services/projectsAPI";
-import { createProjectPreviewImages } from "../utils/projectPdf";
+import { getClientProjectPreview, getClientProjectPreviewByKey } from "../services/projectsAPI";
+import { createProjectPdf } from "../utils/projectPdf";
 import "../styles/ClientProjectPreview.css";
 
 function ClientProjectPreview() {
-  const { id } = useParams();
+  const { id, previewKey } = useParams();
   const [searchParams] = useSearchParams();
-  const [previewPages, setPreviewPages] = useState([]);
+  const [pdfUrl, setPdfUrl] = useState("");
   const [state, setState] = useState({ loading: true, error: "" });
 
   useEffect(() => {
     let active = true;
+    let generatedPdfUrl = "";
     const loadPreview = async () => {
-      const key = searchParams.get("key");
+      const key = previewKey || searchParams.get("key");
       if (!key) {
         if (active) setState({ loading: false, error: "رابط المعاينة غير مكتمل." });
         return;
       }
 
       try {
-        const response = await getClientProjectPreview(id, key);
+        const response = previewKey
+          ? await getClientProjectPreviewByKey(previewKey)
+          : await getClientProjectPreview(id, key);
         const { project, copperConfiguration } = response.data || {};
-        const pages = await createProjectPreviewImages({
+        const pdf = await createProjectPdf({
           project,
           prices: project?.prices || {},
           copperConfiguration,
         });
+        generatedPdfUrl = URL.createObjectURL(pdf);
         if (active) {
-          setPreviewPages(pages);
+          setPdfUrl(generatedPdfUrl);
           setState({ loading: false, error: "" });
         }
       } catch (error) {
@@ -44,8 +48,9 @@ function ClientProjectPreview() {
     loadPreview();
     return () => {
       active = false;
+      if (generatedPdfUrl) URL.revokeObjectURL(generatedPdfUrl);
     };
-  }, [id, searchParams]);
+  }, [id, previewKey, searchParams]);
 
   if (state.loading) {
     return <main className="client-preview-state" dir="rtl"><div><span className="client-preview-spinner" /><h1>جاري تجهيز معاينة المشروع…</h1><p>يرجى الانتظار لحظات.</p></div></main>;
@@ -60,10 +65,8 @@ function ClientProjectPreview() {
       <div><strong>STARCO Panels</strong><span>معاينة عرض السعر</span></div>
       <p>للعرض فقط</p>
     </header>
-    <section className="client-preview-pages" aria-label="معاينة عرض سعر STARCO">
-      {previewPages.map((page, index) => (
-        <img key={index} src={page} alt={`صفحة ${index + 1} من عرض السعر`} draggable="false" />
-      ))}
+    <section className="client-preview-pdf" aria-label="معاينة ملف عرض سعر STARCO">
+      <iframe src={pdfUrl} title="ملف عرض سعر STARCO" />
     </section>
   </main>;
 }

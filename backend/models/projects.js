@@ -45,6 +45,19 @@ const findClientPreview = async (projectId, clientPreviewToken) => {
     });
 };
 
+const findClientPreviewByToken = async (clientPreviewToken) => {
+    const openconnection = await dbconfig.openconnection(
+        collectionName,
+        projectSchema
+    );
+
+    return openconnection.findOne({
+        clientPreviewToken,
+        status: "completed",
+        isDeleted: false
+    });
+};
+
 const create = async (project) => {
     const openconnection = await dbconfig.openconnection(
         collectionName,
@@ -143,6 +156,7 @@ module.exports = {
     select_one,
     selectall,
     findClientPreview,
+    findClientPreviewByToken,
     add_one,
     create,
     update_whatsapp_project,

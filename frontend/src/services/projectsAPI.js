@@ -12,6 +12,10 @@ export const getClientProjectPreview = (id, key) => {
     return api.get(`/projects/client/${id}`, { params: { key } });
 };
 
+export const getClientProjectPreviewByKey = (key) => {
+    return api.get(`/projects/client-preview/${encodeURIComponent(key)}`);
+};
+
 export const deleteProject = (id) => {
     return api.delete(`/projects/${id}`);
 };
