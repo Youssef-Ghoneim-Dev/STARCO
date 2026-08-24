@@ -16,6 +16,10 @@ const {
 } = require("../services/whatsappMeta");
 const { uploadFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
+const {
+    sendNewProjectAssigned,
+    sendProjectUpdatedReview
+} = require("../services/projectWhatsappNotifications");
 
 const SESSION_HOURS = 24;
 
@@ -296,11 +300,28 @@ const notifyAssignedEngineerOfMarketingEdit = async (project) => {
     });
     if (!engineer?.phoneNumber) return;
 
-    const baseUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-    await sendSafeText(
-        engineer.phoneNumber,
-        `تنبيه: المندوب عدّل بعض البيانات في مشروع يحتاج مراجعتك.\nID : ${project._id}\nالعميل: ${project.client?.name || "غير محدد"}\nالرابط: ${baseUrl}/projects/${project._id}\nبرجاء الدخول والتأكد من التعديلات.`
+    try {
+        await sendProjectUpdatedReview(engineer.phoneNumber, project);
+    } catch (error) {
+        console.error("WhatsApp project update template failed:", error.message);
+    }
+};
+
+const notifyEngineersOfNewProject = async (project) => {
+    const engineers = await users.selectall({
+        role: "Engineer",
+        approved: true,
+        isDeleted: false,
+        phoneNumber: { $nin: [null, ""] }
+    });
+    const results = await Promise.allSettled(
+        engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, project))
     );
+    results.forEach((result) => {
+        if (result.status === "rejected") {
+            console.error("WhatsApp new project template failed:", result.reason?.message || result.reason);
+        }
+    });
 };
 
 const finishSession = async (session, inboundMessage) => {
@@ -392,6 +413,8 @@ const finishSession = async (session, inboundMessage) => {
     });
     if (finalizingSession.mode === "edit") {
         await notifyAssignedEngineerOfMarketingEdit(project);
+    } else {
+        await notifyEngineersOfNewProject(project);
     }
     return { project };
 };

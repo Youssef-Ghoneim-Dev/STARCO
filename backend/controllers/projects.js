@@ -6,6 +6,11 @@ const systemConfiguration = require("../models/systemConfiguration");
 const clientModels = require("../models/clients");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendTextMessage } = require("../services/whatsappMeta");
+const {
+    sendNewProjectAssigned,
+    sendProjectUpdatedReview,
+    sendProjectCompletedPreview
+} = require("../services/projectWhatsappNotifications");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
@@ -39,6 +44,29 @@ const getProjectMarketer = async (project) => {
     return marketerId
         ? userModels.select_one({ _id: marketerId, approved: true, isDeleted: false })
         : null;
+};
+
+const getActiveEngineers = () => userModels.selectall({
+    role: "Engineer",
+    approved: true,
+    isDeleted: false,
+    phoneNumber: { $nin: [null, ""] }
+});
+
+const notifyEngineersAboutSubmittedProject = async (project, isUpdatedProject) => {
+    const assignedEngineer = project.engineerId
+        ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
+        : null;
+    const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
+    if (!recipients.length) return "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل.";
+
+    const send = isUpdatedProject ? sendProjectUpdatedReview : sendNewProjectAssigned;
+    const results = await Promise.allSettled(recipients.map((engineer) => send(engineer.phoneNumber, project)));
+    const sentCount = results.filter((result) => result.status === "fulfilled").length;
+    if (!sentCount) throw results.find((result) => result.status === "rejected")?.reason || new Error("تعذر إرسال قالب WhatsApp.");
+    return sentCount === recipients.length
+        ? `تم إرسال إشعار WhatsApp إلى ${sentCount} مهندس.`
+        : `تم إرسال الإشعار إلى ${sentCount} من أصل ${recipients.length} مهندس.`;
 };
 
 const editableProjectData = (body = {}) => {
@@ -417,9 +445,16 @@ const submitMarketingProject = async (req, res, next) => {
         if (!MARKETER_EDIT_STATUSES.includes(project.status)) {
             return res.status(409).json({ status: "error", message: "هذا المشروع أُرسل بالفعل للمهندس أو يعمل عليه شخص آخر." });
         }
+        const wasUpdatedProject = project.status === "editingByMarketing";
         const clientNameReview = await buildClientNameReview(project.client);
         const submittedProject = await projectModels.update({ id: project._id, status: "pending", clientNameReview, updatedAt: Date.now() });
-        return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", project: submittedProject });
+        let notification;
+        try {
+            notification = await notifyEngineersAboutSubmittedProject(submittedProject, wasUpdatedProject);
+        } catch (error) {
+            notification = `تم حفظ المشروع، لكن تعذر إرسال إشعار WhatsApp: ${error.message}`;
+        }
+        return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", notification, project: submittedProject });
     } catch (error) { next(error); }
 };
 
@@ -544,9 +579,8 @@ const completeProject = async (req, res, next) => {
             if (marketer?.phoneNumber) {
                 const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
                 const previewUrl = `${frontendUrl}/client-project/${completedProject._id}?key=${clientPreviewToken}`;
-                const body = `تم الانتهاء من مشروعك بنجاح.\nID المشروع: ${completedProject._id}\nالعميل: ${completedProject.client?.name || "غير محدد"}\nعدد اللوحات: ${(completedProject.panels || []).length}\nرابط معاينة PDF: ${previewUrl}`;
                 try {
-                    await sendTextMessage(marketer.phoneNumber, body);
+                    await sendProjectCompletedPreview(marketer.phoneNumber, completedProject, previewUrl);
                     await projectModels.update({ id: completedProject._id, marketingCompletionNotifiedAt: new Date(), marketingCompletionNotificationError: null });
                     notification = "تم إرسال رسالة الإنهاء إلى المسوّق.";
                 } catch (error) {
