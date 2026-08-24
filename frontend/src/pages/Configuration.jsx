@@ -30,7 +30,7 @@ const defaultConfig = {
   ], pricePerKg: 0, barCounts: [1, 3], branchLengths: { oneDirection: 150, twoDirections: 300 }, weightFormula: "Length * BarCount * Width * Thickness / 1000000" },
 };
 
-const priceFields = [["manufacturing", "المصنعية"], ["locks", "الكوالين"], ["hinges", "المفصلات"], ["transport", "النقل"], ["screws", "المسامير"], ["stretch", "الأستريتش"], ["carton", "الكرتون"]];
+const priceFields = [["manufacturing", "المصنعية"], ["locks", "الكوالين"], ["hinges", "المفصلات"], ["transport", "النقل"], ["screws", "المسامير"], ["stretch", "استرتش"], ["carton", "الكرتون"]];
 const partSettings = [["chair", "الكرسي"], ["omega", "أوميجا"]];
 const partFields = [["defaultWidth", "العرض الافتراضي"], ["defaultHeight", "الارتفاع الافتراضي"], ["defaultQuantity", "الكمية الافتراضية"], ["quantityStep", "خطوة الكمية"]];
 
@@ -155,7 +155,7 @@ function Configuration() {
   if (!canManagePricing) return <DashboardLayout notAllowed><p className="configuration-denied">هذه الصفحة غير متاحة لحسابك.</p></DashboardLayout>;
 
   return <DashboardLayout notAllowed><section className="configuration-page" dir="rtl">
-    <div className="configuration-heading"><h1>الإعدادات</h1><p>أسعار المشروع والقيم الافتراضية للأجزاء الجديدة.</p></div>
+    <div className="configuration-heading"><h1>الإعدادات</h1></div>
     <PanelTypesEditor panelTypes={config.panelTypes || []} canEditFormulas={isOwner} onChange={(panelTypes) => setConfig((current) => ({ ...current, panelTypes }))} />
     {isOwner && <CopperConfigurationEditor configuration={config.copperConfiguration} onChange={(copperConfiguration) => setConfig((current) => ({ ...current, copperConfiguration }))} />}
     <form className="pricing-form" onSubmit={savePricing}>

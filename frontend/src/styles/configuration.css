@@ -139,6 +139,16 @@
 
 .configuration-subheading {
     margin-top: 36px;
+    padding-inline-start: 14px;
+    border-inline-start: 3px solid var(--primary);
+}
+
+.configuration-subheading p {
+    padding-inline-start: 10px;
+}
+
+.panel-types-editor + .pricing-form {
+    margin-top: 28px;
 }
 
 .configuration-denied {
@@ -354,4 +364,8 @@
     }
 
     .additional-part-add { flex-direction: column; }
+
+    .panel-types-editor + .pricing-form {
+        margin-top: 24px;
+    }
 }
