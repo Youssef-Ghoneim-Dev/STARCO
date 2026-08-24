@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getClientProjectPreview } from "../services/projectsAPI";
-import { createProjectPdf } from "../utils/projectPdf";
+import { createProjectPreviewImages } from "../utils/projectPdf";
 import "../styles/ClientProjectPreview.css";
 
 function ClientProjectPreview() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const [pdfUrl, setPdfUrl] = useState("");
+  const [previewPages, setPreviewPages] = useState([]);
   const [state, setState] = useState({ loading: true, error: "" });
 
   useEffect(() => {
     let active = true;
-    let objectUrl = "";
-
     const loadPreview = async () => {
       const key = searchParams.get("key");
       if (!key) {
@@ -24,14 +22,13 @@ function ClientProjectPreview() {
       try {
         const response = await getClientProjectPreview(id, key);
         const { project, copperConfiguration } = response.data || {};
-        const pdf = await createProjectPdf({
+        const pages = await createProjectPreviewImages({
           project,
           prices: project?.prices || {},
           copperConfiguration,
         });
-        objectUrl = URL.createObjectURL(pdf);
         if (active) {
-          setPdfUrl(objectUrl);
+          setPreviewPages(pages);
           setState({ loading: false, error: "" });
         }
       } catch (error) {
@@ -47,7 +44,6 @@ function ClientProjectPreview() {
     loadPreview();
     return () => {
       active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [id, searchParams]);
 
@@ -64,11 +60,11 @@ function ClientProjectPreview() {
       <div><strong>STARCO Panels</strong><span>معاينة عرض السعر</span></div>
       <p>للعرض فقط</p>
     </header>
-    <iframe
-      className="client-preview-frame"
-      title="معاينة عرض سعر STARCO"
-      src={`${pdfUrl}#toolbar=0&navpanes=0`}
-    />
+    <section className="client-preview-pages" aria-label="معاينة عرض سعر STARCO">
+      {previewPages.map((page, index) => (
+        <img key={index} src={page} alt={`صفحة ${index + 1} من عرض السعر`} draggable="false" />
+      ))}
+    </section>
   </main>;
 }
 

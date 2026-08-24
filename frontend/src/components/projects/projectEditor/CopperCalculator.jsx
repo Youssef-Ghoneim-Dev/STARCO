@@ -45,7 +45,14 @@ function CopperCalculator() {
   const amperageOptions = (configuration.catalog || []).map((item) => ({ value: item.key, label: item.name }));
   const barCountOptions = barCounts.map((count) => ({ value: count, label: String(count) }));
   const directionOptions = [{ value: "one", label: "اتجاه واحد" }, { value: "two", label: "اتجاهين" }];
-  const updateMain = (field, value) => updateCopper((current) => ({ ...current, enabled: true, main: { ...(current.main || {}), [field]: value } }));
+  const updateMain = (field, value) => updateCopper((current) => ({
+    ...current,
+    enabled: true,
+    main: { ...(current.main || {}), [field]: value },
+    branches: field === "barCount"
+      ? (current.branches || []).map((branch) => ({ ...branch, barCount: value }))
+      : (current.branches || []),
+  }));
   const updateBranch = (index, field, value) => updateCopper((current) => {
     const groupId = current.branches?.[index]?.branchGroupId;
     return {

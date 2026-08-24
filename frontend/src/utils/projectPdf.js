@@ -339,7 +339,7 @@ const prioritizePanelsByThicknessCount = (panels) => {
   });
 };
 
-export const createProjectPdf = async ({ project, prices, copperConfiguration }) => {
+const createProjectPageCanvases = async ({ project, prices, copperConfiguration }) => {
   const [cover, pricesBackground, closing] = await Promise.all([
     loadImage(coverImage),
     loadImage(pricesImage),
@@ -349,7 +349,7 @@ export const createProjectPdf = async ({ project, prices, copperConfiguration })
   const pages = [];
   const coverPage = createPageCanvas(cover);
   drawCoverText(coverPage.context, project.client);
-  pages.push(toJpegBytes(coverPage.canvas));
+  pages.push(coverPage.canvas);
 
   const panelGroups = prioritizePanelsByThicknessCount(project.panels);
 
@@ -375,13 +375,23 @@ export const createProjectPdf = async ({ project, prices, copperConfiguration })
         isSingleTable,
       );
     });
-    pages.push(toJpegBytes(page.canvas));
+    pages.push(page.canvas);
   });
 
   const closingPage = createPageCanvas(closing);
-  pages.push(toJpegBytes(closingPage.canvas));
+  pages.push(closingPage.canvas);
 
-  return createPdfBlob(pages);
+  return pages;
+};
+
+export const createProjectPdf = async (options) => {
+  const pages = await createProjectPageCanvases(options);
+  return createPdfBlob(pages.map(toJpegBytes));
+};
+
+export const createProjectPreviewImages = async (options) => {
+  const pages = await createProjectPageCanvases(options);
+  return pages.map((page) => page.toDataURL("image/jpeg", 0.95));
 };
 
 export const getProjectPdfFilename = (project) => {
