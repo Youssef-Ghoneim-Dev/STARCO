@@ -8,6 +8,7 @@ function SaveActions() {
   const navigate = useNavigate();
   const { saveProject, savingProject, saveProjectError, project, prices, systemConfig } = useProject();
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [defaultNamesConfirmation, setDefaultNamesConfirmation] = useState(false);
   const validationErrors = useMemo(() => {
     const errors = [];
     const client = project?.client || {};
@@ -57,7 +58,15 @@ function SaveActions() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  const complete = async () => {
+  const defaultPanelNames = project.panels
+    .map((panel, index) => panel.panelName?.trim() || `لوحة ${index + 1}`)
+    .filter((name) => /^لوحة\s*\d+$/u.test(name));
+
+  const complete = async ({ confirmedDefaultNames = false } = {}) => {
+    if (!confirmedDefaultNames && defaultPanelNames.length > 0) {
+      setDefaultNamesConfirmation(true);
+      return;
+    }
     const result = await saveProject({ complete: true });
     if (result.success) {
       toast.success("تم إتمام المشروع وإرسال رابط المعاينة للمندوب.");
@@ -68,9 +77,21 @@ function SaveActions() {
   return <section className="project-editor-card">
     <div className="save-actions save-actions-two">
       <button className="secondary-btn" type="button" onClick={previewPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "معاينة PDF"}</button>
-      <button className="complete-project-btn" type="button" onClick={complete} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع وإرسال رابط المعاينة</button>
+      <button className="complete-project-btn" type="button" onClick={() => complete()} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع وإرسال رابط المعاينة</button>
     </div>
     {!canSubmit && <ul className="save-validation-list">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>}
+    {defaultNamesConfirmation && <div className="panel-name-warning-backdrop" role="presentation" onMouseDown={() => setDefaultNamesConfirmation(false)}>
+      <div className="panel-name-warning-dialog" role="dialog" aria-modal="true" aria-labelledby="panel-name-warning-title" dir="rtl" onMouseDown={(event) => event.stopPropagation()}>
+        <h2 id="panel-name-warning-title">تأكيد أسماء اللوحات</h2>
+        <p>الأسماء التالية ما زالت بالأسماء التلقائية:</p>
+        <ul>{defaultPanelNames.map((name) => <li key={name}>{name}</li>)}</ul>
+        <p>هل أنت متأكد من إتمام المشروع بهذه الأسماء؟</p>
+        <div>
+          <button type="button" className="panel-name-warning-review" onClick={() => setDefaultNamesConfirmation(false)}>مراجعة الأسماء</button>
+          <button type="button" className="panel-name-warning-confirm" onClick={() => { setDefaultNamesConfirmation(false); complete({ confirmedDefaultNames: true }); }}>نعم، إتمام المشروع</button>
+        </div>
+      </div>
+    </div>}
   </section>;
 }
 
