@@ -1,18 +1,58 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { getClientProjectPreview, getClientProjectPreviewByKey } from "../services/projectsAPI";
 import { createProjectPdf } from "../utils/projectPdf";
 import "../styles/ClientProjectPreview.css";
 
+GlobalWorkerOptions.workerSrc = pdfWorker;
+
+function PdfPage({ pdfDocument, pageNumber }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let renderTask;
+
+    const renderPage = async () => {
+      const page = await pdfDocument.getPage(pageNumber);
+      if (cancelled || !canvasRef.current) return;
+
+      const viewport = page.getViewport({ scale: 1 });
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { alpha: false });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      renderTask = page.render({ canvasContext: context, viewport });
+      await renderTask.promise;
+    };
+
+    renderPage().catch((error) => {
+      if (!cancelled && error?.name !== "RenderingCancelledException") {
+        console.error("Could not render PDF page:", error);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
+  }, [pageNumber, pdfDocument]);
+
+  return <canvas ref={canvasRef} aria-label={`صفحة ${pageNumber} من ملف عرض السعر`} />;
+}
+
 function ClientProjectPreview() {
   const { id, previewKey } = useParams();
   const [searchParams] = useSearchParams();
-  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfDocument, setPdfDocument] = useState(null);
   const [state, setState] = useState({ loading: true, error: "" });
 
   useEffect(() => {
     let active = true;
-    let generatedPdfUrl = "";
+    let loadingTask;
+    let loadedDocument;
     const loadPreview = async () => {
       const key = previewKey || searchParams.get("key");
       if (!key) {
@@ -30,9 +70,10 @@ function ClientProjectPreview() {
           prices: project?.prices || {},
           copperConfiguration,
         });
-        generatedPdfUrl = URL.createObjectURL(pdf);
+        loadingTask = getDocument({ data: new Uint8Array(await pdf.arrayBuffer()) });
+        loadedDocument = await loadingTask.promise;
         if (active) {
-          setPdfUrl(generatedPdfUrl);
+          setPdfDocument(loadedDocument);
           setState({ loading: false, error: "" });
         }
       } catch (error) {
@@ -48,7 +89,8 @@ function ClientProjectPreview() {
     loadPreview();
     return () => {
       active = false;
-      if (generatedPdfUrl) URL.revokeObjectURL(generatedPdfUrl);
+      if (!loadedDocument) loadingTask?.destroy();
+      loadedDocument?.destroy();
     };
   }, [id, previewKey, searchParams]);
 
@@ -66,7 +108,9 @@ function ClientProjectPreview() {
       <p>للعرض فقط</p>
     </header>
     <section className="client-preview-pdf" aria-label="معاينة ملف عرض سعر STARCO">
-      <iframe src={pdfUrl} title="ملف عرض سعر STARCO" />
+      {Array.from({ length: pdfDocument?.numPages || 0 }, (_, index) => (
+        <PdfPage key={index + 1} pdfDocument={pdfDocument} pageNumber={index + 1} />
+      ))}
     </section>
   </main>;
 }

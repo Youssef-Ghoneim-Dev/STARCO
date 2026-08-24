@@ -5,7 +5,6 @@ const defaultProject = require("../utils/defaultProject");
 const systemConfiguration = require("../models/systemConfiguration");
 const clientModels = require("../models/clients");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
-const { sendTextMessage } = require("../services/whatsappMeta");
 const {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
@@ -409,23 +408,21 @@ const startProjectEditing = async (req, res, next) => {
             ? "editingByMarketing"
             : isOwner(req.user) ? "editingByOwner" : "editingByEngineer";
         const editingProject = await projectModels.update({ id: project._id, status: editingStatus, updatedAt: Date.now() });
-        const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-        const workUrl = `${frontendUrl}/projects/${project._id}`;
         let notification = "تم تحويل المشروع إلى وضع التعديل.";
 
         if (project.status === "completed") {
             try {
-                if (marketerRequested && project.engineerId) {
-                    const engineer = await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false });
-                    if (engineer?.phoneNumber) {
-                        await sendTextMessage(engineer.phoneNumber, `قام المندوب بطلب تعديل المشروع الخاص بالعميل: ${project.client?.name || "غير محدد"}.\nتم تحويله إلى حالة Editing.\nالرابط: ${workUrl}`);
-                        notification = "تم تحويل المشروع إلى وضع التعديل وإشعار المهندس المسؤول.";
-                    }
+                if (marketerRequested) {
+                    notification = await notifyEngineersAboutSubmittedProject(editingProject, true);
                 } else if (!marketerRequested) {
                     const marketer = await getProjectMarketer(project);
                     if (marketer?.phoneNumber) {
-                        await sendTextMessage(marketer.phoneNumber, `تم تحويل مشروعك الخاص بالعميل: ${project.client?.name || "غير محدد"} إلى حالة Editing.\nيمكنك الآن تعديل بيانات المشروع ومرفقاته.\nالرابط: ${workUrl}`);
-                        notification = "تم تحويل المشروع إلى وضع التعديل وإشعار المندوب.";
+                        await sendProjectUpdatedReview(
+                            marketer.phoneNumber,
+                            editingProject,
+                            marketer.name || "غير محدد"
+                        );
+                        notification = "تم تحويل المشروع إلى وضع التعديل وإرسال قالب المراجعة إلى المندوب.";
                     }
                 }
             } catch (error) {
