@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const users = require("../models/users");
 const projects = require("../models/projects");
 const sessions = require("../models/whatsappSessions");
@@ -104,6 +105,18 @@ const canSenderAttachToProject = async (project, marketer, senderPhone) => {
         projectMarketer?.phoneNumber
         && normalizePhoneNumber(projectMarketer.phoneNumber) === normalizePhoneNumber(senderPhone)
     );
+};
+
+const hasValidProjectMediaToken = (command) => {
+    if (!command.mediaToken) return false;
+    try {
+        const payload = jwt.verify(command.mediaToken, process.env.TOKEN_KEY);
+        return payload.purpose === "project-media"
+            && sameId(payload.projectId, command.projectId)
+            && Number(payload.panelNumber) === Number(command.panelNumber);
+    } catch (_error) {
+        return false;
+    }
 };
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
@@ -319,15 +332,25 @@ const notifyAssignedEngineerOfMarketingEdit = async (project) => {
         isDeleted: false
     });
     if (!engineer?.phoneNumber) return;
+    const marketer = await users.select_one({
+        _id: project.marketingId,
+        approved: true,
+        isDeleted: false
+    });
 
     try {
-        await sendProjectUpdatedReview(engineer.phoneNumber, project);
+        await sendProjectUpdatedReview(engineer.phoneNumber, project, marketer?.name || "غير محدد");
     } catch (error) {
         console.error("WhatsApp project update template failed:", error.message);
     }
 };
 
 const notifyEngineersOfNewProject = async (project) => {
+    const marketer = await users.select_one({
+        _id: project.marketingId,
+        approved: true,
+        isDeleted: false
+    });
     const engineers = await users.selectall({
         role: "Engineer",
         approved: true,
@@ -335,7 +358,11 @@ const notifyEngineersOfNewProject = async (project) => {
         phoneNumber: { $nin: [null, ""] }
     });
     const results = await Promise.allSettled(
-        engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, project))
+        engineers.map((engineer) => sendNewProjectAssigned(
+            engineer.phoneNumber,
+            project,
+            marketer?.name || "غير محدد"
+        ))
     );
     results.forEach((result) => {
         if (result.status === "rejected") {
@@ -468,7 +495,9 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
         const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
-        if (!targetProject || !(await canSenderAttachToProject(targetProject, marketer, senderPhone))) {
+        const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
+        const hasMediaAccess = targetProject && hasValidProjectMediaToken(command);
+        if (!targetProject || (!ownsProject && !hasMediaAccess)) {
             return "لم يتم العثور على مشروع بهذا ID تابع لك.";
         }
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {

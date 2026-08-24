@@ -15,6 +15,7 @@ const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
@@ -60,8 +61,11 @@ const notifyEngineersAboutSubmittedProject = async (project, isUpdatedProject) =
     const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
     if (!recipients.length) return "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل.";
 
+    const marketer = await getProjectMarketer(project);
     const send = isUpdatedProject ? sendProjectUpdatedReview : sendNewProjectAssigned;
-    const results = await Promise.allSettled(recipients.map((engineer) => send(engineer.phoneNumber, project)));
+    const results = await Promise.allSettled(
+        recipients.map((engineer) => send(engineer.phoneNumber, project, marketer?.name || "غير محدد"))
+    );
     const sentCount = results.filter((result) => result.status === "fulfilled").length;
     if (!sentCount) throw results.find((result) => result.status === "rejected")?.reason || new Error("تعذر إرسال قالب WhatsApp.");
     return sentCount === recipients.length
@@ -557,7 +561,12 @@ const getProjectMediaWhatsappLink = async (req, res, next) => {
         if (!businessPhone) {
             return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
         }
-        const text = `STARCO MEDIA #${project._id} PANEL ${panelIndex + 1}`;
+        const mediaToken = jwt.sign({
+            purpose: "project-media",
+            projectId: String(project._id),
+            panelNumber: panelIndex + 1
+        }, process.env.TOKEN_KEY, { expiresIn: "30m" });
+        const text = `STARCO MEDIA #${project._id} PANEL ${panelIndex + 1} TOKEN ${mediaToken}`;
         return res.status(200).json({
             status: "ok",
             text,
