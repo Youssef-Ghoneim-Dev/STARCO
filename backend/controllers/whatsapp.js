@@ -772,7 +772,7 @@ const receiveWebhook = async (req, res) => {
 
 const sendTestMessage = async (req, res, next) => {
     try {
-        if (req.decodedToken.role !== "OwnerManager") {
+        if (req.user.role !== "OwnerManager") {
             return res.status(403).json({ status: "error", message: "Only Owner Manager can send a WhatsApp test message" });
         }
         const { to, body } = req.body;
@@ -788,7 +788,7 @@ const sendTestMessage = async (req, res, next) => {
 
 const sendTestTemplate = async (req, res, next) => {
     try {
-        if (req.decodedToken.role !== "OwnerManager") {
+        if (req.user.role !== "OwnerManager") {
             return res.status(403).json({ status: "error", message: "Only Owner Manager can send a WhatsApp test template" });
         }
         const { to, name, languageCode, components } = req.body;

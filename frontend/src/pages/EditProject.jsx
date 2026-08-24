@@ -21,10 +21,12 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "" }) {
       <ProjectPrices />
     </fieldset>
     <PanelsTabs readOnly={readOnly} />
-    <fieldset className="project-read-only-fieldset" disabled={readOnly}>
-      <PanelEditor />
+    <div className="project-read-only-fieldset">
+      <PanelEditor readOnly={readOnly} />
+      <fieldset className="project-read-only-fieldset" disabled={readOnly}>
       <SaveActions />
-    </fieldset>
+      </fieldset>
+    </div>
   </>;
 }
 

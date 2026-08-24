@@ -2,7 +2,7 @@ const models = require("../../models/users")
 
 const getUsers = async (req, res, next) => {
     try {
-        const user = req.decodedToken;
+        const user = req.user;
         if (user.role === "OwnerManager") {
             const users = await models.selectall({
                 isDeleted: false
@@ -28,7 +28,7 @@ const getUsers = async (req, res, next) => {
 
 const getDeletedUsers = async (req, res, next) => {
     try {
-        const user = req.decodedToken;
+        const user = req.user;
         if (user.role === "OwnerManager") {
             const users = await models.selectall({
                 isDeleted: true
@@ -54,7 +54,7 @@ const getDeletedUsers = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
     try {
-        const manager = req.decodedToken;
+        const manager = req.user;
         const userId = req.params.id;
         const user = { id: userId, ...req.body };
         const targetUser = await models.select_one({ _id: userId })
@@ -116,7 +116,7 @@ const updateUser = async (req, res, next) => {
 
 const deleteUser = async (req, res, next) => {
     try {
-        const manager = req.decodedToken
+        const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
         if (targetUser.isDeleted) {
@@ -162,7 +162,7 @@ const deleteUser = async (req, res, next) => {
 
 const restoreUser = async (req, res, next) => {
     try {
-        const manager = req.decodedToken
+        const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
         if (!targetUser.isDeleted) {
@@ -208,12 +208,12 @@ const restoreUser = async (req, res, next) => {
 
 const deleteUserForever = async (req, res, next) => {
     try {
-        const manager = req.decodedToken;
+        const manager = req.user;
         const userId = req.params.id;
         if (manager.role !== "OwnerManager") {
             return res.status(403).json({ status: "error", message: "you are not admin" });
         }
-        if (String(manager.id) === String(userId)) {
+        if (String(manager._id) === String(userId)) {
             return res.status(400).json({ status: "error", message: "You cannot permanently delete your own account." });
         }
         const result = await models.deleteForever({ _id: userId, isDeleted: true });

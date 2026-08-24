@@ -542,7 +542,7 @@
 
 .manufacturing-prices-table {
     width: 100%;
-    min-width: 0;
+    min-width: 860px;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -1294,4 +1294,53 @@
   .marketing-client-card, .marketing-data-grid { grid-template-columns: 1fr; }
   .marketing-branch-row { grid-template-columns: 1fr; align-items: stretch; }
   .media-choice-actions { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .project-editor-page,
+    .panel-editor,
+    .project-read-only-fieldset { gap: 16px; }
+
+    .project-editor-card { padding: 16px; border-radius: 16px; }
+    .section-title { margin-bottom: 16px; font-size: 20px; }
+
+    .project-info-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .project-field { min-width: 0; }
+    .project-field label,
+    .panel-setup-grid label { font-size: 13px; }
+    .project-field input,
+    .project-field select,
+    .app-select-trigger { min-width: 0; min-height: 44px; height: 44px; padding-inline: 10px; font-size: 13px; }
+    .app-select-trigger { padding-inline-start: 10px; }
+
+    .profit-section { margin-top: 18px; }
+    .profit-section label { margin-bottom: 9px; font-size: 14px; }
+    .profit-grid { gap: 7px; }
+    .profit-btn { flex: 1 0 calc(25% - 7px); min-width: 50px; height: 36px; padding: 0 6px; font-size: 12px; }
+
+    .panel-setup-grid { gap: 10px; }
+    .panel-setup-grid > label { min-width: 0; }
+    .panel-setup-grid input,
+    .panel-setup-grid select { width: 100%; min-width: 0; min-height: 42px; box-sizing: border-box; padding-inline: 10px; font-size: 13px; }
+
+    .manufacturing-prices-table th,
+    .manufacturing-prices-table td { padding: 8px 7px; font-size: 12px; }
+    .manufacturing-prices-table input { height: 38px; padding: 0 7px; font-size: 13px; }
+
+    .supplies-grid { gap: 10px; }
+    .check-card { flex: 1 1 135px; justify-content: center; padding: 11px 10px; font-size: 14px; }
+
+    .save-actions.save-actions-two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .save-actions .secondary-btn,
+    .save-actions .complete-project-btn { min-width: 0; min-height: 48px; height: auto; padding: 9px 7px; font-size: 12px; line-height: 1.35; }
+
+    .all-prices-table { min-width: 700px; }
+    .all-prices-table th,
+    .all-prices-table td { padding: 9px 7px; font-size: 12px; }
+    .all-prices-section-heading { width: 110px; min-width: 110px; padding: 8px !important; font-size: 13px; }
+    .all-prices-row-label { width: 60px; }
 }

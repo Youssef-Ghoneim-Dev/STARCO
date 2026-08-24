@@ -1,7 +1,7 @@
 const models = require("../../models/users")
 const getPendingUsers = async (req, res, next) => {
     try {
-        const user = req.decodedToken;
+        const user = req.user;
         if (user.role === "OwnerManager") {
             const users = await models.selectall({
                 approved: false,
@@ -29,7 +29,7 @@ const getPendingUsers = async (req, res, next) => {
 
 const approveUser = async (req, res, next) => {
     try {
-        const manager = req.decodedToken
+        const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
         if (targetUser.approved) {
@@ -74,7 +74,7 @@ const approveUser = async (req, res, next) => {
 }
 const deletePendingUser = async (req, res, next) => {
     try {
-        const manager = req.decodedToken
+        const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
         if (targetUser === null) {
