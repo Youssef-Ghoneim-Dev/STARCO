@@ -693,7 +693,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       const { data } = await submitMarketingProjectRequest(projectId);
       setProject((current) => ({ ...current, status: data.project?.status || "pending" }));
       setPreventAutoSave(true);
-      return { success: true, message: data.message };
+      return { success: true, message: data.message, notification: data.notification };
     } catch (error) {
       const message = getSaveErrorMessage(error);
       setSaveProjectError(message);

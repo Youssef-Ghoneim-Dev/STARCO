@@ -29,6 +29,8 @@ const requestMeta = async (path, body) => {
         const error = new Error(payload?.error?.message || "WhatsApp API request failed");
         error.statusCode = response.status;
         error.metaCode = payload?.error?.code;
+        error.metaSubcode = payload?.error?.error_subcode;
+        error.metaDetails = payload?.error?.error_data?.details;
         throw error;
     }
 

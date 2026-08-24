@@ -22,6 +22,7 @@ const {
 } = require("../services/projectWhatsappNotifications");
 
 const SESSION_HOURS = 24;
+const sameId = (first, second) => String(first || "") === String(second || "");
 
 const loadWhatsappTemplates = async () => {
     const config = await systemConfiguration.get();
@@ -84,6 +85,25 @@ const gettingStartedReplies = async () => {
         "هذه الرسالة لا تتبع صيغة نظام STARCO. لبدء مشروع جديد استخدم الشكل التالي:\n\nمثال:\nSTARCO START\nاسم العميل: شركة ستاركو",
         templates.startProject
     ];
+};
+
+const canSenderAttachToProject = async (project, marketer, senderPhone) => {
+    if (!project?.marketingId) return false;
+    if (sameId(project.marketingId, marketer?._id)) return true;
+
+    // More than one historical account may carry the same WhatsApp number.
+    // In that case select_marketer_by_phone can return a different record even
+    // though the sender is the phone owner of this project's marketer account.
+    const projectMarketer = await users.select_one({
+        _id: project.marketingId,
+        role: "Marketer",
+        approved: true,
+        isDeleted: false
+    });
+    return Boolean(
+        projectMarketer?.phoneNumber
+        && normalizePhoneNumber(projectMarketer.phoneNumber) === normalizePhoneNumber(senderPhone)
+    );
 };
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
@@ -447,8 +467,10 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (await getActiveSession(senderPhone)) {
             return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
-        const targetProject = await projects.select_one({ _id: command.projectId, marketingId: marketer._id, isDeleted: false });
-        if (!targetProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        if (!targetProject || !(await canSenderAttachToProject(targetProject, marketer, senderPhone))) {
+            return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        }
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
             return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
         }
@@ -465,7 +487,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         };
         await sessions.create({
             senderPhone,
-            marketingRepId: marketer._id,
+            marketingRepId: targetProject.marketingId,
             mode: "media",
             targetProjectId: targetProject._id,
             targetPanelCount: targetProject.panels.length,

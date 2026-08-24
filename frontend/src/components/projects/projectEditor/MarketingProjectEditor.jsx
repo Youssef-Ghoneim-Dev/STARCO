@@ -97,6 +97,8 @@ function MarketingProjectEditor() {
     const result = await submitMarketingProject();
     if (result.success) {
       toast.success("تم حفظ المشروع.");
+      if (result.notification?.includes("تعذر")) toast.error(result.notification, { duration: 7000 });
+      else if (result.notification) toast.success(result.notification);
       navigate("/projects");
     }
     else toast.error(result.message || "تعذر حفظ بيانات المشروع.");

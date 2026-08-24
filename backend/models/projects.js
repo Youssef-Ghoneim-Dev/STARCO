@@ -60,7 +60,7 @@ const update_whatsapp_project = async (projectId, update) => {
         projectSchema
     );
 
-    return openconnection.findByIdAndUpdate(projectId, update, { new: true });
+    return openconnection.findByIdAndUpdate(projectId, update, { returnDocument: "after" });
 };
 
 const update = async (project) => {
@@ -69,7 +69,7 @@ const update = async (project) => {
         projectSchema
     );
 
-    return await openconnection.findByIdAndUpdate(project.id, project, { new: true });
+    return await openconnection.findByIdAndUpdate(project.id, project, { returnDocument: "after" });
 };
 
 const claimByEngineer = async (projectId, engineerId) => {
@@ -86,7 +86,7 @@ const claimByEngineer = async (projectId, engineerId) => {
             engineerId,
             status: "inProgress"
         },
-        { new: true }
+        { returnDocument: "after" }
     );
 };
 
@@ -100,7 +100,7 @@ const updateOwnedProject = async (projectId, engineerId, updates) => {
             status: { $in: ["inProgress", "editing", "editingByEngineer", "editingByOwner"] }
         },
         { ...updates, updatedAt: Date.now() },
-        { new: true, runValidators: true }
+        { returnDocument: "after", runValidators: true }
     );
 };
 

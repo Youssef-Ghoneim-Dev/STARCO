@@ -452,6 +452,13 @@ const submitMarketingProject = async (req, res, next) => {
         try {
             notification = await notifyEngineersAboutSubmittedProject(submittedProject, wasUpdatedProject);
         } catch (error) {
+            console.error("WhatsApp project submission template failed:", {
+                projectId: String(submittedProject._id),
+                message: error.message,
+                metaCode: error.metaCode,
+                metaSubcode: error.metaSubcode,
+                metaDetails: error.metaDetails
+            });
             notification = `تم حفظ المشروع، لكن تعذر إرسال إشعار WhatsApp: ${error.message}`;
         }
         return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", notification, project: submittedProject });
@@ -529,9 +536,19 @@ const getProjectMediaWhatsappLink = async (req, res, next) => {
         if (!isMarketer(req.user)) {
             return res.status(403).json({ status: "error", message: "إرسال المرفقات عبر WhatsApp متاح للمندوب فقط." });
         }
-        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        let project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project || !(await marketerOwnsProject(req.user, project))) {
             return res.status(404).json({ status: "error", message: "المشروع غير موجود أو لا تملك صلاحية الوصول إليه." });
+        }
+        // Backfill ownership for legacy marketing/WhatsApp drafts. The media
+        // webhook relies on this stable owner instead of whichever duplicate
+        // user record happens to be returned for the same phone number.
+        if (!project.marketingId) {
+            project = await projectModels.update({
+                id: project._id,
+                marketingId: req.user._id,
+                updatedAt: Date.now()
+            });
         }
         const panelIndex = project.panels.findIndex((panel) => String(panel.panelId) === String(req.query.panelId || ""));
         if (panelIndex < 0) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
