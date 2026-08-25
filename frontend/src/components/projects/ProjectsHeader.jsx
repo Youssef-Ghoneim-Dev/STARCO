@@ -20,7 +20,11 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
             <option value="pending">Pending</option>
             <option value="editing">Editing</option>
             <option value="inProgress">In progress</option>
-            <option value="completed">Completed</option>
+            <option value="quoteCompleted">Quote completed</option>
+            <option value="executionPdfRequested">Execution PDF requested</option>
+            <option value="executionPdfReady">Execution PDF ready</option>
+            <option value="executionOrdered">Execution ordered</option>
+            <option value="completed">Fully completed</option>
           </select>
         </label>
         <NavLink to="/new-project" className="new-project-link">

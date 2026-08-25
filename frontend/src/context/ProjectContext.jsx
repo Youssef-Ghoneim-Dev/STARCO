@@ -135,6 +135,12 @@ const normalizePanelThickness = (panel) => ({
 
 const hasValue = (value) => value !== "" && value !== null && value !== undefined;
 
+const getAutomaticPanelName = (dimensions = {}) => {
+  const values = [dimensions.length, dimensions.width, dimensions.depth].map(Number);
+  if (values.some((value) => !Number.isFinite(value) || value <= 0)) return "";
+  return values.map((value) => Number((value / 10).toFixed(2))).join(" × ");
+};
+
 const evaluateFormula = (formula, dimensions) => {
   if (!formula?.trim()) return undefined;
   const values = { Length: Number(dimensions?.length), Width: Number(dimensions?.width), Depth: Number(dimensions?.depth) };
@@ -157,6 +163,24 @@ const buildTypeParts = (type, dimensions) => (type?.parts || []).map((part) => (
     height: evaluateFormula(part.lengthFormula, dimensions),
   }),
 }));
+
+const mergeRecalculatedParts = (existingParts = [], type, dimensions) => {
+  const calculatedParts = buildTypeParts(type, dimensions);
+  const remainingCalculatedParts = [...calculatedParts];
+  const preservedParts = existingParts.map((part) => {
+    const calculatedIndex = remainingCalculatedParts.findIndex((calculated) => calculated.name === part.name);
+    if (calculatedIndex < 0) return part;
+
+    const [calculated] = remainingCalculatedParts.splice(calculatedIndex, 1);
+    return {
+      ...part,
+      ...(hasValue(calculated.width) ? { width: calculated.width } : {}),
+      ...(hasValue(calculated.height) ? { height: calculated.height } : {}),
+    };
+  });
+
+  return [...preservedParts, ...remainingCalculatedParts];
+};
 
 const hydratePanel = (panel, index, systemConfig) => {
   const basePanel = createPanel(index + 1, systemConfig);
@@ -294,7 +318,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           });
           // A completed project is an approved historical quote: never let a
           // page load or WhatsApp backfill attempt modify it automatically.
-          setPreventAutoSave(data.status === "completed" || !needsWhatsappBackfill(data, savedConfig));
+          setPreventAutoSave(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(data.status) || !needsWhatsappBackfill(data, savedConfig));
         } catch (error) {
           console.error("Failed to load project:", error);
           if (mounted) {
@@ -647,9 +671,21 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
   const updatePanelDimensions = useCallback((field, value) => {
     updatePanel(activePanel, (panel) => {
+      const previousAutomaticName = getAutomaticPanelName(panel.dimensions);
       const dimensions = { ...(panel.dimensions || {}), [field]: value };
+      const automaticName = getAutomaticPanelName(dimensions);
+      const currentName = String(panel.panelName || "").trim();
+      const isDefaultName = !currentName || /^لوحة\s*\d+$/u.test(currentName);
+      let panelName = panel.panelName;
+
+      if (automaticName && (isDefaultName || currentName === previousAutomaticName)) {
+        panelName = automaticName;
+      } else if (automaticName && previousAutomaticName && currentName.startsWith(`${previousAutomaticName} `)) {
+        panelName = `${automaticName}${currentName.slice(previousAutomaticName.length)}`;
+      }
+
       const selectedType = (systemConfig?.panelTypes || []).find((type) => type.key === panel.panelTypeKey);
-      return { ...panel, dimensions, ...(selectedType ? { parts: buildTypeParts(selectedType, dimensions) } : {}) };
+      return { ...panel, dimensions, panelName, ...(selectedType ? { parts: mergeRecalculatedParts(panel.parts, selectedType, dimensions) } : {}) };
     });
   }, [activePanel, systemConfig, updatePanel]);
   const recalculateActivePanelParts = useCallback(async () => {
@@ -659,7 +695,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       const selectedType = (savedConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
       if (!selectedType) return { success: false, message: "اختر نوع اللوحة أولًا لإعادة حساب الأجزاء." };
       setSystemConfig(savedConfig);
-      updatePanel(activePanel, (panel) => ({ ...panel, parts: buildTypeParts(selectedType, panel.dimensions) }));
+      updatePanel(activePanel, (panel) => ({ ...panel, parts: mergeRecalculatedParts(panel.parts, selectedType, panel.dimensions) }));
       return { success: true };
     } catch (error) {
       return { success: false, message: getSaveErrorMessage(error) || "تعذر إعادة حساب الأجزاء." };
@@ -684,15 +720,17 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       const projectToSave = prepareProjectForSaving(project, prices);
 
       await updateProject(projectId, projectToSave);
+      let completionData = null;
       if (complete) {
         const { data } = await completeProject(projectId);
+        completionData = data;
         setProject((previousProject) => ({
           ...previousProject,
-          status: data.project?.status || "completed",
+          status: data.project?.status || "quoteCompleted",
         }));
         setPreventAutoSave(true);
       }
-      return { success: true };
+      return { success: true, data: completionData };
     } catch (error) {
       const message = getSaveErrorMessage(error);
       setSaveProjectError(message);
@@ -731,6 +769,17 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     }
   }, [prices, project, projectId, readOnly]);
   const canDeletePart = (part, parts) => {
+    const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
+    const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
+    const isOriginalPart = (panelType?.parts || []).some((item) => item?.name === part.name);
+    const isConfiguredAdditionalPart = (panelType?.additionalParts || [])
+      .map((item) => typeof item === "string" ? item : item?.name)
+      .filter(Boolean)
+      .some((name) => part.name === name || part.name.startsWith(`${name} `));
+
+    if (isOriginalPart) return false;
+    if (isConfiguredAdditionalPart) return true;
+
     if (part.name.startsWith("باب")) {
       const doors = parts.filter((p) => p.name.startsWith("باب"));
 

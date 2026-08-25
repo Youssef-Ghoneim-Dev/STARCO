@@ -32,7 +32,11 @@ const statusDetails = {
   editing: { label: "قيد التعديل", className: "editing" },
   inProgress: { label: "قيد التنفيذ", className: "in-progress" },
   pending: { label: "قيد الانتظار", className: "pending" },
-  completed: { label: "مكتمل", className: "completed" },
+  quoteCompleted: { label: "عرض سعر مكتمل", className: "completed" },
+  executionPdfRequested: { label: "مطلوب PDF تنفيذ", className: "pending" },
+  executionPdfReady: { label: "PDF التنفيذ جاهز", className: "in-progress" },
+  executionOrdered: { label: "أمر تنفيذ", className: "in-progress" },
+  completed: { label: "مكتمل نهائيًا", className: "completed" },
 };
 
 function ProjectCard({ project, setProjects }) {

@@ -8,7 +8,9 @@ const { compareClientNames } = require("../utils/clientNameSimilarity");
 const {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
-    sendProjectCompletedPreview
+    sendProjectCompletedPreview,
+    sendExecutionPdfRequested,
+    sendExecutionPdfCompleted
 } = require("../services/projectWhatsappNotifications");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
@@ -23,6 +25,27 @@ const canUseRecycleBin = (user) => ["OwnerManager", "Engineer", "Marketer", "Mar
 const sameId = (first, second) => String(first || "") === String(second || "");
 const MARKETER_EDIT_STATUSES = ["marketingDraft", "editingByMarketing"];
 const TECHNICAL_EDIT_STATUSES = ["inProgress", "editing", "editingByEngineer", "editingByOwner"];
+const QUOTE_COMPLETED_STATUSES = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"];
+
+const getPanelById = (project, panelId) => (project.panels || []).find(
+    (panel) => String(panel.panelId) === String(panelId)
+);
+
+const canManageExecutionRequest = async (user, project) => {
+    if (isOwner(user) || user.role === "MarketingManager") return true;
+    if (isEngineer(user)) return !project.engineerId || sameId(project.engineerId, user._id);
+    return isMarketer(user) && marketerOwnsProject(user, project);
+};
+
+const canManageExecutionPdf = (user, project) => isOwner(user)
+    || (isEngineer(user) && (!project.engineerId || sameId(project.engineerId, user._id)));
+const deriveExecutionStatus = (panels = []) => {
+    const statuses = panels.map((panel) => panel.executionPdf?.status || "notRequested");
+    if (statuses.includes("requested")) return "executionPdfRequested";
+    if (statuses.includes("ready")) return "executionPdfReady";
+    if (statuses.includes("skipped")) return "executionOrdered";
+    return "quoteCompleted";
+};
 
 // Older WhatsApp projects may have been created before marketingId was saved
 // on the project.  Their WhatsApp session still has the correct marketer ID,
@@ -400,7 +423,7 @@ const startProjectEditing = async (req, res, next) => {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية تحويل هذا المشروع إلى وضع التعديل." });
         }
 
-        if (project.status !== "completed") {
+        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(project.status)) {
             return res.status(409).json({ status: "error", message: "هذا المشروع مفتوح بالفعل لدى مستخدم آخر أو ما زال قيد العمل." });
         }
 
@@ -410,7 +433,7 @@ const startProjectEditing = async (req, res, next) => {
         const editingProject = await projectModels.update({ id: project._id, status: editingStatus, updatedAt: Date.now() });
         let notification = "تم تحويل المشروع إلى وضع التعديل.";
 
-        if (project.status === "completed") {
+        if (project.status === "quoteCompleted") {
             try {
                 if (marketerRequested) {
                     notification = await notifyEngineersAboutSubmittedProject(editingProject, true);
@@ -575,8 +598,8 @@ const completeProject = async (req, res, next) => {
         if (!isOwner(req.user) && !sameId(project.engineerId, req.user._id)) {
             return projectAlreadyClaimed(res, project);
         }
-        if (project.status === "completed") {
-            return res.status(200).json({ status: "ok", message: "المشروع مكتمل بالفعل.", project });
+        if (QUOTE_COMPLETED_STATUSES.includes(project.status)) {
+            return res.status(200).json({ status: "ok", message: "عرض السعر مكتمل بالفعل.", project });
         }
         if (!TECHNICAL_EDIT_STATUSES.includes(project.status)) {
             return res.status(409).json({ status: "error", message: "لا يمكن إتمام المشروع قبل فتحه للتعديل الفني." });
@@ -590,16 +613,16 @@ const completeProject = async (req, res, next) => {
         const completedProject = await projectModels.update({
             id: project._id,
             client: projectForClientSync.client,
-            status: "completed",
+            status: "quoteCompleted",
             clientPreviewToken,
             updatedAt: Date.now()
         });
+        const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+        const previewUrl = `${frontendUrl}/p/${clientPreviewToken}`;
         let notification = "لم يتم إرسال رسالة؛ لا يوجد مسوّق مرتبط بالمشروع.";
         {
             const marketer = await getProjectMarketer(completedProject);
             if (marketer?.phoneNumber) {
-                const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-                const previewUrl = `${frontendUrl}/p/${clientPreviewToken}`;
                 try {
                     await sendProjectCompletedPreview(marketer.phoneNumber, completedProject, previewUrl);
                     await projectModels.update({ id: completedProject._id, marketingCompletionNotifiedAt: new Date(), marketingCompletionNotificationError: null });
@@ -610,10 +633,133 @@ const completeProject = async (req, res, next) => {
                 }
             }
         }
-        return res.status(200).json({ status: "ok", message: "تم إتمام المشروع.", notification, project: completedProject });
+        return res.status(200).json({ status: "ok", message: "تم إتمام عرض السعر.", notification, previewUrl, project: completedProject });
     } catch (error) {
         next(error);
     }
+};
+
+const requestExecutionPdf = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!(await canManageExecutionRequest(req.user, project))) {
+            return res.status(403).json({ status: "error", message: "لا تملك صلاحية إصدار أمر PDF تنفيذ لهذا المشروع." });
+        }
+        if (!["quoteCompleted", "completed"].includes(project.status)) {
+            return res.status(409).json({ status: "error", message: "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ." });
+        }
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإصدار أمر التنفيذ." });
+
+        panel.executionPdf = {
+            ...(panel.executionPdf?.toObject?.() || panel.executionPdf || {}),
+            status: "requested",
+            requestedAt: new Date(),
+            requestedBy: req.user._id,
+            completedAt: null,
+            completedBy: null,
+            skippedAt: null,
+            skippedBy: null
+        };
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
+
+        let notification = "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل.";
+        const assignedEngineer = project.engineerId
+            ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
+            : null;
+        const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
+        if (recipients.length) {
+            const results = await Promise.allSettled(recipients.map((engineer) =>
+                sendExecutionPdfRequested(engineer.phoneNumber, updatedProject, panel.panelName)
+            ));
+            const sentCount = results.filter((result) => result.status === "fulfilled").length;
+            notification = sentCount
+                ? `تم إرسال أمر PDF التنفيذ إلى ${sentCount} مهندس.`
+                : `تم إصدار أمر PDF التنفيذ، لكن تعذر إرسال WhatsApp: ${results[0]?.reason?.message || "خطأ غير معروف"}`;
+        }
+        return res.status(200).json({ status: "ok", message: "تم إصدار أمر PDF التنفيذ.", notification, project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const uploadExecutionPdfFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "رفع PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
+        if (!["executionPdfRequested", "executionPdfReady", "executionOrdered"].includes(project.status)) return res.status(409).json({ status: "error", message: "لا يوجد أمر PDF تنفيذ مفتوح لهذا المشروع." });
+        if (!req.file) return res.status(400).json({ status: "error", message: "اختر ملف PDF أو صورة أولًا." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.executionPdf?.status !== "requested") return res.status(400).json({ status: "error", message: "هذه اللوحة لا يوجد لها أمر PDF تنفيذ مفتوح." });
+
+        const stored = await uploadFile({ fileName: req.file.originalname, mimeType: req.file.mimetype, buffer: req.file.buffer });
+        panel.executionPdf.files.push({
+            storageFileId: stored.id,
+            fileName: stored.name || req.file.originalname,
+            mimeType: stored.mimeType || req.file.mimetype,
+            fileSize: Number(stored.size || req.file.size || 0),
+            uploadedAt: new Date(),
+            uploadedBy: req.user._id
+        });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(201).json({ status: "ok", message: "تم رفع الملف.", project: updatedProject, file: panel.executionPdf.files.at(-1) });
+    } catch (error) { next(error); }
+};
+
+const getExecutionPdfFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canReadProject(req.user, project) && !(await marketerOwnsProject(req.user, project))) {
+            return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض الملف." });
+        }
+        const panel = getPanelById(project, req.params.panelId);
+        const file = panel?.executionPdf?.files?.id(req.params.fileId);
+        if (!file) return res.status(404).json({ status: "error", message: "الملف غير موجود." });
+        const stored = await downloadStoredFile(file.storageFileId);
+        res.setHeader("Content-Type", file.mimeType || stored.mimeType);
+        res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
+        return res.send(stored.buffer);
+    } catch (error) { next(error); }
+};
+
+const finishExecutionPdf = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "إتمام PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.executionPdf?.status !== "requested") return res.status(409).json({ status: "error", message: "لا يوجد أمر PDF تنفيذ مفتوح لهذه اللوحة." });
+        if (!(panel.executionPdf.files || []).length) return res.status(400).json({ status: "error", message: "ارفع ملف PDF أو صورة واحدة على الأقل قبل الإتمام." });
+        panel.executionPdf.status = "ready";
+        panel.executionPdf.completedAt = new Date();
+        panel.executionPdf.completedBy = req.user._id;
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
+        let notification = "";
+        const marketer = await getProjectMarketer(updatedProject);
+        if (marketer?.phoneNumber) {
+            try {
+                await sendExecutionPdfCompleted(marketer.phoneNumber, updatedProject, panel.panelName);
+                notification = "تم إشعار المندوب باكتمال PDF التنفيذ.";
+            } catch (error) { notification = `اكتمل PDF التنفيذ، لكن تعذر إرسال WhatsApp: ${error.message}`; }
+        }
+        return res.status(200).json({ status: "ok", message: "تم حفظ وإتمام PDF التنفيذ.", notification, project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const skipExecutionPdf = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "تخطي PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.executionPdf?.status !== "requested") return res.status(409).json({ status: "error", message: "لا يوجد أمر PDF تنفيذ مفتوح لهذه اللوحة." });
+        panel.executionPdf.status = "skipped";
+        panel.executionPdf.skippedAt = new Date();
+        panel.executionPdf.skippedBy = req.user._id;
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: "تم تخطي PDF التنفيذ والانتقال إلى أمر التنفيذ.", project: updatedProject });
+    } catch (error) { next(error); }
 };
 
 const deleteProject = async (req, res, next) => {
@@ -646,7 +792,13 @@ const permanentlyDeleteProject = async (req, res, next) => {
         if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
 
         const messages = await whatsappMessages.findAllByProject(project._id);
-        const storedFileIds = [...new Set(messages.map((message) => message.media?.storageFileId).filter(Boolean))];
+        const executionFileIds = (project.panels || []).flatMap((panel) =>
+            (panel.executionPdf?.files || []).map((file) => file.storageFileId).filter(Boolean)
+        );
+        const storedFileIds = [...new Set([
+            ...messages.map((message) => message.media?.storageFileId).filter(Boolean),
+            ...executionFileIds
+        ])];
         await Promise.all(storedFileIds.map((fileId) => deleteStoredFile(fileId)));
         await whatsappMessages.deleteByProject(project._id);
         await projectModels.deleteForever(project._id);
@@ -656,4 +808,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

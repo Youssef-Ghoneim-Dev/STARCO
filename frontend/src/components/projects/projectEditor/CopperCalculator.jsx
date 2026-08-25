@@ -45,6 +45,7 @@ function CopperCalculator() {
   const amperageOptions = (configuration.catalog || []).map((item) => ({ value: item.key, label: item.name }));
   const barCountOptions = barCounts.map((count) => ({ value: count, label: String(count) }));
   const directionOptions = [{ value: "one", label: "اتجاه واحد" }, { value: "two", label: "اتجاهين" }];
+  const defaultCopperPrice = configuration.pricePerKg ?? "";
   const branches = copper.branches || [];
   const commonDirection = branches.length && branches.every((branch) => (branch.direction || "one") === (branches[0].direction || "one")) ? (branches[0].direction || "one") : "";
   const commonBarCount = branches.length && branches.every((branch) => Number(branch.barCount || barCounts[0]) === Number(branches[0].barCount || barCounts[0])) ? Number(branches[0].barCount || barCounts[0]) : "";
@@ -91,10 +92,10 @@ function CopperCalculator() {
       };
     });
 
-  if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg ?? configuration.pricePerKg ?? "" }))}>+ إضافة نحاس للوحة</button></div>;
+  if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg === "" || current.pricePerKg == null ? defaultCopperPrice : current.pricePerKg }))}>+ إضافة نحاس للوحة</button></div>;
 
   return <section className="copper-calculator" dir="rtl">
-    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => updateCopper(() => ({ enabled: false, pricePerKg: "", earthPrice: "", groundPrice: "", main: { optionKey: "", length: "", barCount: barCounts[0] }, branches: [] }))}>حذف النحاس</button></div>
+    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => updateCopper(() => ({ enabled: false, pricePerKg: defaultCopperPrice, earthPrice: "", groundPrice: "", main: { optionKey: "", length: "", barCount: barCounts[0] }, branches: [] }))}>حذف النحاس</button></div>
     <div className="copper-cost-fields">
       <label>سعر النحاس<input type="number" min="0" step="any" value={copper.pricePerKg ?? configuration.pricePerKg ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: event.target.value }))} /></label>
       <label>سعر الإرث والأرضي<input type="number" min="0" step="any" value={copper.earthPrice ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, earthPrice: event.target.value, groundPrice: 0 }))} /></label>

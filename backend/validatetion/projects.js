@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
         }).optional(),
 
         status: joi.string()
-            .valid("marketingDraft", "editingByMarketing", "editingByEngineer", "editingByOwner", "pending", "inProgress", "editing", "completed")
+            .valid("marketingDraft", "editingByMarketing", "editingByEngineer", "editingByOwner", "pending", "inProgress", "editing", "quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed")
             .optional(),
         clientNameReview: joi.object({
             enteredName: joi.string().allow("").max(100).optional(),
@@ -86,9 +86,12 @@ module.exports = (req, res, next) => {
                         optionKey: joi.string().allow("").optional(),
                         direction: joi.string().valid("one", "two").optional(),
                         length: joi.number().min(0).allow(null).optional(),
-                        barCount: joi.number().min(1).optional()
+                        barCount: joi.number().min(1).optional(),
+                        quantity: joi.number().integer().min(1).optional()
                     })).optional()
                 }).optional(),
+
+                executionPdf: joi.object().unknown(true).optional(),
 
                 parts: joi.array().items(
 

@@ -42,6 +42,24 @@ export const startProjectEditing = (id) => api.post(`/projects/${id}/start-editi
 
 export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
 
+export const requestExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/request`, { panelId });
+
+export const uploadExecutionPdfFile = (projectId, panelId, file) => {
+    const formData = new FormData();
+    formData.append("panelId", panelId);
+    formData.append("file", file);
+    return api.post(`/projects/${projectId}/execution-pdf/files`, formData);
+};
+
+export const finishExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/finish`, { panelId });
+
+export const skipExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/skip`, { panelId });
+
+export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
+    `/projects/${projectId}/execution-pdf/${panelId}/files/${fileId}`,
+    { responseType: "blob" },
+);
+
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
 
 export const getProjectMediaWhatsappLink = (id, panelId) => api.get(

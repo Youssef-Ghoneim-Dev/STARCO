@@ -11,6 +11,11 @@ const upload = multer({
     limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, callback) => callback(null, file.mimetype.startsWith("image/") || file.mimetype.startsWith("audio/"))
 });
+const executionUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => callback(null, file.mimetype === "application/pdf" || file.mimetype.startsWith("image/"))
+});
 
 // Public, key-protected page used by the completed-project WhatsApp link.
 // Keep it before /:id so Express does not treat "client" as a project id.
@@ -87,6 +92,12 @@ projectsRouter.post(
     CheckUserToken,
     projectController.completeProject
 );
+
+projectsRouter.post("/:id/execution-pdf/request", authMw, CheckUserToken, projectController.requestExecutionPdf);
+projectsRouter.post("/:id/execution-pdf/files", authMw, CheckUserToken, executionUpload.single("file"), projectController.uploadExecutionPdfFile);
+projectsRouter.get("/:id/execution-pdf/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getExecutionPdfFile);
+projectsRouter.post("/:id/execution-pdf/finish", authMw, CheckUserToken, projectController.finishExecutionPdf);
+projectsRouter.post("/:id/execution-pdf/skip", authMw, CheckUserToken, projectController.skipExecutionPdf);
 
 projectsRouter.delete(
     "/:id",

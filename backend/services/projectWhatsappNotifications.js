@@ -70,8 +70,28 @@ const sendProjectCompletedPreview = (to, project, previewLink) => sendNamedTempl
     [project._id, project.client?.name || "غير محدد", (project.panels || []).length, previewLink]
 );
 
+const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
+    to,
+    project,
+    "WHATSAPP_TEMPLATE_EXECUTION_PDF_REQUESTED",
+    "execution_pdf_requested",
+    ["project_id", "client_name", "panel_name", "project_url"],
+    [project._id, project.client?.name || "غير محدد", panelName || "غير محدد", projectUrl(project)]
+);
+
+const sendExecutionPdfCompleted = (to, project, panelName) => sendNamedTemplate(
+    to,
+    project,
+    "WHATSAPP_TEMPLATE_EXECUTION_PDF_COMPLETED",
+    "execution_pdf_completed",
+    ["project_id", "client_name", "panel_name", "project_url"],
+    [project._id, project.client?.name || "غير محدد", panelName || "غير محدد", projectUrl(project)]
+);
+
 module.exports = {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
-    sendProjectCompletedPreview
+    sendProjectCompletedPreview,
+    sendExecutionPdfRequested,
+    sendExecutionPdfCompleted
 };

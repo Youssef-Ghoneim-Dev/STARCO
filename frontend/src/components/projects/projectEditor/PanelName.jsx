@@ -19,16 +19,6 @@ function PanelName() {
 
   return (
     <section className="project-editor-card panel-name-card">
-      <label htmlFor="panel-name">اسم اللوحة</label>
-
-      <textarea
-        id="panel-name"
-        dir="auto"
-        value={panel.panelName ?? ""}
-        onChange={(e) => updatePanelName(e.target.value)}
-        placeholder="اسم اللوحة"
-      />
-
       <div className="panel-setup-grid">
         <label>نوع اللوحة
           <StyledSelect value={panel.panelTypeKey || ""} placeholder="اختر نوع اللوحة" onChange={choosePanelType} options={(systemConfig?.panelTypes || []).map((type) => ({ value: type.key, label: type.name }))} />
@@ -39,6 +29,14 @@ function PanelName() {
           </label>
         ))}
       </div>
+      <label htmlFor="panel-name">اسم اللوحة</label>
+      <textarea
+        id="panel-name"
+        dir="auto"
+        value={panel.panelName ?? ""}
+        onChange={(e) => updatePanelName(e.target.value)}
+        placeholder="يُكتب تلقائيًا بعد إدخال الطول والعرض والعمق"
+      />
       {pendingPanelType && <div className="panel-type-confirmation" role="alert">
         <strong>تأكيد تغيير نوع اللوحة</strong>
         <p>هذا النوع حدده المندوب. تغييرُه سيعيد ضبط الأجزاء وإعدادات التصنيع حسب النوع الجديد.</p>

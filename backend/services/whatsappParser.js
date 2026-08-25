@@ -50,6 +50,11 @@ const parseWhatsappCommand = (text) => {
         return { type: "media", projectId: mediaMatch[1], panelNumber: parsePanelNumber(mediaMatch[2]) };
     }
 
+    const executionMatch = firstLine.match(/^(?:STARCO\s+(?:PDF\s+EXECUTION|EXECUTION\s+PDF)|(?:امر|أمر)\s+(?:PDF\s+)?تنفيذ(?:\s+PDF)?)\s+#?([a-f\d]{24})(?:\s+(?:PANEL|لوحة)\s*(\d+))?$/i);
+    if (executionMatch) {
+        return { type: "execution-pdf", projectId: executionMatch[1], panelNumber: parsePanelNumber(executionMatch[2] || "1") };
+    }
+
     const selectionMatch = firstLine.match(/^\s*رقم\s+اللوحة\s*(?::|：|-)?\s*(.+?)\s*$/i);
     if (selectionMatch) {
         return { type: "panel-selection", panelNumber: parsePanelNumber(selectionMatch[1]) };

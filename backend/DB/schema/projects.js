@@ -20,6 +20,15 @@ const panelPartSchema = new mongoose.Schema({
     }
 }, { _id: false });
 
+const executionPdfFileSchema = new mongoose.Schema({
+    storageFileId: { type: String, required: true },
+    fileName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    fileSize: { type: Number, default: 0 },
+    uploadedAt: { type: Date, default: Date.now },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
+}, { _id: true });
+
 const panelSchema = new mongoose.Schema({
 
     panelId: {
@@ -129,7 +138,22 @@ const panelSchema = new mongoose.Schema({
 
     thickness: [{
         type: Number
-    }]
+    }],
+
+    executionPdf: {
+        status: {
+            type: String,
+            enum: ["notRequested", "requested", "ready", "skipped"],
+            default: "notRequested"
+        },
+        requestedAt: { type: Date, default: null },
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        completedAt: { type: Date, default: null },
+        completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        skippedAt: { type: Date, default: null },
+        skippedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        files: [executionPdfFileSchema]
+    }
 
 }, { _id: false });
 
@@ -194,6 +218,10 @@ module.exports = new mongoose.Schema({
             "pending",
             "inProgress",
             "editing",
+            "quoteCompleted",
+            "executionPdfRequested",
+            "executionPdfReady",
+            "executionOrdered",
             "completed"
         ],
         default: "pending"

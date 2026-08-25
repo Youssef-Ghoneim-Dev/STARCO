@@ -3,6 +3,7 @@ import { HiOutlinePencilAlt, HiOutlinePlus, HiOutlineSearch, HiOutlineTrash, HiO
 import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { createClient, deleteClient, findSimilarClients, getAllClients, updateClient } from "../services/clientsAPI";
+import { matchesSearchText } from "../utils/textSearch";
 import "../styles/management.css";
 
 const blankClient = { name: "", type: "person", profitPercentage: 15 };
@@ -27,8 +28,7 @@ function Clients() {
   }, []);
 
   const filteredClients = useMemo(() => {
-    const value = query.trim().toLocaleLowerCase("ar-EG");
-    return clients.filter((client) => !value || client.name?.toLocaleLowerCase("ar-EG").includes(value));
+    return clients.filter((client) => matchesSearchText(client.name, query));
   }, [clients, query]);
 
   const openForm = (client = null) => {

@@ -459,6 +459,8 @@
 .copper-catalog-settings > summary strong { font-size: 16px; }
 .copper-catalog-settings > summary span { color: var(--text-light); font-size: 12px; font-weight: 600; }
 .copper-catalog-settings-body { padding: 0 16px 16px; border-top: 1px solid #e3edf1; }
+.copper-section-save { justify-self: start; min-width: 190px; font-weight: 800; }
+.copper-catalog-actions { display: grid; justify-items: start; gap: 10px; }
 
 @media (max-width: 1050px) {
     .configured-part {

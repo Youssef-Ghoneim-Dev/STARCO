@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
 import { createProjectPdf, getProjectPdfFilename } from "../../../utils/projectPdf";
 
 function SaveActions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { saveProject, savingProject, saveProjectError, project, prices, systemConfig } = useProject();
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [defaultNamesConfirmation, setDefaultNamesConfirmation] = useState(false);
+  const [pendingCompletionAction, setPendingCompletionAction] = useState("link");
+  const [completedPreviewUrl, setCompletedPreviewUrl] = useState("");
   const validationErrors = useMemo(() => {
     const errors = [];
     const client = project?.client || {};
@@ -60,10 +60,7 @@ function SaveActions() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  const downloadPdf = async () => {
-    const pdf = await generatePdf();
-    if (!pdf) return;
-
+  const savePdfBlob = (pdf) => {
     const url = URL.createObjectURL(pdf);
     const link = document.createElement("a");
     link.href = url;
@@ -78,22 +75,53 @@ function SaveActions() {
     .map((panel, index) => panel.panelName?.trim() || `لوحة ${index + 1}`)
     .filter((name) => /^لوحة\s*\d+$/u.test(name));
 
-  const complete = async ({ confirmedDefaultNames = false } = {}) => {
+  const complete = async ({ confirmedDefaultNames = false, action = "link" } = {}) => {
     if (!confirmedDefaultNames && defaultPanelNames.length > 0) {
+      setPendingCompletionAction(action);
       setDefaultNamesConfirmation(true);
       return;
     }
+
+    const pdf = action === "download" ? await generatePdf() : null;
+    if (action === "download" && !pdf) return;
+
     const result = await saveProject({ complete: true });
     if (result.success) {
-      navigate("/projects");
+      if (action === "download") {
+        savePdfBlob(pdf);
+        navigate("/projects");
+        return;
+      }
+      const previewToken = result.data?.project?.clientPreviewToken;
+      const previewUrl = result.data?.previewUrl || (previewToken ? `${window.location.origin}/p/${previewToken}` : "");
+      if (previewUrl) setCompletedPreviewUrl(previewUrl);
+      else navigate("/projects");
     } else toast.error(result.message || saveProjectError || "تعذر إتمام المشروع.");
   };
 
+  const copyPreviewLinkAndExit = async () => {
+    try {
+      await navigator.clipboard.writeText(completedPreviewUrl);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = completedPreviewUrl;
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    navigate("/projects");
+  };
+
+  const isManualProject = project?.source === "manual";
+
   return <section className="project-editor-card">
-    <div className={`save-actions ${user?.role === "Engineer" && project?.source === "manual" ? "save-actions-three" : "save-actions-two"}`}>
-      {user?.role === "Engineer" && project?.source === "manual" && <button className="secondary-btn" type="button" onClick={downloadPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
+    <div className={`save-actions ${isManualProject ? "save-actions-three" : "save-actions-two"}`}>
       <button className="secondary-btn" type="button" onClick={previewPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "معاينة PDF"}</button>
-      <button className="complete-project-btn" type="button" onClick={() => complete()} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع وإرسال رابط المعاينة</button>
+      {isManualProject && <button className="secondary-btn download-pdf-btn" type="button" onClick={() => complete({ action: "download" })} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
+      <button className="complete-project-btn" type="button" onClick={() => complete({ action: "link" })} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع واستخراج رابط المعاينة</button>
     </div>
     {!canSubmit && <ul className="save-validation-list">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>}
     {defaultNamesConfirmation && <div className="panel-name-warning-backdrop" role="presentation" onMouseDown={() => setDefaultNamesConfirmation(false)}>
@@ -104,8 +132,16 @@ function SaveActions() {
         <p>هل أنت متأكد من إتمام المشروع بهذه الأسماء؟</p>
         <div>
           <button type="button" className="panel-name-warning-review" onClick={() => setDefaultNamesConfirmation(false)}>مراجعة الأسماء</button>
-          <button type="button" className="panel-name-warning-confirm" onClick={() => { setDefaultNamesConfirmation(false); complete({ confirmedDefaultNames: true }); }}>نعم، إتمام المشروع</button>
+          <button type="button" className="panel-name-warning-confirm" onClick={() => { setDefaultNamesConfirmation(false); complete({ confirmedDefaultNames: true, action: pendingCompletionAction }); }}>نعم، إتمام المشروع</button>
         </div>
+      </div>
+    </div>}
+    {completedPreviewUrl && <div className="panel-name-warning-backdrop" role="presentation">
+      <div className="panel-name-warning-dialog completed-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="completed-preview-title" dir="rtl">
+        <h2 id="completed-preview-title">تم إتمام عرض السعر</h2>
+        <p>تم حفظ عرض السعر وإنشاء رابط المعاينة الخاص بالعميل. انسخه ثم ارجع إلى صفحة المشاريع.</p>
+        <div className="completed-preview-link"><input type="text" dir="ltr" readOnly value={completedPreviewUrl} onFocus={(event) => event.target.select()} /><button type="button" onClick={copyPreviewLinkAndExit}>نسخ الرابط والعودة للمشاريع</button></div>
+        <button type="button" className="panel-name-warning-review" onClick={() => navigate("/projects")}>العودة دون نسخ</button>
       </div>
     </div>}
   </section>;

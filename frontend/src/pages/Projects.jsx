@@ -6,6 +6,7 @@ import ProjectsHeader from "../components/projects/ProjectsHeader";
 import ProjectsGrid from "../components/projects/ProjectsGrid";
 
 import { getProjects } from "../services/projectsAPI";
+import { matchesSearchText } from "../utils/textSearch";
 
 import "../styles/projects.css";
 
@@ -41,23 +42,26 @@ function Projects() {
   }, []);
 
   const filteredProjects = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("ar-EG");
     const statusPriority = {
       editing: 0,
       inProgress: 1,
       pending: 2,
-      completed: 3,
+      quoteCompleted: 3,
+      executionPdfRequested: 1,
+      executionPdfReady: 1,
+      executionOrdered: 1,
+      completed: 4,
     };
 
     return projects.filter((project) => {
-      const clientName = project.client?.name?.toLocaleLowerCase("ar-EG") || "";
+      const clientName = project.client?.name || "";
       const panelNames = (project.panels || [])
-        .map((panel) => panel.panelName?.toLocaleLowerCase("ar-EG") || "")
+        .map((panel) => panel.panelName || "")
         .join(" ");
       return (
-        (!normalizedQuery ||
-          clientName.includes(normalizedQuery) ||
-          panelNames.includes(normalizedQuery)) &&
+        (!query.trim() ||
+          matchesSearchText(clientName, query) ||
+          matchesSearchText(panelNames, query)) &&
         (status === "all" || project.status === status)
       );
     }).sort((firstProject, secondProject) => {

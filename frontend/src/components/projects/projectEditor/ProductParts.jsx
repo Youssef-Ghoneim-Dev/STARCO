@@ -99,6 +99,7 @@ function ProductParts() {
                 type="button"
                 onClick={() => deletePart(index)}
                 title="حذف الجزء"
+                aria-label={`حذف ${part.name}`}
               >
                 <IoClose />
               </button>

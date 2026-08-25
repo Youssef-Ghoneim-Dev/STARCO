@@ -10,6 +10,7 @@ import SaveActions from "../components/projects/projectEditor/SaveActions";
 import { ProjectProvider, useProject } from "../context/ProjectContext";
 import WhatsappProjectData from "../components/projects/projectEditor/WhatsappProjectData";
 import MarketingProjectEditor from "../components/projects/projectEditor/MarketingProjectEditor";
+import ExecutionPdfWorkspace from "../components/projects/projectEditor/ExecutionPdfWorkspace";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ProjectEditor.css";
 
@@ -51,37 +52,50 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const [tab, setTab] = useState("project-data");
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
+  const isQuoteCompleted = project?.status === "quoteCompleted";
+  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered"].includes(project?.status);
   const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
   const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
   const editorReadOnly = readOnly || !technicalCanEdit;
-  const readOnlyMessage = !readOnly && isCompleted
-    ? "هذا المشروع مكتمل، لذلك هو للعرض فقط ولا يمكن تعديل تسعيره أو ملف PDF الخاص به."
+  const readOnlyMessage = !readOnly && (isQuoteCompleted || isExecutionPhase || isCompleted)
+    ? isCompleted ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط." : "عرض السعر مكتمل ومحفوظ. يمكنك الرجوع إليه دون تعديل أثناء مرحلة التنفيذ."
     : readOnly
       ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
       : "";
 
   if (isMarketer) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
-    const message = isCompleted
-      ? "هذا المشروع مكتمل. يمكنك مراجعة بياناته، ولتغييرها اضغط تحويل المشروع إلى وضع التعديل."
+    const message = isQuoteCompleted
+      ? "عرض السعر مكتمل. يمكنك إصدار أمر PDF تنفيذ للوحة المطلوبة، أو تحويل عرض السعر إلى وضع التعديل."
+      : isExecutionPhase
+        ? "المشروع دخل مرحلة التنفيذ. تابع حالة PDF التنفيذ من البطاقة التالية."
+      : isCompleted
+      ? "هذا المشروع مكتمل نهائيًا."
       : "هذا المشروع أُرسل للمهندس أو يعمل عليه حاليًا، لذلك بياناته للعرض فقط.";
     return <>
-      {isCompleted && <StartEditingPanel isMarketer />}
+      {isQuoteCompleted && <StartEditingPanel isMarketer />}
       <div className="project-read-only-notice" dir="rtl">{message}</div>
+      {(isQuoteCompleted || isExecutionPhase || isCompleted) && <ExecutionPdfWorkspace />}
       <fieldset className="project-read-only-fieldset" disabled><MarketingProjectEditor /></fieldset>
     </>;
   }
+  if (isQuoteCompleted || isExecutionPhase || isCompleted) return <>
+    {isQuoteCompleted && !readOnly && <StartEditingPanel />}
+    <ExecutionPdfWorkspace />
+    <details className="quote-reference-details">
+      <summary>عرض بيانات التسعير المحفوظة</summary>
+      {isWhatsappProject && <><PanelsTabs readOnly /><WhatsappProjectData /></>}
+      <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
+    </details>
+  </>;
   if (!isWhatsappProject) return <>
-    {isCompleted && !readOnly && <StartEditingPanel />}
     <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />
   </>;
   return <>
-    {isCompleted && !readOnly && <StartEditingPanel />}
     <div className="whatsapp-project-tabs" dir="rtl">
       <button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button>
       <button className={tab === "quote" ? "active" : ""} onClick={() => setTab("quote")}>عرض السعر</button>
     </div>
-    {isCompleted && <div className="project-read-only-notice" dir="rtl">هذا المشروع مكتمل، لذلك هو للعرض فقط ولا يمكن تعديل تسعيره أو ملف PDF الخاص به.</div>}
     {tab === "project-data" ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnly ? readOnlyMessage : ""} />}
   </>;
 }

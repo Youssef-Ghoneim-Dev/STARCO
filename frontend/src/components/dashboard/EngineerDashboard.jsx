@@ -108,7 +108,7 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
     if (status === "completed") result.completed += 1;
     else if (/manufactur/i.test(status)) result.manufacturing += 1;
     else if (/pdf/i.test(status)) result.pdf += 1;
-    else if (["inProgress", "execution", "executing"].includes(status)) result.execution += 1;
+    else if (["inProgress", "execution", "executing", "executionOrdered"].includes(status)) result.execution += 1;
     else if (["pending", "marketingDraft"].includes(status)) result.new += 1;
     else result.pricing += 1;
     return result;
@@ -116,7 +116,7 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
 
   const sortedProjects = useMemo(() => [...projects].sort((a, b) => projectUpdatedAt(b) - projectUpdatedAt(a)), [projects]);
   const todayRequests = sortedProjects.filter((project) => sameDay(project.createdAt, selectedDate)).slice(0, 5);
-  const executionOrders = sortedProjects.filter((project) => isStatus(project, ["inProgress", "execution", "executing"])).slice(0, 3);
+  const executionOrders = sortedProjects.filter((project) => isStatus(project, ["executionPdfRequested", "executionPdfReady", "executionOrdered", "execution", "executing"])).slice(0, 3);
   const priorityProjects = sortedProjects.filter((project) => project.status !== "completed").slice(0, 4);
   const completedToday = selectedProjects.filter((project) => project.status === "completed").length;
   const previousCompleted = yesterdayProjects.filter((project) => project.status === "completed").length;

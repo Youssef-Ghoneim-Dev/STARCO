@@ -123,7 +123,7 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
     setNewBarCount("");
   };
   return <section className="panel-types-editor copper-configuration-editor">
-    <div className="configuration-heading configuration-subheading copper-configuration-heading"><div><h2>إعدادات النحاس</h2><p>جدول الأمبيرات وعدد البارات يُستخدمان تلقائيًا في تسعير النحاس داخل كل لوحة.</p></div><button type="button" className="configuration-secondary" onClick={onSave} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ إعدادات النحاس"}</button></div>
+    <div className="configuration-heading configuration-subheading copper-configuration-heading"><div><h2>إعدادات النحاس</h2><p>جدول الأمبيرات وعدد البارات يُستخدمان تلقائيًا في تسعير النحاس داخل كل لوحة.</p></div></div>
     <div className="copper-quick-settings">
       <div className="copper-setting-fields">
         <NumberField label="سعر النحاس الافتراضي" value={copper.pricePerKg} onChange={(value) => onChange({ ...copper, pricePerKg: value })} />
@@ -147,6 +147,7 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
         </div>
       </div>
       <div className="copper-bar-count-editor"><div className="copper-bar-count-heading"><strong>أعداد البارات المتاحة</strong><span>اختَر الأعداد التي يستطيع المهندس استخدامها</span></div><div className="copper-bar-count-controls"><div className="copper-bar-count-chips">{[...(copper.barCounts || [])].sort((first, second) => first - second).map((count) => <span key={count}>{count}<button type="button" aria-label={`حذف عدد البارات ${count}`} onClick={() => onChange({ ...copper, barCounts: copper.barCounts.filter((item) => Number(item) !== Number(count)) })}><IoClose /></button></span>)}</div><div className="copper-bar-count-add"><input type="number" min="1" step="1" placeholder="عدد جديد" value={newBarCount} onChange={(event) => setNewBarCount(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addBarCount(); } }} /><button type="button" onClick={addBarCount}>إضافة</button></div></div></div>
+      <button type="button" className="configuration-secondary copper-section-save" onClick={onSave} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ إعدادات النحاس"}</button>
     </div>
     <details className="copper-catalog-settings"><summary><IoChevronDown aria-hidden="true" /><div><strong>جدول الأمبيرات ومقاسات النحاس</strong><span>{catalog.length} مقاسًا — اضغط للعرض والتعديل</span></div></summary><div className="copper-catalog-settings-body"><div className="copper-catalog-list">{catalog.map((item) => <div className="configured-part copper-catalog-item" key={item.key}>
       <div className="copper-amperage-name"><span>الاسم</span><strong>{Number(item.amperage) || 0} أمبير</strong></div>
@@ -155,7 +156,7 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
       <NumberField label="السمك (مم)" value={item.thickness} onChange={(value) => updateCatalog(item.key, (current) => ({ ...current, thickness: value }))} />
       <button type="button" className="configuration-delete" onClick={() => onChange({ ...copper, catalog: copper.catalog.filter((entry) => entry.key !== item.key) })}>حذف</button>
     </div>)}</div>
-    <button type="button" className="configuration-secondary" onClick={addCatalog}>+ إضافة مقاس نحاس</button></div></details>
+    <div className="copper-catalog-actions"><button type="button" className="configuration-secondary" onClick={addCatalog}>+ إضافة مقاس نحاس</button><button type="button" className="configuration-secondary copper-section-save" onClick={onSave} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ جدول الأمبيرات"}</button></div></div></details>
   </section>;
 }
 

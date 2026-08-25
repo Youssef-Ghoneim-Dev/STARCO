@@ -18,7 +18,8 @@ const { uploadFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
 const {
     sendNewProjectAssigned,
-    sendProjectUpdatedReview
+    sendProjectUpdatedReview,
+    sendExecutionPdfRequested
 } = require("../services/projectWhatsappNotifications");
 
 const SESSION_HOURS = 24;
@@ -474,6 +475,39 @@ const completeRequestedFinishIfReady = async (sessionId) => {
 
 const handleCommand = async ({ command, senderPhone, marketer, inboundMessage }) => {
     const templates = await loadWhatsappTemplates();
+
+    if (command.type === "execution-pdf") {
+        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
+        if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(targetProject.status)) return "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ.";
+        if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
+            return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
+        }
+        const panel = targetProject.panels[command.panelNumber - 1];
+        panel.executionPdf = {
+            ...(panel.executionPdf?.toObject?.() || panel.executionPdf || {}),
+            status: "requested",
+            requestedAt: new Date(),
+            requestedBy: marketer._id,
+            completedAt: null,
+            completedBy: null,
+            skippedAt: null,
+            skippedBy: null
+        };
+        const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "executionPdfRequested", updatedAt: Date.now() });
+        const assignedEngineer = targetProject.engineerId
+            ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false })
+            : null;
+        const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const results = await Promise.allSettled(recipients.map((engineer) =>
+            sendExecutionPdfRequested(engineer.phoneNumber, updatedProject, panel.panelName)
+        ));
+        const sentCount = results.filter((result) => result.status === "fulfilled").length;
+        return sentCount
+            ? `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}» وإشعار المهندس.`
+            : `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}»، لكن تعذر إرسال إشعار WhatsApp للمهندس.`;
+    }
 
     if (command.type === "media") {
         if (await getActiveSession(senderPhone)) {
