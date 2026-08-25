@@ -197,7 +197,9 @@ const notifyEngineersAboutSubmittedProject = async (project, isUpdatedProject) =
         ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
         : null;
     const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
-    if (!recipients.length) return "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل.";
+    if (!recipients.length) {
+        throw new Error("لا يوجد مهندس نشط برقم WhatsApp مسجل.");
+    }
 
     const marketer = await getProjectMarketer(project);
     const send = isUpdatedProject ? sendProjectUpdatedReview : sendNewProjectAssigned;
@@ -615,20 +617,30 @@ const submitMarketingProject = async (req, res, next) => {
         const wasUpdatedProject = project.status === "editingByMarketing";
         const clientNameReview = await buildClientNameReview(project.client);
         const submittedProject = await projectModels.update({ id: project._id, status: "pending", clientNameReview, updatedAt: Date.now() });
-        let notification;
         try {
-            notification = await notifyEngineersAboutSubmittedProject(submittedProject, wasUpdatedProject);
+            const notification = await notifyEngineersAboutSubmittedProject(submittedProject, wasUpdatedProject);
+            return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", notification, project: submittedProject });
         } catch (error) {
             console.error("WhatsApp project submission template failed:", {
                 projectId: String(submittedProject._id),
+                projectSource: submittedProject.source,
+                previousStatus: project.status,
                 message: error.message,
                 metaCode: error.metaCode,
                 metaSubcode: error.metaSubcode,
                 metaDetails: error.metaDetails
             });
-            notification = `تم حفظ المشروع، لكن تعذر إرسال إشعار WhatsApp: ${error.message}`;
+            const retryableProject = await projectModels.update({
+                id: submittedProject._id,
+                status: project.status,
+                updatedAt: Date.now()
+            });
+            return res.status(502).json({
+                status: "error",
+                message: `تم حفظ البيانات، لكن تعذر إرسال إشعار WhatsApp: ${error.message}. يمكنك المحاولة مرة أخرى.`,
+                project: retryableProject
+            });
         }
-        return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", notification, project: submittedProject });
     } catch (error) { next(error); }
 };
 
