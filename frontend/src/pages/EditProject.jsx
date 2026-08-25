@@ -53,7 +53,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
   const isQuoteCompleted = project?.status === "quoteCompleted";
-  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered"].includes(project?.status);
+  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded"].includes(project?.status);
   const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
   const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
   const editorReadOnly = readOnly || !technicalCanEdit;

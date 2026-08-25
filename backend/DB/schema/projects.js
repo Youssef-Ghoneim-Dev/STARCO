@@ -20,7 +20,7 @@ const panelPartSchema = new mongoose.Schema({
     }
 }, { _id: false });
 
-const executionPdfFileSchema = new mongoose.Schema({
+const storedProjectFileSchema = new mongoose.Schema({
     storageFileId: { type: String, required: true },
     fileName: { type: String, required: true },
     mimeType: { type: String, required: true },
@@ -143,7 +143,7 @@ const panelSchema = new mongoose.Schema({
     executionPdf: {
         status: {
             type: String,
-            enum: ["notRequested", "requested", "ready", "skipped"],
+            enum: ["notRequested", "requested", "ready", "changesRequested", "confirmed", "skipped"],
             default: "notRequested"
         },
         requestedAt: { type: Date, default: null },
@@ -152,7 +152,37 @@ const panelSchema = new mongoose.Schema({
         completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
         skippedAt: { type: Date, default: null },
         skippedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
-        files: [executionPdfFileSchema]
+        confirmedAt: { type: Date, default: null },
+        confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        changesRequestedAt: { type: Date, default: null },
+        changesRequestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        files: [storedProjectFileSchema]
+    },
+
+    manufacturing: {
+        status: {
+            type: String,
+            enum: ["notStarted", "awaitingFiles", "filesReady", "downloadedToLaser"],
+            default: "notStarted"
+        },
+        notes: { type: String, default: "" },
+        files: [storedProjectFileSchema],
+        startedAt: { type: Date, default: null },
+        startedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        filesReadyAt: { type: Date, default: null },
+        filesReadyBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        downloadedToLaserAt: { type: Date, default: null },
+        downloadedToLaserBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        laserStageDueAt: { type: Date, default: null },
+        currentStage: {
+            type: String,
+            enum: ["awaitingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed", ""],
+            default: ""
+        },
+        currentStageStartedAt: { type: Date, default: null },
+        lastReminderAt: { type: Date, default: null },
+        delayReason: { type: String, default: "" },
+        delayRecordedAt: { type: Date, default: null }
     }
 
 }, { _id: false });
@@ -222,6 +252,9 @@ module.exports = new mongoose.Schema({
             "executionPdfRequested",
             "executionPdfReady",
             "executionOrdered",
+            "manufacturingFilesPending",
+            "manufacturingFilesReady",
+            "laserFilesDownloaded",
             "completed"
         ],
         default: "pending"

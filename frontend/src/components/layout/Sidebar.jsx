@@ -22,7 +22,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
 
   const role = user?.role;
   const canUseRecycleBin = ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(role);
-  const canViewProjects = role !== "ProductionManager";
+  const canViewProjects = true;
 
   const logout = () => {
     setLoggingOut(true);

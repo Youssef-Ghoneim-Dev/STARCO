@@ -55,6 +55,13 @@ const parseWhatsappCommand = (text) => {
         return { type: "execution-pdf", projectId: executionMatch[1], panelNumber: parsePanelNumber(executionMatch[2] || "1") };
     }
 
+    const executionDecisionMatch = firstLine.match(/^(?:STARCO\s+EXECUTION\s+(CONFIRM|CHANGES)|(?:تأكيد\s+التنفيذ|تعديلات\s+التنفيذ))\s+#?([a-f\d]{24})(?:\s+(?:PANEL|لوحة)\s*(\d+))?$/i);
+    if (executionDecisionMatch) {
+        const normalized = firstLine.replace(/[أإآ]/g, "ا");
+        const decision = executionDecisionMatch[1]?.toUpperCase() === "CHANGES" || normalized.includes("تعديلات") ? "changes" : "confirm";
+        return { type: "execution-decision", decision, projectId: executionDecisionMatch[2], panelNumber: parsePanelNumber(executionDecisionMatch[3] || "1") };
+    }
+
     const selectionMatch = firstLine.match(/^\s*رقم\s+اللوحة\s*(?::|：|-)?\s*(.+?)\s*$/i);
     if (selectionMatch) {
         return { type: "panel-selection", panelNumber: parsePanelNumber(selectionMatch[1]) };

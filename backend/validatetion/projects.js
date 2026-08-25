@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
         }).optional(),
 
         status: joi.string()
-            .valid("marketingDraft", "editingByMarketing", "editingByEngineer", "editingByOwner", "pending", "inProgress", "editing", "quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed")
+            .valid("marketingDraft", "editingByMarketing", "editingByEngineer", "editingByOwner", "pending", "inProgress", "editing", "quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed")
             .optional(),
         clientNameReview: joi.object({
             enteredName: joi.string().allow("").max(100).optional(),

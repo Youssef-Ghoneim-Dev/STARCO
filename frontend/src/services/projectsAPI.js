@@ -55,9 +55,45 @@ export const finishExecutionPdf = (id, panelId) => api.post(`/projects/${id}/exe
 
 export const skipExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/skip`, { panelId });
 
+export const requestExecutionPdfChanges = (id, panelId) => api.post(`/projects/${id}/execution-pdf/request-changes`, { panelId });
+
+export const confirmProjectExecution = (id, panelId) => api.post(`/projects/${id}/execution-pdf/confirm`, { panelId });
+
 export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
     `/projects/${projectId}/execution-pdf/${panelId}/files/${fileId}`,
     { responseType: "blob" },
+);
+
+export const uploadManufacturingFile = (projectId, panelId, file) => {
+    const formData = new FormData();
+    formData.append("panelId", panelId);
+    formData.append("file", file);
+    return api.post(`/projects/${projectId}/manufacturing/files`, formData);
+};
+
+export const finishManufacturingFiles = (projectId, panelId, notes) => api.post(
+    `/projects/${projectId}/manufacturing/finish`,
+    { panelId, notes },
+);
+
+export const getManufacturingFile = (projectId, panelId, fileId) => api.get(
+    `/projects/${projectId}/manufacturing/${panelId}/files/${fileId}`,
+    { responseType: "blob" },
+);
+
+export const getManufacturingArchive = (projectId, panelId) => api.get(
+    `/projects/${projectId}/manufacturing/${panelId}/archive`,
+    { responseType: "blob" },
+);
+
+export const markManufacturingDownloadedToLaser = (projectId, panelId) => api.post(
+    `/projects/${projectId}/manufacturing/downloaded-to-laser`,
+    { panelId },
+);
+
+export const recordManufacturingDelay = (projectId, panelId, reason) => api.post(
+    `/projects/${projectId}/manufacturing/delay`,
+    { panelId, reason },
 );
 
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);

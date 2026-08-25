@@ -318,7 +318,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           });
           // A completed project is an approved historical quote: never let a
           // page load or WhatsApp backfill attempt modify it automatically.
-          setPreventAutoSave(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(data.status) || !needsWhatsappBackfill(data, savedConfig));
+          setPreventAutoSave(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(data.status) || !needsWhatsappBackfill(data, savedConfig));
         } catch (error) {
           console.error("Failed to load project:", error);
           if (mounted) {
@@ -724,10 +724,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       if (complete) {
         const { data } = await completeProject(projectId);
         completionData = data;
-        setProject((previousProject) => ({
-          ...previousProject,
-          status: data.project?.status || "quoteCompleted",
-        }));
+        // Keep the quote editor mounted until the completion dialog displays
+        // the generated preview link. The backend has already persisted the
+        // new status, and leaving this page will load it normally next time.
         setPreventAutoSave(true);
       }
       return { success: true, data: completionData };

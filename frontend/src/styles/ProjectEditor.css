@@ -1425,6 +1425,24 @@
 .execution-files-grid svg { flex: 0 0 auto; font-size: 25px; color: var(--primary); }
 .execution-files-grid span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .execution-pdf-actions { display: grid; grid-template-columns: minmax(150px, .55fr) minmax(240px, 1fr); gap: 12px; }
+.execution-review-actions, .manufacturing-ready-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.execution-review-actions button, .manufacturing-ready-actions button { flex: 1 1 220px; min-height: 48px; padding: 0 20px; border-radius: 11px; border: 1px solid var(--border); font: inherit; font-weight: 800; cursor: pointer; }
+.request-changes-btn { color: #9a3412; background: #fff7ed; border-color: #fed7aa !important; }
+.confirm-execution-btn { color: #fff; background: var(--primary); border-color: var(--primary) !important; }
+.manufacturing-files-section { margin-top: 18px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+.manufacturing-files-section h3 { margin: 8px 0; color: var(--text); }
+.manufacturing-files-section p { color: var(--text-light); }
+.manufacturing-files-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.manufacturing-files-list span { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 8px 11px; border-radius: 9px; background: #f1f5f9; color: var(--text); overflow-wrap: anywhere; }
+.manufacturing-notes-label { display: grid; gap: 8px; margin-top: 16px; color: var(--text); font-weight: 800; }
+.manufacturing-notes-label textarea { width: 100%; min-height: 110px; resize: vertical; padding: 13px; border: 1px solid var(--border); border-radius: 11px; font: inherit; }
+.manufacturing-files-section > .finish-execution-pdf-btn { width: 100%; margin-top: 14px; }
+.manufacturing-download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 16px; }
+.manufacturing-download-grid button { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: #f8fafc; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
+.manufacturing-download-grid button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manufacturing-delay-form { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 10px; margin-top: 14px; }
+.manufacturing-delay-form select, .manufacturing-delay-form button { min-height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 10px; background: #fff; font: inherit; font-weight: 700; }
+.manufacturing-delay-form button { color: #9a3412; background: #fff7ed; cursor: pointer; }
 .skip-execution-btn { min-height: 48px; border: 1px solid #d7a64a; border-radius: 11px; background: #fff9ec; color: #8a5a00; font: inherit; font-weight: 800; cursor: pointer; }
 .execution-pdf-actions button:disabled, .execution-order-card button:disabled { opacity: .55; cursor: not-allowed; }
 .execution-status-notice { padding: 18px; border-radius: 13px; font-weight: 800; text-align: center; }
@@ -1448,6 +1466,7 @@
     .execution-pdf-heading, .execution-order-card { align-items: stretch; flex-direction: column; }
     .project-id-copy { max-width: none; width: 100%; box-sizing: border-box; }
     .execution-pdf-actions { grid-template-columns: 1fr; }
+    .manufacturing-delay-form { grid-template-columns: 1fr; }
     .execution-dropzone { padding: 28px 14px; }
     .project-editor-page,
     .panel-editor,

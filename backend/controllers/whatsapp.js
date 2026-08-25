@@ -14,12 +14,13 @@ const {
     sendTemplateMessage,
     downloadMedia
 } = require("../services/whatsappMeta");
-const { uploadFile } = require("../services/googleDrive");
+const { uploadFile, deleteStoredFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
 const {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
-    sendExecutionPdfRequested
+    sendExecutionPdfRequested,
+    sendExecutionConfirmed
 } = require("../services/projectWhatsappNotifications");
 
 const SESSION_HOURS = 24;
@@ -134,6 +135,85 @@ const extractText = (message) => {
         return message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || "";
     }
     return "";
+};
+
+const parseStageReply = (value) => {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[أإآ]/g, "ا");
+    if (["نعم", "ايوه", "yes", "true"].includes(normalized)) return true;
+    if (["لا", "لأ", "no", "false"].includes(normalized)) return false;
+    return null;
+};
+
+const handleProductionStageReply = async ({ message, senderPhone, text }) => {
+    const contextMessageId = message.context?.id;
+    const answer = parseStageReply(text);
+    if (!contextMessageId || answer === null) return false;
+
+    const outbound = await messages.findByProviderMessageId(contextMessageId);
+    if (outbound?.type !== "production_stage_check" || !outbound.projectId || !outbound.panelId) return false;
+    if (normalizePhoneNumber(outbound.recipientPhone) !== normalizePhoneNumber(senderPhone)) return false;
+
+    const responder = await users.select_one({
+        phoneNumber: normalizePhoneNumber(senderPhone),
+        role: { $in: ["OwnerManager", "ProductionManager"] },
+        approved: true,
+        isDeleted: false
+    });
+    if (!responder) {
+        await sendSafeText(senderPhone, "هذا الرقم غير مربوط بحساب مدير معتمد في نظام STARCO.");
+        return true;
+    }
+
+    const project = await projects.select_one({ _id: outbound.projectId, isDeleted: false });
+    const panel = project?.panels?.find((item) => String(item.panelId) === String(outbound.panelId));
+    if (!project || !panel?.manufacturing) {
+        await sendSafeText(senderPhone, "تعذر العثور على اللوحة المرتبطة برسالة المتابعة.");
+        return true;
+    }
+
+    await messages.create({
+        providerMessageId: message.id,
+        direction: "inbound",
+        projectId: project._id,
+        panelId: panel.panelId,
+        senderPhone,
+        type: "production_stage_reply",
+        text,
+        status: "processed",
+        rawPayload: message
+    });
+
+    const stageName = outbound.rawPayload?.stageName || "";
+    if (!answer) {
+        panel.manufacturing.delayReason = "بانتظار تحديد سبب التأخير";
+        panel.manufacturing.delayRecordedAt = new Date();
+        await projects.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        const link = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/projects/${project._id}`;
+        await sendSafeText(senderPhone, `تم تسجيل وجود تأخير في «${stageName}». افتح المشروع واختر سبب التأخير من القائمة:\n${link}`);
+        return true;
+    }
+
+    if (stageName.includes("تنزيل الملفات")) {
+        const nextMidnight = new Date();
+        nextMidnight.setHours(24, 0, 0, 0);
+        panel.manufacturing.status = "downloadedToLaser";
+        panel.manufacturing.downloadedToLaserAt = new Date();
+        panel.manufacturing.downloadedToLaserBy = responder._id;
+        panel.manufacturing.laserStageDueAt = nextMidnight;
+        panel.manufacturing.currentStage = "laser";
+        panel.manufacturing.currentStageStartedAt = new Date();
+        panel.manufacturing.lastReminderAt = null;
+        await projects.update({ id: project._id, panels: project.panels, status: "laserFilesDownloaded", updatedAt: Date.now() });
+        await sendSafeText(senderPhone, `تم تسجيل تنزيل ملفات اللوحة «${panel.panelName}» إلى الليزر. ستبدأ متابعة مرحلة الليزر في اليوم التالي.`);
+        return true;
+    }
+
+    panel.manufacturing.currentStage = "manufacturing";
+    panel.manufacturing.currentStageStartedAt = new Date();
+    panel.manufacturing.lastReminderAt = null;
+    await projects.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+    await sendSafeText(senderPhone, `تم تسجيل اكتمال مرحلة الليزر للوحة «${panel.panelName}» والانتقال إلى مرحلة التصنيع.`);
+    return true;
 };
 
 const mediaFromMessage = (message) => {
@@ -480,7 +560,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
-        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(targetProject.status)) return "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ.";
+        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(targetProject.status)) return "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ.";
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
             return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
         }
@@ -499,14 +579,53 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const assignedEngineer = targetProject.engineerId
             ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false })
             : null;
-        const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
-        const results = await Promise.allSettled(recipients.map((engineer) =>
-            sendExecutionPdfRequested(engineer.phoneNumber, updatedProject, panel.panelName)
+        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const managers = await users.selectall({ role: { $in: ["OwnerManager", "ProductionManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const recipients = [...engineers, ...managers].filter((recipient, index, all) => {
+            const phone = String(recipient.phoneNumber || "").replace(/\D/g, "");
+            return phone && all.findIndex((item) => String(item.phoneNumber || "").replace(/\D/g, "") === phone) === index;
+        });
+        const results = await Promise.allSettled(recipients.map((recipient) =>
+            sendExecutionPdfRequested(recipient.phoneNumber, updatedProject, panel.panelName)
         ));
         const sentCount = results.filter((result) => result.status === "fulfilled").length;
         return sentCount
-            ? `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}» وإشعار المهندس.`
-            : `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}»، لكن تعذر إرسال إشعار WhatsApp للمهندس.`;
+            ? `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}» وإشعار المسؤولين.`
+            : `تم إصدار أمر PDF التنفيذ للوحة «${panel.panelName}»، لكن تعذر إرسال إشعار WhatsApp.`;
+    }
+
+    if (command.type === "execution-decision") {
+        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
+        if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        if (!command.panelNumber || command.panelNumber > targetProject.panels.length) return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
+        const panel = targetProject.panels[command.panelNumber - 1];
+        if (!["ready", "skipped"].includes(panel.executionPdf?.status)) return "يجب تجهيز PDF التنفيذ أو تخطيه أولًا.";
+
+        if (command.decision === "changes") {
+            const files = [...(panel.executionPdf.files || [])];
+            panel.executionPdf.status = "changesRequested";
+            panel.executionPdf.changesRequestedAt = new Date();
+            panel.executionPdf.changesRequestedBy = marketer._id;
+            panel.executionPdf.files = [];
+            if (panel.manufacturing) panel.manufacturing.status = "notStarted";
+            const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "editingByEngineer", updatedAt: Date.now() });
+            await Promise.allSettled(files.map((file) => deleteStoredFile(file.storageFileId)));
+            const assignedEngineer = targetProject.engineerId ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false }) : null;
+            const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+            await Promise.allSettled(engineers.map((engineer) => sendProjectUpdatedReview(engineer.phoneNumber, updatedProject, marketer.name || "غير محدد")));
+            return `تم فتح مشروع اللوحة «${panel.panelName}» للتعديل مع الاحتفاظ بجميع بيانات التسعير.`;
+        }
+
+        panel.executionPdf.status = "confirmed";
+        panel.executionPdf.confirmedAt = new Date();
+        panel.executionPdf.confirmedBy = marketer._id;
+        panel.manufacturing = { ...(panel.manufacturing?.toObject?.() || panel.manufacturing || {}), status: "awaitingFiles", startedAt: new Date(), startedBy: marketer._id };
+        const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
+        const assignedEngineer = targetProject.engineerId ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false }) : null;
+        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        await Promise.allSettled(engineers.map((engineer) => sendExecutionConfirmed(engineer.phoneNumber, updatedProject, panel.panelName)));
+        return `تم تأكيد تنفيذ اللوحة «${panel.panelName}» وفتح مرحلة رفع ملفات التصنيع.`;
     }
 
     if (command.type === "media") {
@@ -756,6 +875,7 @@ const handleIncomingMessage = async (message, value) => {
     const activeSession = await getActiveSession(senderPhone);
 
     markMessageAsRead(message.id).catch((error) => console.error("Could not mark message as read:", error.message));
+    if (await handleProductionStageReply({ message, senderPhone, text })) return;
     const marketer = await users.select_marketer_by_phone(senderPhone);
     if (!marketer) {
         await sendSafeText(senderPhone, "هذا الرقم غير مربوط بحساب مندوب معتمد في نظام STARCO.");

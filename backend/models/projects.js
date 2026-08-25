@@ -40,7 +40,7 @@ const findClientPreview = async (projectId, clientPreviewToken) => {
     return openconnection.findOne({
         _id: projectId,
         clientPreviewToken,
-        status: { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"] },
+        status: { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] },
         isDeleted: false
     });
 };
@@ -53,7 +53,7 @@ const findClientPreviewByToken = async (clientPreviewToken) => {
 
     return openconnection.findOne({
         clientPreviewToken,
-        status: { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"] },
+        status: { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] },
         isDeleted: false
     });
 };

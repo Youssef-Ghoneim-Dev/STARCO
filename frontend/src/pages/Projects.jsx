@@ -50,6 +50,9 @@ function Projects() {
       executionPdfRequested: 1,
       executionPdfReady: 1,
       executionOrdered: 1,
+      manufacturingFilesPending: 1,
+      manufacturingFilesReady: 1,
+      laserFilesDownloaded: 1,
       completed: 4,
     };
 

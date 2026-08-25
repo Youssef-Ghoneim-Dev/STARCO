@@ -14,7 +14,19 @@ const upload = multer({
 const executionUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 25 * 1024 * 1024 },
-    fileFilter: (req, file, callback) => callback(null, file.mimetype === "application/pdf" || file.mimetype.startsWith("image/"))
+    fileFilter: (req, file, callback) => {
+        const mimeType = String(file.mimetype || "").toLowerCase();
+        const fileName = String(file.originalname || "").toLowerCase();
+        const allowed = mimeType === "application/pdf"
+            || mimeType.startsWith("image/")
+            || fileName.endsWith(".pdf")
+            || /\.(avif|bmp|gif|heic|heif|jpe?g|png|webp)$/i.test(fileName);
+        callback(null, allowed);
+    }
+});
+const manufacturingUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 // Public, key-protected page used by the completed-project WhatsApp link.
@@ -98,6 +110,14 @@ projectsRouter.post("/:id/execution-pdf/files", authMw, CheckUserToken, executio
 projectsRouter.get("/:id/execution-pdf/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getExecutionPdfFile);
 projectsRouter.post("/:id/execution-pdf/finish", authMw, CheckUserToken, projectController.finishExecutionPdf);
 projectsRouter.post("/:id/execution-pdf/skip", authMw, CheckUserToken, projectController.skipExecutionPdf);
+projectsRouter.post("/:id/execution-pdf/request-changes", authMw, CheckUserToken, projectController.requestExecutionPdfChanges);
+projectsRouter.post("/:id/execution-pdf/confirm", authMw, CheckUserToken, projectController.confirmExecution);
+projectsRouter.post("/:id/manufacturing/files", authMw, CheckUserToken, manufacturingUpload.single("file"), projectController.uploadManufacturingFile);
+projectsRouter.get("/:id/manufacturing/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getManufacturingFile);
+projectsRouter.get("/:id/manufacturing/:panelId/archive", authMw, CheckUserToken, projectController.downloadManufacturingArchive);
+projectsRouter.post("/:id/manufacturing/finish", authMw, CheckUserToken, projectController.finishManufacturingFiles);
+projectsRouter.post("/:id/manufacturing/downloaded-to-laser", authMw, CheckUserToken, projectController.markManufacturingDownloadedToLaser);
+projectsRouter.post("/:id/manufacturing/delay", authMw, CheckUserToken, projectController.recordManufacturingDelay);
 
 projectsRouter.delete(
     "/:id",

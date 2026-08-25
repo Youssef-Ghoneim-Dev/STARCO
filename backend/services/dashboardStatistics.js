@@ -4,7 +4,7 @@ const userModels = require("../models/users");
 const dashboardStatistics = require("../models/dashboardStatistics");
 
 const RETENTION_DAYS = 30;
-const PRODUCTION_STATUSES = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "production", "executing"];
+const PRODUCTION_STATUSES = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "production", "executing"];
 const APPROVAL_STATUSES = ["awaitingExecution", "approved", "readyForExecution"];
 
 const startOfDay = (value = new Date()) => {

@@ -35,6 +35,9 @@ const statusDetails = {
   quoteCompleted: { label: "عرض سعر مكتمل", className: "completed" },
   executionPdfRequested: { label: "مطلوب PDF تنفيذ", className: "pending" },
   executionPdfReady: { label: "PDF التنفيذ جاهز", className: "in-progress" },
+  manufacturingFilesPending: { label: "بانتظار ملفات التصنيع", className: "pending" },
+  manufacturingFilesReady: { label: "ملفات التصنيع جاهزة", className: "in-progress" },
+  laserFilesDownloaded: { label: "تم التنزيل إلى الليزر", className: "in-progress" },
   executionOrdered: { label: "أمر تنفيذ", className: "in-progress" },
   completed: { label: "مكتمل نهائيًا", className: "completed" },
 };

@@ -10,26 +10,96 @@ const {
     sendProjectUpdatedReview,
     sendProjectCompletedPreview,
     sendExecutionPdfRequested,
-    sendExecutionPdfCompleted
+    sendExecutionPdfCompleted,
+    sendExecutionConfirmed,
+    sendPanelFilesReady
 } = require("../services/projectWhatsappNotifications");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
 
+const crcTable = Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+    return value >>> 0;
+});
+const crc32 = (buffer) => {
+    let value = 0xffffffff;
+    for (const byte of buffer) value = crcTable[(value ^ byte) & 0xff] ^ (value >>> 8);
+    return (value ^ 0xffffffff) >>> 0;
+};
+const dosDateTime = (date = new Date()) => ({
+    time: ((date.getHours() & 31) << 11) | ((date.getMinutes() & 63) << 5) | Math.floor(date.getSeconds() / 2),
+    date: (((Math.max(date.getFullYear(), 1980) - 1980) & 127) << 9) | (((date.getMonth() + 1) & 15) << 5) | (date.getDate() & 31)
+});
+const createZipArchive = (entries) => {
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+    entries.forEach(({ name, buffer, date }) => {
+        const fileName = Buffer.from(name, "utf8");
+        const checksum = crc32(buffer);
+        const stamp = dosDateTime(date);
+        const localHeader = Buffer.alloc(30);
+        localHeader.writeUInt32LE(0x04034b50, 0);
+        localHeader.writeUInt16LE(20, 4);
+        localHeader.writeUInt16LE(0x0800, 6);
+        localHeader.writeUInt16LE(0, 8);
+        localHeader.writeUInt16LE(stamp.time, 10);
+        localHeader.writeUInt16LE(stamp.date, 12);
+        localHeader.writeUInt32LE(checksum, 14);
+        localHeader.writeUInt32LE(buffer.length, 18);
+        localHeader.writeUInt32LE(buffer.length, 22);
+        localHeader.writeUInt16LE(fileName.length, 26);
+        localHeader.writeUInt16LE(0, 28);
+        localParts.push(localHeader, fileName, buffer);
+
+        const centralHeader = Buffer.alloc(46);
+        centralHeader.writeUInt32LE(0x02014b50, 0);
+        centralHeader.writeUInt16LE(20, 4);
+        centralHeader.writeUInt16LE(20, 6);
+        centralHeader.writeUInt16LE(0x0800, 8);
+        centralHeader.writeUInt16LE(0, 10);
+        centralHeader.writeUInt16LE(stamp.time, 12);
+        centralHeader.writeUInt16LE(stamp.date, 14);
+        centralHeader.writeUInt32LE(checksum, 16);
+        centralHeader.writeUInt32LE(buffer.length, 20);
+        centralHeader.writeUInt32LE(buffer.length, 24);
+        centralHeader.writeUInt16LE(fileName.length, 28);
+        centralHeader.writeUInt32LE(offset, 42);
+        centralParts.push(centralHeader, fileName);
+        offset += localHeader.length + fileName.length + buffer.length;
+    });
+    const centralDirectory = Buffer.concat(centralParts);
+    const end = Buffer.alloc(22);
+    end.writeUInt32LE(0x06054b50, 0);
+    end.writeUInt16LE(entries.length, 8);
+    end.writeUInt16LE(entries.length, 10);
+    end.writeUInt32LE(centralDirectory.length, 12);
+    end.writeUInt32LE(offset, 16);
+    return Buffer.concat([...localParts, centralDirectory, end]);
+};
+
 const isOwner = (user) => user.role === "OwnerManager";
 const isEngineer = (user) => user.role === "Engineer";
 const isMarketer = (user) => user.role === "Marketer";
+const isProductionManager = (user) => user.role === "ProductionManager";
 const canWorkOnProjects = (user) => isOwner(user) || isEngineer(user);
 const canUseRecycleBin = (user) => ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(user.role);
 const sameId = (first, second) => String(first || "") === String(second || "");
 const MARKETER_EDIT_STATUSES = ["marketingDraft", "editingByMarketing"];
 const TECHNICAL_EDIT_STATUSES = ["inProgress", "editing", "editingByEngineer", "editingByOwner"];
-const QUOTE_COMPLETED_STATUSES = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"];
+const QUOTE_COMPLETED_STATUSES = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"];
 
 const getPanelById = (project, panelId) => (project.panels || []).find(
     (panel) => String(panel.panelId) === String(panelId)
 );
+const ensurePanelManufacturing = (panel) => {
+    if (!panel.manufacturing) panel.manufacturing = { status: "notStarted", notes: "", files: [] };
+    if (!panel.manufacturing.files) panel.manufacturing.files = [];
+    return panel.manufacturing;
+};
 
 const canManageExecutionRequest = async (user, project) => {
     if (isOwner(user) || user.role === "MarketingManager") return true;
@@ -39,11 +109,16 @@ const canManageExecutionRequest = async (user, project) => {
 
 const canManageExecutionPdf = (user, project) => isOwner(user)
     || (isEngineer(user) && (!project.engineerId || sameId(project.engineerId, user._id)));
+const canManageManufacturingFiles = (user, project) => isOwner(user)
+    || (isEngineer(user) && (!project.engineerId || sameId(project.engineerId, user._id)));
+const canDownloadManufacturingFiles = (user, project) => isOwner(user)
+    || isProductionManager(user)
+    || (isEngineer(user) && (!project.engineerId || sameId(project.engineerId, user._id)));
 const deriveExecutionStatus = (panels = []) => {
     const statuses = panels.map((panel) => panel.executionPdf?.status || "notRequested");
     if (statuses.includes("requested")) return "executionPdfRequested";
     if (statuses.includes("ready")) return "executionPdfReady";
-    if (statuses.includes("skipped")) return "executionOrdered";
+    if (statuses.includes("confirmed") || statuses.includes("skipped")) return "manufacturingFilesPending";
     return "quoteCompleted";
 };
 
@@ -74,6 +149,17 @@ const getActiveEngineers = () => userModels.selectall({
     isDeleted: false,
     phoneNumber: { $nin: [null, ""] }
 });
+
+const getActiveUsersByRoles = (roles) => userModels.selectall({
+    role: { $in: roles },
+    approved: true,
+    isDeleted: false,
+    phoneNumber: { $nin: [null, ""] }
+});
+
+const uniqueRecipients = (users = []) => [...new Map(
+    users.filter((user) => user?.phoneNumber).map((user) => [String(user.phoneNumber).replace(/\D/g, ""), user])
+).values()];
 
 const notifyEngineersAboutSubmittedProject = async (project, isUpdatedProject) => {
     const assignedEngineer = project.engineerId
@@ -217,6 +303,8 @@ const getProjects = async (req, res, next) => {
             ];
         } else if (isEngineer(req.user)) {
             condition.status = { $nin: ["marketingDraft", "editingByMarketing"] };
+        } else if (isProductionManager(req.user)) {
+            condition.status = { $in: ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] };
         } else if (!canWorkOnProjects(req.user) && req.user.role !== "MarketingManager") {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع." });
         }
@@ -267,7 +355,7 @@ const getProject = async (req, res, next) => {
             project = claimedProject || await projectModels.select_one({ _id: projectId, isDeleted: false });
         }
 
-        if (isOwner(req.user)) return res.status(200).json(project);
+        if (isOwner(req.user) || req.user.role === "MarketingManager") return res.status(200).json(project);
         if (req.user.role === "Marketer") {
             if (!(await marketerOwnsProject(req.user, project))) {
                 return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
@@ -278,6 +366,9 @@ const getProject = async (req, res, next) => {
             if (!sameId(project.engineerId, req.user._id)) return projectAlreadyClaimed(res, project);
             return res.status(200).json(project);
         }
+        if (isProductionManager(req.user) && ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(project.status)) {
+            return res.status(200).json(project);
+        }
         return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشروع." });
     } catch (error) {
         next(error);
@@ -285,6 +376,8 @@ const getProject = async (req, res, next) => {
 };
 
 const canReadProject = (user, project) => isOwner(user)
+    || user.role === "MarketingManager"
+    || isProductionManager(user)
     || (isEngineer(user) && sameId(project.engineerId, user._id));
 
 const getProjectMedia = async (req, res, next) => {
@@ -423,7 +516,7 @@ const startProjectEditing = async (req, res, next) => {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية تحويل هذا المشروع إلى وضع التعديل." });
         }
 
-        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "completed"].includes(project.status)) {
+        if (!QUOTE_COMPLETED_STATUSES.includes(project.status)) {
             return res.status(409).json({ status: "error", message: "هذا المشروع مفتوح بالفعل لدى مستخدم آخر أو ما زال قيد العمل." });
         }
 
@@ -646,7 +739,7 @@ const requestExecutionPdf = async (req, res, next) => {
         if (!(await canManageExecutionRequest(req.user, project))) {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية إصدار أمر PDF تنفيذ لهذا المشروع." });
         }
-        if (!["quoteCompleted", "completed"].includes(project.status)) {
+        if (!QUOTE_COMPLETED_STATUSES.includes(project.status)) {
             return res.status(409).json({ status: "error", message: "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ." });
         }
         const panel = getPanelById(project, req.body?.panelId);
@@ -664,19 +757,26 @@ const requestExecutionPdf = async (req, res, next) => {
         };
         const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
 
-        let notification = "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل.";
-        const assignedEngineer = project.engineerId
-            ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
-            : null;
-        const recipients = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
-        if (recipients.length) {
-            const results = await Promise.allSettled(recipients.map((engineer) =>
-                sendExecutionPdfRequested(engineer.phoneNumber, updatedProject, panel.panelName)
-            ));
-            const sentCount = results.filter((result) => result.status === "fulfilled").length;
-            notification = sentCount
-                ? `تم إرسال أمر PDF التنفيذ إلى ${sentCount} مهندس.`
-                : `تم إصدار أمر PDF التنفيذ، لكن تعذر إرسال WhatsApp: ${results[0]?.reason?.message || "خطأ غير معروف"}`;
+        const shouldNotifyEngineer = ["marketing", "whatsapp"].includes(project.source);
+        let notification = shouldNotifyEngineer
+            ? "لم يتم إرسال إشعار؛ لا يوجد مهندس برقم WhatsApp مسجل."
+            : "تم إصدار أمر PDF التنفيذ بدون إشعار WhatsApp لأن المشروع يدوي.";
+        if (shouldNotifyEngineer) {
+            const assignedEngineer = project.engineerId
+                ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
+                : null;
+            const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
+            const managers = await getActiveUsersByRoles(["OwnerManager", "ProductionManager"]);
+            const recipients = uniqueRecipients([...engineers, ...managers]);
+            if (recipients.length) {
+                const results = await Promise.allSettled(recipients.map((engineer) =>
+                    sendExecutionPdfRequested(engineer.phoneNumber, updatedProject, panel.panelName)
+                ));
+                const sentCount = results.filter((result) => result.status === "fulfilled").length;
+                notification = sentCount
+                    ? `تم إرسال أمر PDF التنفيذ إلى ${sentCount} مستلم.`
+                    : `تم إصدار أمر PDF التنفيذ، لكن تعذر إرسال WhatsApp: ${results[0]?.reason?.message || "خطأ غير معروف"}`;
+            }
         }
         return res.status(200).json({ status: "ok", message: "تم إصدار أمر PDF التنفيذ.", notification, project: updatedProject });
     } catch (error) { next(error); }
@@ -757,8 +857,188 @@ const skipExecutionPdf = async (req, res, next) => {
         panel.executionPdf.status = "skipped";
         panel.executionPdf.skippedAt = new Date();
         panel.executionPdf.skippedBy = req.user._id;
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
+        panel.manufacturing = {
+            ...(panel.manufacturing?.toObject?.() || panel.manufacturing || {}),
+            status: "awaitingFiles",
+            startedAt: new Date(),
+            startedBy: req.user._id
+        };
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
         return res.status(200).json({ status: "ok", message: "تم تخطي PDF التنفيذ والانتقال إلى أمر التنفيذ.", project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const requestExecutionPdfChanges = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!(await canManageExecutionRequest(req.user, project))) return res.status(403).json({ status: "error", message: "لا تملك صلاحية طلب تعديل ملف التنفيذ." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || !["ready", "skipped"].includes(panel.executionPdf?.status)) return res.status(409).json({ status: "error", message: "ملف تنفيذ هذه اللوحة غير جاهز لطلب التعديل." });
+
+        const oldFiles = [...(panel.executionPdf.files || [])];
+        panel.executionPdf.status = "changesRequested";
+        panel.executionPdf.changesRequestedAt = new Date();
+        panel.executionPdf.changesRequestedBy = req.user._id;
+        ensurePanelManufacturing(panel).status = "notStarted";
+        await Promise.allSettled(oldFiles.map((file) => deleteStoredFile(file.storageFileId)));
+        panel.executionPdf.files = [];
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "editingByEngineer", updatedAt: Date.now() });
+
+        let notification = "تم فتح التسعير للتعديل مع الاحتفاظ بجميع البيانات الحالية.";
+        if (["marketing", "whatsapp"].includes(project.source)) {
+            try { notification = await notifyEngineersAboutSubmittedProject(updatedProject, true); }
+            catch (error) { notification = `تم فتح التعديل، لكن تعذر إشعار المهندس: ${error.message}`; }
+        }
+        return res.status(200).json({ status: "ok", message: "تم فتح المشروع للتعديل دون مسح بيانات التسعير.", notification, project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const confirmExecution = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!(await canManageExecutionRequest(req.user, project))) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تأكيد التنفيذ." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || !["ready", "skipped"].includes(panel.executionPdf?.status)) return res.status(409).json({ status: "error", message: "يجب تجهيز PDF التنفيذ أو تخطيه أولًا." });
+
+        panel.executionPdf.status = "confirmed";
+        panel.executionPdf.confirmedAt = new Date();
+        panel.executionPdf.confirmedBy = req.user._id;
+        panel.manufacturing = {
+            ...(panel.manufacturing?.toObject?.() || panel.manufacturing || {}),
+            status: "awaitingFiles",
+            startedAt: new Date(),
+            startedBy: req.user._id
+        };
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
+
+        let notification = "تم تأكيد التنفيذ وفتح مرحلة ملفات التصنيع.";
+        if (["marketing", "whatsapp"].includes(project.source)) {
+            const assignedEngineer = project.engineerId ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false }) : null;
+            const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await getActiveEngineers();
+            const results = await Promise.allSettled(engineers.map((engineer) => sendExecutionConfirmed(engineer.phoneNumber, updatedProject, panel.panelName)));
+            if (!results.some((result) => result.status === "fulfilled")) notification = `تم التأكيد، لكن تعذر إشعار المهندس: ${results[0]?.reason?.message || "لا يوجد مهندس"}`;
+        }
+        return res.status(200).json({ status: "ok", message: "تم تأكيد التنفيذ.", notification, project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const uploadManufacturingFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "رفع ملفات التصنيع متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "awaitingFiles") return res.status(409).json({ status: "error", message: "مرحلة رفع ملفات التصنيع غير مفتوحة لهذه اللوحة." });
+        if (!req.file) return res.status(400).json({ status: "error", message: "اختر ملفًا أولًا." });
+        const stored = await uploadFile({ fileName: req.file.originalname, mimeType: req.file.mimetype || "application/octet-stream", buffer: req.file.buffer });
+        ensurePanelManufacturing(panel).files.push({
+            storageFileId: stored.id,
+            fileName: stored.name || req.file.originalname,
+            mimeType: stored.mimeType || req.file.mimetype || "application/octet-stream",
+            fileSize: Number(stored.size || req.file.size || 0),
+            uploadedAt: new Date(),
+            uploadedBy: req.user._id
+        });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(201).json({ status: "ok", message: "تم رفع ملف التصنيع.", project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const getManufacturingFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canDownloadManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تنزيل ملفات التصنيع." });
+        const panel = getPanelById(project, req.params.panelId);
+        const file = panel?.manufacturing?.files?.id(req.params.fileId);
+        if (!file) return res.status(404).json({ status: "error", message: "الملف غير موجود." });
+        const stored = await downloadStoredFile(file.storageFileId);
+        res.setHeader("Content-Type", file.mimeType || stored.mimeType || "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
+        return res.send(stored.buffer);
+    } catch (error) { next(error); }
+};
+
+const downloadManufacturingArchive = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canDownloadManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تنزيل ملفات التصنيع." });
+        const panel = getPanelById(project, req.params.panelId);
+        const files = panel?.manufacturing?.files || [];
+        if (!files.length) return res.status(404).json({ status: "error", message: "لا توجد ملفات تصنيع لتنزيلها." });
+        const downloaded = await Promise.all(files.map(async (file, index) => {
+            const stored = await downloadStoredFile(file.storageFileId);
+            return { name: `${index + 1}-${file.fileName}`, buffer: stored.buffer, date: file.uploadedAt || new Date() };
+        }));
+        const archive = createZipArchive(downloaded);
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${panel.panelName || "panel"}-files.zip`)}`);
+        return res.send(archive);
+    } catch (error) { next(error); }
+};
+
+const finishManufacturingFiles = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "إتمام ملفات التصنيع متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "awaitingFiles") return res.status(409).json({ status: "error", message: "مرحلة ملفات التصنيع غير مفتوحة لهذه اللوحة." });
+        if (!(panel.manufacturing.files || []).length) return res.status(400).json({ status: "error", message: "ارفع ملف تصنيع واحدًا على الأقل." });
+        panel.manufacturing.status = "filesReady";
+        panel.manufacturing.notes = String(req.body?.notes || "").slice(0, 2000);
+        panel.manufacturing.filesReadyAt = new Date();
+        panel.manufacturing.filesReadyBy = req.user._id;
+        panel.manufacturing.currentStage = "awaitingLaserDownload";
+        panel.manufacturing.currentStageStartedAt = new Date();
+        panel.manufacturing.lastReminderAt = null;
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesReady", updatedAt: Date.now() });
+        const recipients = await getActiveUsersByRoles(["OwnerManager", "ProductionManager"]);
+        const results = await Promise.allSettled(recipients.map((recipient) => sendPanelFilesReady(recipient.phoneNumber, updatedProject, panel.panelName)));
+        const sentCount = results.filter((result) => result.status === "fulfilled").length;
+        const notification = sentCount ? `تم إشعار ${sentCount} من مسؤولي التنفيذ.` : `تم حفظ الملفات، لكن تعذر إرسال الإشعار: ${results[0]?.reason?.message || "لا يوجد مستلم"}`;
+        return res.status(200).json({ status: "ok", message: "ملفات تصنيع اللوحة جاهزة.", notification, project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const markManufacturingDownloadedToLaser = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!isOwner(req.user) && !isProductionManager(req.user)) return res.status(403).json({ status: "error", message: "تأكيد تنزيل الملفات إلى الليزر متاح لمدير التنفيذ أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "filesReady") return res.status(409).json({ status: "error", message: "ملفات هذه اللوحة ليست جاهزة للتنزيل إلى الليزر." });
+        panel.manufacturing.status = "downloadedToLaser";
+        panel.manufacturing.downloadedToLaserAt = new Date();
+        panel.manufacturing.downloadedToLaserBy = req.user._id;
+        panel.manufacturing.currentStage = "laser";
+        panel.manufacturing.currentStageStartedAt = new Date();
+        panel.manufacturing.lastReminderAt = null;
+        const laserStageDueAt = new Date();
+        laserStageDueAt.setHours(24, 0, 0, 0);
+        panel.manufacturing.laserStageDueAt = laserStageDueAt;
+        panel.manufacturing.lastReminderAt = null;
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "laserFilesDownloaded", updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: "تم تسجيل تنزيل الملفات إلى الليزر.", project: updatedProject });
+    } catch (error) { next(error); }
+};
+
+const recordManufacturingDelay = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!isOwner(req.user) && !isProductionManager(req.user)) return res.status(403).json({ status: "error", message: "تسجيل سبب التأخير متاح لمدير التنفيذ أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        const allowedReasons = ["عدم تنزيل الملفات إلى الليزر", "أعطال الليزر", "نقص خامات", "أعطال التصنيع", "مراجعة العميل", "أخرى"];
+        const reason = String(req.body?.reason || "");
+        if (!panel || !allowedReasons.includes(reason)) return res.status(400).json({ status: "error", message: "اختر سبب تأخير صحيحًا." });
+        panel.manufacturing.delayReason = reason;
+        panel.manufacturing.delayRecordedAt = new Date();
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: "تم تسجيل سبب التأخير.", project: updatedProject });
     } catch (error) { next(error); }
 };
 
@@ -795,9 +1075,13 @@ const permanentlyDeleteProject = async (req, res, next) => {
         const executionFileIds = (project.panels || []).flatMap((panel) =>
             (panel.executionPdf?.files || []).map((file) => file.storageFileId).filter(Boolean)
         );
+        const manufacturingFileIds = (project.panels || []).flatMap((panel) =>
+            (panel.manufacturing?.files || []).map((file) => file.storageFileId).filter(Boolean)
+        );
         const storedFileIds = [...new Set([
             ...messages.map((message) => message.media?.storageFileId).filter(Boolean),
-            ...executionFileIds
+            ...executionFileIds,
+            ...manufacturingFileIds
         ])];
         await Promise.all(storedFileIds.map((fileId) => deleteStoredFile(fileId)));
         await whatsappMessages.deleteByProject(project._id);
@@ -808,4 +1092,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

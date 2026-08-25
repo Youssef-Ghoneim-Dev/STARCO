@@ -1,6 +1,8 @@
 import { FiFilter, FiPlus, FiSearch } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
+  const { user } = useAuth();
   return (
     <div className="projects-header">
       <div>
@@ -23,13 +25,16 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
             <option value="quoteCompleted">Quote completed</option>
             <option value="executionPdfRequested">Execution PDF requested</option>
             <option value="executionPdfReady">Execution PDF ready</option>
+            <option value="manufacturingFilesPending">Manufacturing files pending</option>
+            <option value="manufacturingFilesReady">Manufacturing files ready</option>
+            <option value="laserFilesDownloaded">Downloaded to laser</option>
             <option value="executionOrdered">Execution ordered</option>
             <option value="completed">Fully completed</option>
           </select>
         </label>
-        <NavLink to="/new-project" className="new-project-link">
+        {user?.role !== "ProductionManager" && <NavLink to="/new-project" className="new-project-link">
           <button className="new-project-btn"><FiPlus />New Project</button>
-        </NavLink>
+        </NavLink>}
       </div>
     </div>
   );
