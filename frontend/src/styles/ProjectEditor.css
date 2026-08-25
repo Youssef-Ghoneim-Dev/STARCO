@@ -445,6 +445,10 @@
 
 }
 
+.save-actions.save-actions-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .primary-btn:disabled,
 .secondary-btn:disabled,
 .complete-project-btn:disabled {
@@ -1405,6 +1409,8 @@
     .check-card { flex: 1 1 135px; justify-content: center; padding: 11px 10px; font-size: 14px; }
 
     .save-actions.save-actions-two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .save-actions.save-actions-three { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .save-actions.save-actions-three .complete-project-btn { grid-column: 1 / -1; }
     .save-actions .secondary-btn,
     .save-actions .complete-project-btn { min-width: 0; min-height: 48px; height: auto; padding: 9px 7px; font-size: 12px; line-height: 1.35; }
 

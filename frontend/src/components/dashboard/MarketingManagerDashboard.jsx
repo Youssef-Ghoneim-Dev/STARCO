@@ -40,12 +40,27 @@ function MarketingStatus({ counts, total }) {
 }
 
 function MarketingTrend({ projects, selectedDate }) {
+  const [activePoint, setActivePoint] = useState(null);
   const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(selectedDate); date.setDate(date.getDate() - (6 - index)); return date; });
   const created = days.map((date) => projects.filter((project) => sameDate(project.createdAt, date)).length);
   const execution = days.map((date) => projects.filter((project) => ["inProgress", "execution", "executing"].includes(project.status) && sameDate(project.updatedAt, date)).length);
   const max = Math.max(4, ...created, ...execution);
-  const points = (values) => values.map((value, index) => `${24 + index * 61},${142 - (value / max) * 105}`).join(" ");
-  return <section className="marketing-panel marketing-trend"><h2>المشاريع الجديدة وأوامر التنفيذ خلال آخر 7 أيام</h2><div><svg viewBox="0 0 420 175" role="img" aria-label="المشاريع وأوامر التنفيذ خلال آخر سبعة أيام">{[0, 1, 2, 3].map((line) => <line key={line} x1="20" y1={36 + line * 35} x2="402" y2={36 + line * 35} />)}<polyline points={points(created)} className="new" /><polyline points={points(execution)} className="execution" />{created.map((value, index) => <circle key={`new-${index}`} cx={24 + index * 61} cy={142 - (value / max) * 105} r="5"><title>{`${days[index].toLocaleDateString("ar-EG")}: ${value} مشاريع جديدة`}</title></circle>)}{execution.map((value, index) => <circle className="execution-point" key={`execution-${index}`} cx={24 + index * 61} cy={142 - (value / max) * 105} r="5"><title>{`${days[index].toLocaleDateString("ar-EG")}: ${value} أوامر تنفيذ`}</title></circle>)}</svg><div className="marketing-trend-days">{days.map((date) => <span key={date.toISOString()}>{date.toLocaleDateString("ar-EG", { day: "numeric" })}</span>)}</div></div><footer><span><i />مشاريع جديدة</span><span><i />أوامر تنفيذ</span></footer></section>;
+  const pointX = (index) => 24 + index * 61;
+  const pointY = (value) => 142 - (value / max) * 105;
+  const points = (values) => values.map((value, index) => `${pointX(index)},${pointY(value)}`).join(" ");
+  const showPoint = (value, index) => setActivePoint({ index, x: pointX(index), y: pointY(value), created: created[index], execution: execution[index] });
+  const pointProps = (type, value, index) => ({
+    tabIndex: 0,
+    role: "button",
+    "aria-label": `${days[index].toLocaleDateString("ar-EG")}: ${value} ${type}`,
+    onMouseEnter: () => showPoint(value, index),
+    onMouseLeave: () => setActivePoint(null),
+    onFocus: () => showPoint(value, index),
+    onBlur: () => setActivePoint(null),
+    onClick: () => showPoint(value, index),
+  });
+
+  return <section className="marketing-panel marketing-trend"><h2>المشاريع الجديدة وأوامر التنفيذ خلال آخر 7 أيام</h2><div className="marketing-trend-chart"><svg viewBox="0 0 420 175" role="img" aria-label="المشاريع وأوامر التنفيذ خلال آخر سبعة أيام">{[0, 1, 2, 3].map((line) => <line key={line} x1="20" y1={36 + line * 35} x2="402" y2={36 + line * 35} />)}<polyline points={points(created)} className="new" /><polyline points={points(execution)} className="execution" />{created.map((value, index) => <circle key={`new-${index}`} cx={pointX(index)} cy={pointY(value)} r="5" {...pointProps("مشاريع جديدة", value, index)} />)}{execution.map((value, index) => <circle className="execution-point" key={`execution-${index}`} cx={pointX(index)} cy={pointY(value)} r="5" {...pointProps("أوامر تنفيذ", value, index)} />)}{activePoint && <g className="dashboard-chart-tooltip" transform={`translate(${Math.min(activePoint.x + 8, 285)} ${Math.max(activePoint.y - 62, 8)})`}><rect width="128" height="57" rx="8" /><text x="64" y="17" textAnchor="middle">{days[activePoint.index].toLocaleDateString("ar-EG", { day: "numeric", month: "long" })}</text><text x="64" y="34" textAnchor="middle">{`جديدة: ${activePoint.created}`}</text><text x="64" y="49" textAnchor="middle">{`أوامر تنفيذ: ${activePoint.execution}`}</text></g>}</svg><div className="marketing-trend-days">{days.map((date) => <span key={date.toISOString()}>{date.toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}</span>)}</div></div><footer><span><i />مشاريع جديدة</span><span><i />أوامر تنفيذ</span></footer></section>;
 }
 
 function MarketingManagerDashboard({ name, projects, loading, onRefresh }) {

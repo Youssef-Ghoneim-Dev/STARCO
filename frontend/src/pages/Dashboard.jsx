@@ -7,6 +7,8 @@ import QuickActions from "../components/dashboard/QuickActions";
 import OwnerManagerDashboard from "../components/dashboard/OwnerManagerDashboard";
 import EngineerDashboard from "../components/dashboard/EngineerDashboard";
 import MarketingManagerDashboard from "../components/dashboard/MarketingManagerDashboard";
+import ProductionManagerDashboard from "../components/dashboard/ProductionManagerDashboard";
+import MarketerDashboard from "../components/dashboard/MarketerDashboard";
 import { useAuth } from "../context/AuthContext";
 import { getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
@@ -24,6 +26,14 @@ function Dashboard() {
     if (loading || !user || accountStatus === "pending" || accountStatus === "deleted") {
       setDashboardLoading(false);
       return;
+    }
+    // Production managers do not have access to the general projects listing.
+    // Their dashboard is still rendered, but it must not repeatedly call an
+    // endpoint the backend intentionally rejects.
+    if (user.role === "ProductionManager") {
+      setProjects([]);
+      setDashboardLoading(false);
+      return Promise.resolve();
     }
     setDashboardLoading(true);
     const requests = [getProjects()];
@@ -88,6 +98,14 @@ function Dashboard() {
 
   if (user?.role === "MarketingManager") {
     return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  }
+
+  if (user?.role === "ProductionManager") {
+    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  }
+
+  if (user?.role === "Marketer") {
+    return <DashboardLayout notAllowed><MarketerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   return (

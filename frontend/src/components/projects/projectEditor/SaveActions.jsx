@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
-import { createProjectPdf } from "../../../utils/projectPdf";
+import { createProjectPdf, getProjectPdfFilename } from "../../../utils/projectPdf";
 
 function SaveActions() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { saveProject, savingProject, saveProjectError, project, prices, systemConfig } = useProject();
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [defaultNamesConfirmation, setDefaultNamesConfirmation] = useState(false);
@@ -58,6 +60,20 @@ function SaveActions() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
+  const downloadPdf = async () => {
+    const pdf = await generatePdf();
+    if (!pdf) return;
+
+    const url = URL.createObjectURL(pdf);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = getProjectPdfFilename(project);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   const defaultPanelNames = project.panels
     .map((panel, index) => panel.panelName?.trim() || `لوحة ${index + 1}`)
     .filter((name) => /^لوحة\s*\d+$/u.test(name));
@@ -74,7 +90,8 @@ function SaveActions() {
   };
 
   return <section className="project-editor-card">
-    <div className="save-actions save-actions-two">
+    <div className={`save-actions ${user?.role === "Engineer" ? "save-actions-three" : "save-actions-two"}`}>
+      {user?.role === "Engineer" && <button className="secondary-btn" type="button" onClick={downloadPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
       <button className="secondary-btn" type="button" onClick={previewPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "معاينة PDF"}</button>
       <button className="complete-project-btn" type="button" onClick={() => complete()} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع وإرسال رابط المعاينة</button>
     </div>
