@@ -93,6 +93,11 @@ module.exports = (req, res, next) => {
 
                 executionPdf: joi.object().unknown(true).optional(),
 
+                // Workflow data is maintained by the dedicated execution
+                // endpoints, but it is also returned to the editor and may be
+                // included unchanged in an autosave payload.
+                manufacturing: joi.object().unknown(true).optional(),
+
                 parts: joi.array().items(
 
                     joi.object({

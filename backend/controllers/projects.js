@@ -189,6 +189,21 @@ const editableProjectData = (body = {}) => {
     return data;
 };
 
+const preservePanelWorkflow = (incomingPanels, existingPanels = []) => {
+    if (!Array.isArray(incomingPanels)) return incomingPanels;
+    return incomingPanels.map((incoming, index) => {
+        const existing = existingPanels.find((panel) => String(panel.panelId) === String(incoming.panelId))
+            || existingPanels[index];
+        if (!existing) return incoming;
+        const existingObject = existing.toObject?.() || existing;
+        return {
+            ...incoming,
+            executionPdf: existingObject.executionPdf,
+            manufacturing: existingObject.manufacturing
+        };
+    });
+};
+
 const buildClientNameReview = async (client) => {
     if (!client?.name?.trim() || client?.id) return null;
     const candidates = (await clientModels.select_for_name_review())
@@ -494,6 +509,9 @@ const updateProject = async (req, res, next) => {
         }
 
         const updates = editableProjectData(req.body);
+        if (updates.panels) {
+            updates.panels = preservePanelWorkflow(updates.panels, existingProject.panels || []);
+        }
         const project = isOwner(req.user)
             ? await projectModels.update({ id: projectId, ...updates, updatedAt: Date.now() })
             : await projectModels.updateOwnedProject(projectId, req.user._id, updates);
