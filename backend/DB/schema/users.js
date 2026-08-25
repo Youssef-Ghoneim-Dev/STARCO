@@ -1,5 +1,6 @@
 const mongoose = require("mongoose")
-module.exports = new mongoose.Schema({
+
+const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phoneNumber: {
@@ -9,7 +10,9 @@ module.exports = new mongoose.Schema({
         default: null
     },
     password: { type: String, required: false, default: null },
-    googleId: { type: String, unique: true, sparse: true, default: null },
+    // Password accounts do not have a Google id. The partial index below keeps
+    // real Google ids unique without treating multiple missing values as duplicates.
+    googleId: { type: String },
     authProvider: { type: String, enum: ["password", "google"], default: "password" },
     role: {
         type: String, enum: [
@@ -23,3 +26,14 @@ module.exports = new mongoose.Schema({
     approved: { type: Boolean, default: false, required: true },
     isDeleted: { type: Boolean, default: false, required: true }
 })
+
+userSchema.index(
+    { googleId: 1 },
+    {
+        name: "googleId_1",
+        unique: true,
+        partialFilterExpression: { googleId: { $type: "string" } }
+    }
+)
+
+module.exports = userSchema

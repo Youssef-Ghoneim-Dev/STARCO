@@ -1,6 +1,6 @@
 require("dotenv").config();
 // Dashboard snapshots follow the company's working day rather than Vercel's UTC clock.
-process.env.TZ = process.env.TZ || "Africa/Cairo";
+process.env.TZ = process.env.TIME_ZONE || "Africa/Cairo";
 
 const express = require("express");
 const app = express();
@@ -19,6 +19,7 @@ const projectsrouter = require("./routers/projects");
 const whatsapprouter = require("./routers/whatsapp");
 const dashboardRouter = require("./routers/dashboard");
 const { captureAfterSuccessfulMutation, trackDashboardRequest } = require("./services/dashboardStatistics");
+const ensureUserIndexes = require("./DB/ensureUserIndexes");
 const erwhandling = require("./midelwers/Handeling error");
 
 app.use(express.json({
@@ -54,6 +55,7 @@ const mongoose = require("mongoose")
 async function startServer() {
     try {
         await mongoose.connect(process.env.DATABASE_URL);
+        await ensureUserIndexes();
         console.log("MongoDB Connected");
 
         app.listen(port, () => {

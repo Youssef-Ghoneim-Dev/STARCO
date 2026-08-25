@@ -22,6 +22,9 @@ const select_marketer_by_phone = async (phoneNumber) => {
 
 const add_one = async (user) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    if (user.googleId == null) {
+        delete user.googleId;
+    }
     if (user.phoneNumber) {
         user.phoneNumber = normalizePhoneNumber(user.phoneNumber);
     }

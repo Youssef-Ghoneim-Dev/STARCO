@@ -5,6 +5,8 @@ import StatCard from "../components/dashboard/StatCard";
 import RecentProjects from "../components/dashboard/RecentProjects";
 import QuickActions from "../components/dashboard/QuickActions";
 import OwnerManagerDashboard from "../components/dashboard/OwnerManagerDashboard";
+import EngineerDashboard from "../components/dashboard/EngineerDashboard";
+import MarketingManagerDashboard from "../components/dashboard/MarketingManagerDashboard";
 import { useAuth } from "../context/AuthContext";
 import { getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
@@ -78,6 +80,14 @@ function Dashboard() {
 
   if (user?.role === "OwnerManager") {
     return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  }
+
+  if (user?.role === "Engineer") {
+    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  }
+
+  if (user?.role === "MarketingManager") {
+    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   return (
