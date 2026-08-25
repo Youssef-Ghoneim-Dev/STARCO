@@ -65,10 +65,26 @@ export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
 );
 
 export const uploadManufacturingFile = (projectId, panelId, file) => {
-    const formData = new FormData();
-    formData.append("panelId", panelId);
-    formData.append("file", file);
-    return api.post(`/projects/${projectId}/manufacturing/files`, formData);
+    return api.post(`/projects/${projectId}/manufacturing/upload-session`, {
+        panelId,
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileSize: file.size,
+    }).then(async ({ data }) => {
+        const uploadResponse = await fetch(data.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+            body: file,
+        });
+        const uploadedFile = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok || !uploadedFile.id) {
+            throw new Error(uploadedFile?.error?.message || `تعذر رفع الملف إلى مساحة التخزين (${uploadResponse.status}).`);
+        }
+        return api.post(`/projects/${projectId}/manufacturing/upload-complete`, {
+            panelId,
+            storageFileId: uploadedFile.id,
+        });
+    });
 };
 
 export const finishManufacturingFiles = (projectId, panelId, notes) => api.post(

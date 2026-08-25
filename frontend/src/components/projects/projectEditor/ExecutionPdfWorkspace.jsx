@@ -154,7 +154,7 @@ function ExecutionPdfWorkspace() {
         latestProject = data.project;
       }
       setProject(latestProject);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر رفع ملف التصنيع."); }
+    } catch (error) { toast.error(error.response?.data?.message || error.message || "تعذر رفع ملف التصنيع."); }
     finally { setBusy(false); }
   };
 

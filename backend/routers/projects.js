@@ -106,6 +106,8 @@ projectsRouter.post("/:id/execution-pdf/finish", authMw, CheckUserToken, project
 projectsRouter.post("/:id/execution-pdf/skip", authMw, CheckUserToken, projectController.skipExecutionPdf);
 projectsRouter.post("/:id/execution-pdf/request-changes", authMw, CheckUserToken, projectController.requestExecutionPdfChanges);
 projectsRouter.post("/:id/execution-pdf/confirm", authMw, CheckUserToken, projectController.confirmExecution);
+projectsRouter.post("/:id/manufacturing/upload-session", authMw, CheckUserToken, projectController.startManufacturingFileUpload);
+projectsRouter.post("/:id/manufacturing/upload-complete", authMw, CheckUserToken, projectController.completeManufacturingFileUpload);
 projectsRouter.post("/:id/manufacturing/files", authMw, CheckUserToken, manufacturingUpload.single("file"), projectController.uploadManufacturingFile);
 projectsRouter.get("/:id/manufacturing/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getManufacturingFile);
 projectsRouter.get("/:id/manufacturing/:panelId/archive", authMw, CheckUserToken, projectController.downloadManufacturingArchive);

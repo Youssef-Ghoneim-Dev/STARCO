@@ -15,7 +15,7 @@ const {
     sendPanelFilesReady
 } = require("../services/projectWhatsappNotifications");
 const whatsappMessages = require("../models/whatsappMessages");
-const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../services/googleDrive");
+const { downloadStoredFile, deleteStoredFile, uploadFile, createResumableUploadSession, getVerifiedStoredFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
 
@@ -996,6 +996,56 @@ const uploadManufacturingFile = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+const startManufacturingFileUpload = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "رفع ملفات التصنيع متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "awaitingFiles") return res.status(409).json({ status: "error", message: "مرحلة رفع ملفات التصنيع غير مفتوحة لهذه اللوحة." });
+
+        const fileName = String(req.body?.fileName || "").trim();
+        const mimeType = String(req.body?.mimeType || "application/octet-stream").trim();
+        const fileSize = Number(req.body?.fileSize);
+        if (!fileName || !Number.isFinite(fileSize) || fileSize <= 0) {
+            return res.status(400).json({ status: "error", message: "بيانات الملف غير مكتملة." });
+        }
+        if (fileSize > 250 * 1024 * 1024) {
+            return res.status(413).json({ status: "error", message: "حجم الملف أكبر من الحد المسموح وهو 250MB." });
+        }
+
+        const uploadUrl = await createResumableUploadSession({ fileName, mimeType, fileSize });
+        return res.status(201).json({ status: "ok", uploadUrl });
+    } catch (error) { next(error); }
+};
+
+const completeManufacturingFileUpload = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "رفع ملفات التصنيع متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "awaitingFiles") return res.status(409).json({ status: "error", message: "مرحلة رفع ملفات التصنيع غير مفتوحة لهذه اللوحة." });
+
+        const storageFileId = String(req.body?.storageFileId || "").trim();
+        if (!storageFileId) return res.status(400).json({ status: "error", message: "معرّف الملف المرفوع غير موجود." });
+        const stored = await getVerifiedStoredFile(storageFileId);
+        const manufacturing = ensurePanelManufacturing(panel);
+        if (!manufacturing.files.some((file) => String(file.storageFileId) === storageFileId)) {
+            manufacturing.files.push({
+                storageFileId: stored.id,
+                fileName: stored.name,
+                mimeType: stored.mimeType || "application/octet-stream",
+                fileSize: Number(stored.size || 0),
+                uploadedAt: stored.createdTime ? new Date(stored.createdTime) : new Date(),
+                uploadedBy: req.user._id
+            });
+        }
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(201).json({ status: "ok", message: "تم رفع ملف التصنيع.", project: updatedProject });
+    } catch (error) { next(error); }
+};
+
 const getManufacturingFile = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
@@ -1142,4 +1192,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

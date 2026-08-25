@@ -141,6 +141,48 @@ const uploadFile = async ({ fileName, mimeType, buffer }) => {
     return payload;
 };
 
+const createResumableUploadSession = async ({ fileName, mimeType, fileSize }) => {
+    const config = await systemConfiguration.getGoogleDriveConnection();
+    const folderId = config?.googleDrive?.folderId;
+    if (!folderId) throw new Error("Google Drive is not connected yet.");
+
+    const accessToken = await getAccessToken();
+    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,createdTime,parents", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": mimeType || "application/octet-stream",
+            "X-Upload-Content-Length": String(fileSize)
+        },
+        body: JSON.stringify({ name: fileName, parents: [folderId] })
+    });
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error?.message || "Could not start the Google Drive upload.");
+    }
+    const uploadUrl = response.headers.get("location");
+    if (!uploadUrl) throw new Error("Google Drive did not return an upload URL.");
+    return uploadUrl;
+};
+
+const getVerifiedStoredFile = async (fileId) => {
+    const config = await systemConfiguration.getGoogleDriveConnection();
+    const folderId = config?.googleDrive?.folderId;
+    if (!folderId) throw new Error("Google Drive is not connected yet.");
+
+    const accessToken = await getAccessToken();
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,createdTime,parents`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.id) throw new Error(payload?.error?.message || "Uploaded file was not found in Google Drive.");
+    if (!Array.isArray(payload.parents) || !payload.parents.includes(folderId)) {
+        throw new Error("Uploaded file does not belong to the STARCO storage folder.");
+    }
+    return payload;
+};
+
 const downloadStoredFile = async (fileId) => {
     const accessToken = await getAccessToken();
     const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
@@ -170,4 +212,4 @@ const getConnectionStatus = async () => {
     };
 };
 
-module.exports = { createAuthorizationUrl, connectAccount, uploadFile, downloadStoredFile, deleteStoredFile, getConnectionStatus };
+module.exports = { createAuthorizationUrl, connectAccount, uploadFile, createResumableUploadSession, getVerifiedStoredFile, downloadStoredFile, deleteStoredFile, getConnectionStatus };
