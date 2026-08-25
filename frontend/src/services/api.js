@@ -12,13 +12,16 @@ export const unregisterAuthStatusUpdater = () => {
 
 const api = axios.create({
     baseURL: "https://starco-1zov-three.vercel.app/api/V1/",
-    headers: {
-        "Content-Type": "application/json",
-    },
 });
 
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
+
+    // Do not force JSON on file uploads. Axios/the browser must generate the
+    // multipart boundary; otherwise multer receives no file at all.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
+    }
 
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
