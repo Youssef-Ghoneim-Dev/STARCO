@@ -571,6 +571,9 @@
         width: 300px;
 
         height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
 
         z-index: 999;
 

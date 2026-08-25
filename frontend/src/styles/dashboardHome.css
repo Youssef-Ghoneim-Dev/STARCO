@@ -253,9 +253,9 @@
 .owner-dashboard-header p { font-size: 16px; }
 .dashboard-date-tools > button, .dashboard-date-tools > span, .dashboard-date-tools > select, .dashboard-date-input { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 11px; padding: 0 14px; color: #526173; background: #fff; font: inherit; font-size: 14px; white-space: nowrap; }
 .dashboard-date-tools select { min-width: 105px; outline: 0; cursor: pointer; }
-.dashboard-date-input { position: relative; cursor: pointer; }
+.dashboard-date-input { position: relative; cursor: pointer; user-select: none; -webkit-user-select: none; }
 .dashboard-date-input > svg { flex: 0 0 auto; color: var(--primary); pointer-events: none; }
-.dashboard-date-input input { position: relative; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.dashboard-date-input input { position: relative; min-width: 0; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; user-select: none; -webkit-user-select: none; }
 .dashboard-date-input input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .dashboard-period-select { position: relative; z-index: 20; width: 120px; }
 .dashboard-period-select .app-select-trigger { min-height: 44px; border-radius: 11px; font-size: 14px; }
@@ -282,6 +282,7 @@
 .production-average span { font-size: 13px; }
 .weekly-chart-wrap svg { min-height: 190px; max-height: 250px; }
 .weekly-chart-days { color: #657483; font-size: 12px; font-weight: 600; }
+.weekly-date-mobile { display: none; }
 .chart-legend { gap: 24px; margin-top: 17px; color: #536273; font-size: 14px; font-weight: 600; }
 .dashboard-chart-point { cursor: pointer; transition: r .15s ease; }
 .dashboard-chart-point:hover { r: 8px; }
@@ -337,10 +338,11 @@
 }
 
 @media (max-width: 600px) {
-    .owner-dashboard { gap: 14px; }.owner-dashboard-header h1 { font-size: 23px; }.dashboard-date-tools { width: 100%; }.dashboard-date-tools button { width: 100%; justify-content: center; }
+    .owner-dashboard { gap: 14px; }.owner-dashboard-header h1 { font-size: 23px; }.dashboard-date-tools { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); width: 100%; gap: 9px; }.dashboard-date-tools > button { grid-column: 1 / -1; width: 100%; justify-content: center; }.dashboard-date-input { width: 100%; justify-content: space-between; overflow: hidden; }.dashboard-date-input input { width: 100%; }.dashboard-period-select { width: 100%; }.dashboard-period-select .app-select-trigger { width: 100%; }
     .owner-metrics-grid { grid-template-columns: 1fr; gap: 10px; }.owner-metric-card { min-height: 96px; padding: 15px; }.owner-metric-card strong { font-size: 26px; }
     .owner-dashboard-card { padding: 15px; }.production-stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.production-stage > b { display: none; }
     .status-overview-content { grid-template-columns: 1fr; justify-items: center; }.status-legend { width: 100%; }
     .performance-grid { grid-template-columns: 1fr; }.performance-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .owner-kpi-strip { grid-template-columns: 1fr; }.owner-kpi-strip > div, .owner-kpi-strip > div:nth-child(4), .owner-kpi-strip > div:nth-child(5) { border: 0; border-top: 1px solid #e5ebf0; }.owner-kpi-strip > div:first-child { border-top: 0; }
+    .weekly-chart-card { overflow: hidden; }.weekly-chart-wrap { width: 100%; overflow: hidden; }.weekly-chart-wrap svg { width: 100%; min-height: 0; max-height: none; }.weekly-chart-days { width: 100%; overflow: hidden; font-size: 10px; }.weekly-chart-days > span { min-width: 0; overflow: hidden; text-align: center; }.weekly-date-full { display: none; }.weekly-date-mobile { display: inline; }
+    .owner-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }.owner-kpi-strip > div, .owner-kpi-strip > div:nth-child(4), .owner-kpi-strip > div:nth-child(5) { grid-template-columns: minmax(0, 1fr) 32px; min-height: 82px; border: 0; border-top: 1px solid #e5ebf0; border-inline-start: 1px solid #e5ebf0; padding: 10px 12px; }.owner-kpi-strip > div:nth-child(odd) { border-inline-start: 0; }.owner-kpi-strip > div:nth-child(-n + 2) { border-top: 0; }.owner-kpi-strip > div:last-child { grid-column: 1 / -1; }.owner-kpi-strip span { font-size: 11px; }.owner-kpi-strip strong { font-size: 18px; }.owner-kpi-strip svg { width: 18px; height: 18px; padding: 5px; }
 }

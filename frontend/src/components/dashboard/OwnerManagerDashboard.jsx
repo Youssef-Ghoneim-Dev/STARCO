@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getDashboardStatistics } from "../../services/dashboardAPI";
 import StyledSelect from "../common/StyledSelect";
@@ -104,7 +104,7 @@ function WeeklyChart({ projects, endDate, statistics = [] }) {
         {completed.map((value, index) => <circle key={`completed-${index}`} cx={24 + index * 61} cy={142 - (value / max) * 105} r="6" className="chart-point-completed dashboard-chart-point" onMouseEnter={() => setTooltip({ x: 24 + index * 61, y: 142 - (value / max) * 105, date: days[index], created: created[index], completed: value })} onMouseLeave={() => setTooltip(null)} onClick={() => setTooltip({ x: 24 + index * 61, y: 142 - (value / max) * 105, date: days[index], created: created[index], completed: value })}><title>{`${days[index].toLocaleDateString("ar-EG")}: ${value} مشاريع منتهية`}</title></circle>)}
         {tooltip && <g className="dashboard-chart-tooltip" transform={`translate(${Math.min(tooltip.x + 8, 285)} ${Math.max(tooltip.y - 62, 8)})`}><rect width="128" height="57" rx="8" /><text x="64" y="17" textAnchor="middle">{tooltip.date.toLocaleDateString("ar-EG", { day: "numeric", month: "long" })}</text><text x="64" y="34" textAnchor="middle">{`جديدة: ${tooltip.created}`}</text><text x="64" y="49" textAnchor="middle">{`منتهية: ${tooltip.completed}`}</text></g>}
       </svg>
-      <div className="weekly-chart-days">{days.map((date) => <span key={date.toISOString()}>{date.toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}</span>)}</div>
+      <div className="weekly-chart-days">{days.map((date) => <span key={date.toISOString()}><span className="weekly-date-full">{date.toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}</span><span className="weekly-date-mobile">{date.toLocaleDateString("ar-EG", { day: "numeric" })}</span></span>)}</div>
     </div>
     <div className="chart-legend"><span><i className="created" />مشاريع جديدة</span><span><i className="completed" />مشاريع منتهية</span></div>
   </section>;
@@ -136,6 +136,7 @@ function DataTable({ title, icon, columns, rows, linkLabel = "عرض الكل" }
 
 function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefresh }) {
   const today = new Date();
+  const dateInputRef = useRef(null);
   const minDashboardDate = new Date(today);
   minDashboardDate.setDate(minDashboardDate.getDate() - 29);
   const [selectedDateValue, setSelectedDateValue] = useState(dateInputValue(today));
@@ -191,13 +192,23 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
   const metricValue = (key, fallback) => selectedMetrics?.[key] ?? fallback;
   const previousMetricValue = (key, fallback) => previousMetrics?.[key] ?? fallback;
   const refreshAll = () => Promise.allSettled([onRefresh?.(), loadStoredStatistics()]);
+  const openDatePicker = () => {
+    const input = dateInputRef.current;
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") input.showPicker();
+      else input.focus();
+    } catch {
+      input.focus();
+    }
+  };
   const latestProjects = [...projectsForSelectedDate].sort((a, b) => projectDate(b) - projectDate(a)).slice(0, 5);
   const latestRows = latestProjects.length ? latestProjects.map((project, index) => [index + 1, project.client?.name || "عميل غير محدد", demoPeople[index] || "—", formatDate(projectDate(project))]) : [["—", "لا توجد مشاريع بعد", "—", "—"]];
   const delayedRows = latestProjects.slice(0, 5).map((project, index) => [index + 1, project.client?.name || `مشروع ${index + 1}`, productionStages[index % productionStages.length].title, <span className="delay-value" key={project._id || index}>{index % 2 ? "يوم" : "يومان"}</span>]);
   const peopleRows = demoPeople.map((person, index) => [index + 1, person, 6 - index, 4 - Math.floor(index / 2), 3 - Math.floor(index / 2)]);
 
   return <div className="owner-dashboard" dir="rtl">
-    <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث البيانات"}</button><label className="dashboard-date-input"><HiOutlineCalendar aria-hidden="true" /><input aria-label="اختيار تاريخ الإحصائيات" type="date" inputMode="none" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onDrop={(event) => event.preventDefault()} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><div className="dashboard-period-select"><StyledSelect value={datePreset} onChange={changeDatePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(datePreset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
+    <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث البيانات"}</button><label className="dashboard-date-input" onClick={openDatePicker}><HiOutlineCalendar aria-hidden="true" /><input ref={dateInputRef} aria-label="اختيار تاريخ الإحصائيات" type="date" inputMode="none" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onDrop={(event) => event.preventDefault()} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><div className="dashboard-period-select"><StyledSelect value={datePreset} onChange={changeDatePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(datePreset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
     <section className="owner-metrics-grid">
       <MetricCard tone="blue" icon={<HiOutlineFolder />} title={`إجمالي المشاريع حتى ${selectedLabel}`} value={loading ? "—" : metricValue("totalProjects", projectsForSelectedDate.length)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("totalProjects", projectsForSelectedDate.length), previousMetricValue("totalProjects", projectsForPreviousDate.length))} />
       <MetricCard tone="green" icon={<HiOutlineCheckCircle />} title={`مشاريع جديدة (${selectedLabel})`} value={loading ? "—" : metricValue("newProjects", createdForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("newProjects", createdForDate), previousMetricValue("newProjects", createdForPreviousDate))} />
