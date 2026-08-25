@@ -12,6 +12,18 @@ import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
 
+const AUTO_SAVE_DELAY_MS = 500;
+const AUTO_SAVE_LOCKED_STATUSES = new Set([
+  "quoteCompleted",
+  "executionPdfRequested",
+  "executionPdfReady",
+  "executionOrdered",
+  "manufacturingFilesPending",
+  "manufacturingFilesReady",
+  "laserFilesDownloaded",
+  "completed",
+]);
+
 const configuredPriceFields = [
   "manufacturing",
   "locks",
@@ -246,24 +258,6 @@ const prepareProjectForAutoSaving = ({ client, clientNameReview, status, panels 
   })),
 });
 
-const needsWhatsappBackfill = (project, systemConfig) => {
-  if (project?.source !== "whatsapp") return false;
-
-  if (!hasValue(project.prices?.sheetPrice) || !hasValue(project.prices?.paintPrice)) {
-    return true;
-  }
-
-  return (project.panels || []).some((panel) => {
-    if (!Array.isArray(panel.parts) || panel.parts.length === 0) return true;
-
-    return configuredPriceFields.some(
-      (field) =>
-        hasValue(systemConfig?.prices?.[field]) &&
-        !hasValue(panel.prices?.[field]),
-    );
-  });
-};
-
 export function ProjectProvider({ children, projectId, readOnly = false }) {
   const [project, setProject] = useState(defaultProject());
   const [prices, setPrices] = useState({
@@ -316,9 +310,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
               hydratePanel(panel, index, savedConfig),
             ),
           });
-          // A completed project is an approved historical quote: never let a
-          // page load or WhatsApp backfill attempt modify it automatically.
-          setPreventAutoSave(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(data.status) || !needsWhatsappBackfill(data, savedConfig));
+          // Editable projects keep autosave enabled. Workflow stages that are
+          // intentionally read-only are the only stages that block it.
+          setPreventAutoSave(AUTO_SAVE_LOCKED_STATUSES.has(data.status));
         } catch (error) {
           console.error("Failed to load project:", error);
           if (mounted) {
@@ -350,7 +344,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           toast.error(message);
         }
       }
-    }, 700);
+    }, AUTO_SAVE_DELAY_MS);
 
     return () => clearTimeout(timeout);
   }, [project, prices, loadingProject, preventAutoSave, projectId, readOnly]);
