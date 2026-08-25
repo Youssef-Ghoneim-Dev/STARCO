@@ -17,4 +17,13 @@ const selectRange = async (from, to) => model()
     .sort({ date: 1 })
     .lean();
 
-module.exports = { upsert, selectOne, selectRange };
+const incrementActivity = async (dateKey, date, expiresAt, increments) => model().findOneAndUpdate(
+    { dateKey },
+    {
+        $setOnInsert: { dateKey, date, expiresAt },
+        $inc: increments
+    },
+    { upsert: true, returnDocument: "after" }
+);
+
+module.exports = { upsert, selectOne, selectRange, incrementActivity };

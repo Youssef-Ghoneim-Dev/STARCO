@@ -100,10 +100,40 @@ const captureAfterSuccessfulMutation = (req, res, next) => {
     next();
 };
 
+const roleActivityField = {
+    OwnerManager: "activity.ownerManagerRequests",
+    Engineer: "activity.engineerRequests",
+    Marketer: "activity.marketerRequests",
+    MarketingManager: "activity.marketingManagerRequests",
+    ProductionManager: "activity.productionManagerRequests"
+};
+
+const trackDashboardRequest = (req, res, next) => {
+    res.once("finish", () => {
+        if (res.statusCode >= 400) return;
+        const date = startOfDay();
+        const dateKey = toDateKey(date);
+        const expiresAt = startOfDay(date);
+        expiresAt.setDate(expiresAt.getDate() + RETENTION_DAYS);
+        const increments = { "activity.totalRequests": 1 };
+        const roleField = roleActivityField[req.user?.role];
+        if (roleField) increments[roleField] = 1;
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+            increments["activity.successfulMutations"] = 1;
+            if (req.path.startsWith("/projects")) increments["activity.projectMutations"] = 1;
+            if (req.path.startsWith("/clients")) increments["activity.clientMutations"] = 1;
+        }
+        dashboardStatistics.incrementActivity(dateKey, date, expiresAt, increments)
+            .catch((error) => console.error("Dashboard activity tracking failed:", error));
+    });
+    next();
+};
+
 module.exports = {
     RETENTION_DAYS,
     captureDashboardSnapshot,
     captureAfterSuccessfulMutation,
+    trackDashboardRequest,
     getDashboardStatistics,
     startOfDay,
     toDateKey

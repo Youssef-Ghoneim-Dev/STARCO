@@ -1,4 +1,4 @@
-const { getDashboardStatistics, startOfDay } = require("../services/dashboardStatistics");
+const { captureDashboardSnapshot, getDashboardStatistics, startOfDay } = require("../services/dashboardStatistics");
 
 const getStatistics = async (req, res, next) => {
     try {
@@ -17,4 +17,18 @@ const getStatistics = async (req, res, next) => {
     }
 };
 
-module.exports = { getStatistics };
+const captureDailyStatistics = async (req, res, next) => {
+    try {
+        const expected = process.env.CRON_SECRET;
+        const received = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+        if (!expected || received !== expected) {
+            return res.status(401).json({ status: "error", message: "غير مصرح بتشغيل مهمة الإحصائيات." });
+        }
+        const snapshot = await captureDashboardSnapshot();
+        return res.status(200).json({ status: "ok", dateKey: snapshot.dateKey });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getStatistics, captureDailyStatistics };

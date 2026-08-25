@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getDashboardStatistics } from "../../services/dashboardAPI";
+import StyledSelect from "../common/StyledSelect";
 import {
   HiOutlineCalendar,
   HiOutlineChartBar,
@@ -146,6 +147,11 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
   const previousDate = new Date(selectedDate);
   previousDate.setDate(previousDate.getDate() - 1);
   const selectedLabel = sameDay(selectedDate, today) ? "اليوم" : sameDay(selectedDate, new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)) ? "أمس" : selectedDate.toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
+  const datePreset = sameDay(selectedDate, today) ? "today" : sameDay(selectedDate, new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)) ? "yesterday" : "custom";
+  const changeDatePreset = (value) => {
+    if (value === "today") setSelectedDateValue(dateInputValue(today));
+    if (value === "yesterday") setSelectedDateValue(dateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)));
+  };
   const productionStatuses = ["inProgress", "production", "executing"];
   const loadStoredStatistics = useCallback(async () => {
     try {
@@ -191,17 +197,24 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
   const peopleRows = demoPeople.map((person, index) => [index + 1, person, 6 - index, 4 - Math.floor(index / 2), 3 - Math.floor(index / 2)]);
 
   return <div className="owner-dashboard" dir="rtl">
-    <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث البيانات"}</button><label className="dashboard-date-input"><HiOutlineCalendar /><input type="date" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><select aria-label="الفترة المحددة" value={sameDay(selectedDate, today) ? "today" : sameDay(selectedDate, new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)) ? "yesterday" : "custom"} onChange={(event) => { if (event.target.value === "today") setSelectedDateValue(dateInputValue(today)); if (event.target.value === "yesterday") setSelectedDateValue(dateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1))); }}><option value="today">اليوم</option><option value="yesterday">أمس</option>{!sameDay(selectedDate, today) && !sameDay(selectedDate, new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)) && <option value="custom">تاريخ محدد</option>}</select></div></header>
+    <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث البيانات"}</button><label className="dashboard-date-input"><HiOutlineCalendar aria-hidden="true" /><input aria-label="اختيار تاريخ الإحصائيات" type="date" inputMode="none" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onDrop={(event) => event.preventDefault()} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><div className="dashboard-period-select"><StyledSelect value={datePreset} onChange={changeDatePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(datePreset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
     <section className="owner-metrics-grid">
       <MetricCard tone="blue" icon={<HiOutlineFolder />} title={`إجمالي المشاريع حتى ${selectedLabel}`} value={loading ? "—" : metricValue("totalProjects", projectsForSelectedDate.length)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("totalProjects", projectsForSelectedDate.length), previousMetricValue("totalProjects", projectsForPreviousDate.length))} />
       <MetricCard tone="green" icon={<HiOutlineCheckCircle />} title={`مشاريع جديدة (${selectedLabel})`} value={loading ? "—" : metricValue("newProjects", createdForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("newProjects", createdForDate), previousMetricValue("newProjects", createdForPreviousDate))} />
-      <MetricCard tone="indigo" icon={<HiOutlineChatAlt2 />} title={`طلبات ${selectedLabel} من المندوبين`} value={loading ? "—" : metricValue("marketerRequests", createdForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("marketerRequests", createdForDate), previousMetricValue("marketerRequests", createdForPreviousDate))} />
+      <MetricCard tone="indigo" icon={<HiOutlineChatAlt2 />} title={`طلبات المندوبين (${selectedLabel})`} value={loading ? "—" : metricValue("marketerRequests", createdForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("marketerRequests", createdForDate), previousMetricValue("marketerRequests", createdForPreviousDate))} />
       <MetricCard tone="amber" icon={<HiOutlineClock />} title={`مشاريع قيد العمل (${selectedLabel})`} value={loading ? "—" : metricValue("inProgress", inProgressForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("inProgress", inProgressForDate), previousMetricValue("inProgress", inProgressForPreviousDate))} />
       <MetricCard tone="emerald" icon={<HiOutlineCheckCircle />} title={`مشاريع منتهية (${selectedLabel})`} value={loading ? "—" : metricValue("completed", completedForDate)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("completed", completedForDate), previousMetricValue("completed", completedForPreviousDate))} />
       <MetricCard tone="violet" icon={<HiOutlineUsers />} title="إجمالي العملاء" value={loading ? "—" : metricValue("totalClients", clientsCount)} />
     </section>
-    <section className="owner-analytics-grid"><ProductionOverview /><WeeklyChart projects={projects} endDate={selectedDate} statistics={storedStatistics?.history} /><StatusOverview counts={displayedStatusCounts} total={metricValue("totalProjects", projectsForSelectedDate.length)} /></section>
-    <section className="performance-grid">{performanceCards.map((data) => <PerformanceCard data={data} key={data.title} />)}</section>
+    <section className="owner-insights-grid">
+      <ProductionOverview />
+      <StatusOverview counts={displayedStatusCounts} total={metricValue("totalProjects", projectsForSelectedDate.length)} />
+      <WeeklyChart projects={projects} endDate={selectedDate} statistics={storedStatistics?.history} />
+      <PerformanceCard data={performanceCards[0]} />
+      <PerformanceCard data={performanceCards[1]} />
+      <PerformanceCard data={performanceCards[2]} />
+      <PerformanceCard data={performanceCards[3]} />
+    </section>
     <section className="owner-tables-grid">
       <DataTable title="آخر المشاريع المضافة" icon={<HiOutlineFolder />} columns={["#", "اسم المشروع", "المهندس", "تاريخ الإنشاء"]} rows={latestRows} linkLabel="عرض جميع المشاريع" />
       <DataTable title="أكثر المشاريع تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم المشروع", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد بيانات", "—", "—"]]} linkLabel="عرض المشاريع المتأخرة" />

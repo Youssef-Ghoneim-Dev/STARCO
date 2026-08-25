@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/v1/dashboard/capture",
+      "schedule": "5 0 * * *"
+    }
+  ]
+}

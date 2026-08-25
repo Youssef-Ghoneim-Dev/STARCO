@@ -1,4 +1,6 @@
 require("dotenv").config();
+// Dashboard snapshots follow the company's working day rather than Vercel's UTC clock.
+process.env.TZ = process.env.TZ || "Africa/Cairo";
 
 const express = require("express");
 const app = express();
@@ -16,7 +18,7 @@ const systemConfiguration = require("./routers/systemConfiguration");
 const projectsrouter = require("./routers/projects");
 const whatsapprouter = require("./routers/whatsapp");
 const dashboardRouter = require("./routers/dashboard");
-const { captureAfterSuccessfulMutation } = require("./services/dashboardStatistics");
+const { captureAfterSuccessfulMutation, trackDashboardRequest } = require("./services/dashboardStatistics");
 const erwhandling = require("./midelwers/Handeling error");
 
 app.use(express.json({
@@ -29,6 +31,7 @@ app.use(express.json({
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
+app.use(baseUrl, trackDashboardRequest);
 
 app.use("/uploads", express.static("uploads"));
 
