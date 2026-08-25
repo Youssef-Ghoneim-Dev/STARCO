@@ -98,7 +98,8 @@ module.exports = new mongoose.Schema({
                 oneDirection: { type: Number, default: 150 },
                 twoDirections: { type: Number, default: 300 }
             },
-            weightFormula: { type: String, default: "Length * BarCount * Width * Thickness / 1000000" }
+            weightFormula: { type: String, default: "Length * BarCount * Width * Thickness / 1000000" },
+            priceFormula: { type: String, default: "Weight * PricePerKg" }
         }, { _id: false }),
         default: () => cloneCopperConfigurationDefaults()
     },

@@ -78,10 +78,8 @@ const getCopperOption = (configuration, key) => (
     (configuration?.catalog || []).find((item) => item.key === key)
 );
 
-const getCopperWeight = (option, length, barCount, formula) => {
-    if (!option) return 0;
-    const values = { Length: parseNumber(length), BarCount: parseNumber(barCount), Width: parseNumber(option.width), Thickness: parseNumber(option.thickness) };
-    const source = formula || "Length * BarCount * Width * Thickness / 1000000";
+const evaluateCopperFormula = (formula, values, fallbackFormula) => {
+    const source = String(formula || fallbackFormula).trim();
     const words = source.match(/[A-Za-z]+/g) || [];
     if (words.some((word) => !Object.hasOwn(values, word))) return 0;
     const expression = source.replace(/[A-Za-z]+/g, (word) => String(values[word]));
@@ -90,6 +88,16 @@ const getCopperWeight = (option, length, barCount, formula) => {
         const result = Function(`"use strict"; return (${expression});`)();
         return Number.isFinite(result) ? result : 0;
     } catch { return 0; }
+};
+
+const getCopperWeight = (option, length, barCount, formula) => {
+    if (!option) return 0;
+    return evaluateCopperFormula(formula, {
+        Length: parseNumber(length),
+        BarCount: parseNumber(barCount),
+        Width: parseNumber(option.width),
+        Thickness: parseNumber(option.thickness),
+    }, "Length * BarCount * Width * Thickness / 1000000");
 };
 
 export const getCopperCalculation = (panel, configuration = {}) => {
@@ -109,7 +117,12 @@ export const getCopperCalculation = (panel, configuration = {}) => {
         return sum + getCopperWeight(getCopperOption(resolvedConfiguration, branch.optionKey), length, branch.barCount, resolvedConfiguration.weightFormula);
     }, 0);
     const weight = mainWeight + branchWeights;
-    const barsPrice = weight * parseNumber(copper.pricePerKg ?? resolvedConfiguration.pricePerKg);
+    const pricePerKg = parseNumber(copper.pricePerKg ?? resolvedConfiguration.pricePerKg);
+    const barsPrice = evaluateCopperFormula(
+        resolvedConfiguration.priceFormula,
+        { Weight: weight, PricePerKg: pricePerKg },
+        "Weight * PricePerKg",
+    );
     const earthPrice = parseNumber(copper.earthPrice);
     const groundPrice = parseNumber(copper.groundPrice);
     return { weight, barsPrice, earthPrice, groundPrice, total: barsPrice + earthPrice + groundPrice };

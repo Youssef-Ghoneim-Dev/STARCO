@@ -39,10 +39,11 @@ const get = async () => {
     }
     if (!Array.isArray(rawConfig.copperConfiguration?.catalog) || rawConfig.copperConfiguration.catalog.length === 0) {
         migration.copperConfiguration = cloneCopperConfigurationDefaults();
-    } else if (!rawConfig.copperConfiguration?.weightFormula || rawConfig.copperConfiguration?.pricePerKg == null) {
+    } else if (!rawConfig.copperConfiguration?.weightFormula || !rawConfig.copperConfiguration?.priceFormula || rawConfig.copperConfiguration?.pricePerKg == null) {
         migration.copperConfiguration = {
             ...rawConfig.copperConfiguration,
             weightFormula: rawConfig.copperConfiguration?.weightFormula || cloneCopperConfigurationDefaults().weightFormula,
+            priceFormula: rawConfig.copperConfiguration?.priceFormula || cloneCopperConfigurationDefaults().priceFormula,
             pricePerKg: rawConfig.copperConfiguration?.pricePerKg ?? cloneCopperConfigurationDefaults().pricePerKg
         };
     }

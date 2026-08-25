@@ -17,7 +17,8 @@ const copperConfigurationDefaults = {
     ],
     barCounts: [1, 3],
     branchLengths: { oneDirection: 150, twoDirections: 300 },
-    weightFormula: "Length * BarCount * Width * Thickness / 1000000"
+    weightFormula: "Length * BarCount * Width * Thickness / 1000000",
+    priceFormula: "Weight * PricePerKg"
 };
 
 const cloneCopperConfigurationDefaults = () => JSON.parse(JSON.stringify(copperConfigurationDefaults));

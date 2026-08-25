@@ -15,8 +15,18 @@ export const DEFAULT_COPPER_CONFIGURATION = {
   barCounts: [1, 3],
   branchLengths: { oneDirection: 150, twoDirections: 300 },
   weightFormula: "Length * BarCount * Width * Thickness / 1000000",
+  priceFormula: "Weight * PricePerKg",
 };
 
 export const resolveCopperConfiguration = (configuration) => (
-  configuration?.catalog?.length ? configuration : DEFAULT_COPPER_CONFIGURATION
+  configuration?.catalog?.length
+    ? {
+        ...DEFAULT_COPPER_CONFIGURATION,
+        ...configuration,
+        branchLengths: {
+          ...DEFAULT_COPPER_CONFIGURATION.branchLengths,
+          ...(configuration.branchLengths || {}),
+        },
+      }
+    : DEFAULT_COPPER_CONFIGURATION
 );

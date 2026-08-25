@@ -28,7 +28,7 @@ const defaultConfig = {
     { key: "300", name: "300 أمبير", amperage: 300, width: 20, thickness: 10 }, { key: "250", name: "250 أمبير", amperage: 250, width: 30, thickness: 5 },
     { key: "160", name: "160 أمبير", amperage: 160, width: 20, thickness: 5 }, { key: "125", name: "125 أمبير", amperage: 125, width: 15, thickness: 5 },
     { key: "100", name: "100 أمبير", amperage: 100, width: 15, thickness: 5 }, { key: "80", name: "80 أمبير", amperage: 80, width: 10, thickness: 5 }, { key: "63", name: "63 أمبير", amperage: 63, width: 10, thickness: 5 }
-  ], pricePerKg: 0, barCounts: [1, 3], branchLengths: { oneDirection: 150, twoDirections: 300 }, weightFormula: "Length * BarCount * Width * Thickness / 1000000" },
+  ], pricePerKg: 0, barCounts: [1, 3], branchLengths: { oneDirection: 150, twoDirections: 300 }, weightFormula: "Length * BarCount * Width * Thickness / 1000000", priceFormula: "Weight * PricePerKg" },
 };
 
 const priceFields = [["manufacturing", "المصنعية"], ["locks", "الكوالين"], ["hinges", "المفصلات"], ["transport", "النقل"], ["screws", "المسامير"], ["stretch", "استرتش"], ["carton", "الكرتون"]];
@@ -70,7 +70,7 @@ function PanelTypesEditor({ panelTypes, onChange, canEditFormulas, onSave, savin
   return <section className="panel-types-editor">
     <div className="configuration-heading configuration-subheading"><h2>{canEditFormulas ? "أنواع الألواح والمعادلات" : "إعدادات تسعير الألواح"}</h2><p>{canEditFormulas ? "المعادلات تستخدم: Length للطول، Width للعرض، Depth للعمق. مثال: Length - 50" : "يمكنك تعديل أسعار التصنيع والأجزاء الأساسية والإضافية. المعادلات يحافظ عليها Owner Manager."}</p></div>
     {panelTypes.map((type, typeIndex) => <details className="panel-type-settings" key={type.key || typeIndex}>
-      <summary><IoChevronDown className="configuration-collapse-icon" aria-hidden="true" /><strong>{type.name || "نوع لوحة"}</strong><span>اضغط لعرض الإعدادات</span><div className="panel-type-summary-actions"><button type="button" className="configuration-secondary configuration-type-save" disabled={saving} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSave(); }}>{saving ? "جاري الحفظ..." : "حفظ"}</button>{canEditFormulas && <button type="button" className="configuration-delete" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onChange(panelTypes.filter((_, index) => index !== typeIndex)); }}>حذف اللوحة</button>}</div></summary>
+      <summary><IoChevronDown className="configuration-collapse-icon" aria-hidden="true" /><strong>{type.name || "نوع لوحة"}</strong><span>اضغط لعرض الإعدادات</span><div className="panel-type-summary-actions"><button type="button" className="configuration-secondary configuration-type-save" disabled={saving} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSave(); }}>{saving ? "جاري الحفظ..." : "حفظ"}</button>{canEditFormulas && <button type="button" className="configuration-delete configuration-type-delete" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onChange(panelTypes.filter((_, index) => index !== typeIndex)); }}>حذف اللوحة</button>}</div></summary>
       <div className="panel-type-settings-body">
       <div className="configuration-grid two-columns">
         {canEditFormulas && <><label className="configuration-number-field">الاسم<input value={type.name ?? ""} onChange={(e) => updateType(typeIndex, (current) => ({ ...current, name: e.target.value }))} /></label>
@@ -129,6 +129,22 @@ function CopperConfigurationEditor({ configuration, onChange }) {
         <NumberField label="سعر النحاس الافتراضي" value={copper.pricePerKg} onChange={(value) => onChange({ ...copper, pricePerKg: value })} />
         <NumberField label="طول الفرعي - اتجاه واحد" value={copper.branchLengths.oneDirection} onChange={(value) => onChange({ ...copper, branchLengths: { ...copper.branchLengths, oneDirection: value } })} />
         <NumberField label="طول الفرعي - اتجاهين" value={copper.branchLengths.twoDirections} onChange={(value) => onChange({ ...copper, branchLengths: { ...copper.branchLengths, twoDirections: value } })} />
+      </div>
+      <div className="copper-formula-settings">
+        <label>معادلة وزن النحاس<input className="formula-input" dir="ltr" spellCheck="false" value={copper.weightFormula ?? ""} onChange={(event) => onChange({ ...copper, weightFormula: event.target.value })} /></label>
+        <label>معادلة سعر النحاس النهائي<input className="formula-input" dir="ltr" spellCheck="false" value={copper.priceFormula ?? ""} onChange={(event) => onChange({ ...copper, priceFormula: event.target.value })} /></label>
+        <div className="copper-formula-help">
+          <strong>شرح متغيرات المعادلات</strong>
+          <div className="copper-formula-variables">
+            <p><code dir="ltr">Length</code><span>الطول الذي يدخله المهندس بالمليمتر.</span></p>
+            <p><code dir="ltr">BarCount</code><span>عدد بارات النحاس المتوازية المختار، مثل 1 أو 3.</span></p>
+            <p><code dir="ltr">Width</code><span>عرض بارة النحاس بالمليمتر، ويأتي من مقاس الأمبير المختار.</span></p>
+            <p><code dir="ltr">Thickness</code><span>سمك بارة النحاس بالمليمتر، ويأتي من مقاس الأمبير المختار.</span></p>
+            <p><code dir="ltr">Weight</code><span>ناتج معادلة وزن النحاس.</span></p>
+            <p><code dir="ltr">PricePerKg</code><span>سعر كيلو النحاس المستخدم في المشروع.</span></p>
+          </div>
+          <small>الرقم <b dir="ltr">1000000</b> هو معامل التحويل المستخدم في معادلة الوزن الحالية.</small>
+        </div>
       </div>
       <div className="copper-bar-count-editor"><div className="copper-bar-count-heading"><strong>أعداد البارات المتاحة</strong><span>اختَر الأعداد التي يستطيع المهندس استخدامها</span></div><div className="copper-bar-count-controls"><div className="copper-bar-count-chips">{[...(copper.barCounts || [])].sort((first, second) => first - second).map((count) => <span key={count}>{count}<button type="button" aria-label={`حذف عدد البارات ${count}`} onClick={() => onChange({ ...copper, barCounts: copper.barCounts.filter((item) => Number(item) !== Number(count)) })}><IoClose /></button></span>)}</div><div className="copper-bar-count-add"><input type="number" min="1" step="1" placeholder="عدد جديد" value={newBarCount} onChange={(event) => setNewBarCount(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addBarCount(); } }} /><button type="button" onClick={addBarCount}>إضافة</button></div></div></div>
     </div>
