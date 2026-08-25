@@ -21,6 +21,14 @@ import {
 
 const quoteFinishedStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"];
 
+// Temporary test mode: manufacturing attachments are images only until the
+// storage layer is moved to Cloudflare R2.
+const isManufacturingTestImage = (file) => {
+  if (!file?.name) return false;
+  if (String(file.type || "").startsWith("image/")) return true;
+  return /\.(?:jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.name);
+};
+
 const saveBlob = (blob, fileName) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -144,8 +152,13 @@ function ExecutionPdfWorkspace() {
   };
 
   const uploadManufacturingFiles = async (selectedFiles) => {
-    const selected = Array.from(selectedFiles || []).filter((file) => file?.name);
+    const incoming = Array.from(selectedFiles || []).filter((file) => file?.name);
+    const selected = incoming.filter(isManufacturingTestImage);
     if (!selected.length) return toast.error("اختر ملفًا واحدًا على الأقل.");
+    if (selected.length !== incoming.length) {
+      toast.error("مرحلة التجربة تقبل الصور فقط حاليًا.");
+      return;
+    }
     setBusy(true);
     try {
       let latestProject = project;
@@ -281,8 +294,8 @@ function ExecutionPdfWorkspace() {
     {manufacturing.status === "awaitingFiles" && canPrepareManufacturing && <section className="manufacturing-files-section">
       <div>
         <span className="execution-phase-label">ملفات التصنيع</span>
-        <h3>رفع ملفات DXF وملفات التشغيل</h3>
-        <p>يمكنك رفع DXF أو DWG أو أي ملف تشغيل، بالإضافة إلى الصور عند الحاجة.</p>
+        <h3>رفع صور اختبار مرحلة التصنيع</h3>
+        <p>مؤقتًا ارفع صورة أو أكثر لاختبار دورة التنفيذ كاملة. سنفعّل ملفات DXF وDWG بعد الانتقال إلى Cloudflare R2.</p>
       </div>
       <div
         className={`execution-dropzone ${dragging ? "dragging" : ""}`}
@@ -292,11 +305,12 @@ function ExecutionPdfWorkspace() {
         onClick={() => manufacturingInputRef.current?.click()}
       >
         <HiOutlineCloudUpload />
-        <h3>اسحب ملفات التصنيع هنا</h3>
-        <p>أو اضغط لاختيار ملف أو أكثر من الجهاز.</p>
+        <h3>اسحب صور التصنيع هنا</h3>
+        <p>أو اضغط لاختيار صورة أو أكثر من الجهاز.</p>
         <input
           ref={manufacturingInputRef}
           type="file"
+          accept="image/*,.heic,.heif"
           multiple
           hidden
           onChange={(event) => {
@@ -307,7 +321,7 @@ function ExecutionPdfWorkspace() {
         />
       </div>
       {manufacturingFiles.length > 0 && <div className="manufacturing-files-list">
-        {manufacturingFiles.map((file) => <span key={file._id || file.storageFileId}><HiOutlineDocumentText />{file.fileName}</span>)}
+        {manufacturingFiles.map((file) => <span key={file._id || file.storageFileId}><HiOutlinePhotograph />{file.fileName}</span>)}
       </div>}
       <label className="manufacturing-notes-label">معلومات إضافية للملفات
         <textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي تعليمات أو معلومات يحتاجها مدير التنفيذ..." />

@@ -64,27 +64,31 @@ export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
     { responseType: "blob" },
 );
 
-export const uploadManufacturingFile = (projectId, panelId, file) => {
-    return api.post(`/projects/${projectId}/manufacturing/upload-session`, {
+export const uploadManufacturingFile = async (projectId, panelId, file) => {
+    const { data: session } = await api.post(`/projects/${projectId}/manufacturing/upload-session`, {
         panelId,
         fileName: file.name,
         mimeType: file.type || "application/octet-stream",
         fileSize: file.size,
-    }).then(async ({ data }) => {
-        const uploadResponse = await fetch(data.uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type || "application/octet-stream" },
-            body: file,
-        });
-        const uploadedFile = await uploadResponse.json().catch(() => ({}));
-        if (!uploadResponse.ok || !uploadedFile.id) {
-            throw new Error(uploadedFile?.error?.message || `تعذر رفع الملف إلى مساحة التخزين (${uploadResponse.status}).`);
-        }
-        return api.post(`/projects/${projectId}/manufacturing/upload-complete`, {
-            panelId,
-            storageFileId: uploadedFile.id,
-        });
     });
+
+    const chunkSize = Number(session.chunkSize) || (3 * 1024 * 1024);
+    let finalResponse = null;
+    for (let start = 0; start < file.size; start += chunkSize) {
+        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+        const formData = new FormData();
+        formData.append("panelId", panelId);
+        formData.append("uploadToken", session.uploadToken);
+        formData.append("start", String(start));
+        formData.append("total", String(file.size));
+        formData.append("chunk", chunk, `${file.name}.part`);
+        finalResponse = await api.post(`/projects/${projectId}/manufacturing/upload-chunk`, formData);
+    }
+
+    if (!finalResponse?.data?.complete || !finalResponse?.data?.project) {
+        throw new Error("لم يكتمل رفع الملف. حاول مرة أخرى.");
+    }
+    return finalResponse;
 };
 
 export const finishManufacturingFiles = (projectId, panelId, notes) => api.post(

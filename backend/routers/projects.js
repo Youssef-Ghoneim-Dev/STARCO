@@ -22,6 +22,11 @@ const manufacturingUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 50 * 1024 * 1024 }
 });
+const manufacturingChunkUpload = multer({
+    storage: multer.memoryStorage(),
+    // Keep every request comfortably below Vercel's 4.5 MB payload limit.
+    limits: { fileSize: 3.25 * 1024 * 1024 }
+});
 
 // Public, key-protected page used by the completed-project WhatsApp link.
 // Keep it before /:id so Express does not treat "client" as a project id.
@@ -107,6 +112,7 @@ projectsRouter.post("/:id/execution-pdf/skip", authMw, CheckUserToken, projectCo
 projectsRouter.post("/:id/execution-pdf/request-changes", authMw, CheckUserToken, projectController.requestExecutionPdfChanges);
 projectsRouter.post("/:id/execution-pdf/confirm", authMw, CheckUserToken, projectController.confirmExecution);
 projectsRouter.post("/:id/manufacturing/upload-session", authMw, CheckUserToken, projectController.startManufacturingFileUpload);
+projectsRouter.post("/:id/manufacturing/upload-chunk", authMw, CheckUserToken, manufacturingChunkUpload.single("chunk"), projectController.uploadManufacturingFileChunk);
 projectsRouter.post("/:id/manufacturing/upload-complete", authMw, CheckUserToken, projectController.completeManufacturingFileUpload);
 projectsRouter.post("/:id/manufacturing/files", authMw, CheckUserToken, manufacturingUpload.single("file"), projectController.uploadManufacturingFile);
 projectsRouter.get("/:id/manufacturing/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getManufacturingFile);

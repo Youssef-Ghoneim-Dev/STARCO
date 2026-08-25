@@ -18,6 +18,7 @@ const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile, createResumableUploadSession, getVerifiedStoredFile } = require("../services/googleDrive");
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const detectExecutionFileMimeType = (file) => {
     if (!file?.buffer?.length) return null;
@@ -1015,7 +1016,78 @@ const startManufacturingFileUpload = async (req, res, next) => {
         }
 
         const uploadUrl = await createResumableUploadSession({ fileName, mimeType, fileSize });
-        return res.status(201).json({ status: "ok", uploadUrl });
+        if (!process.env.TOKEN_KEY) throw new Error("TOKEN_KEY is required to secure file uploads.");
+        const uploadToken = jwt.sign({
+            purpose: "manufacturing-upload",
+            uploadUrl,
+            projectId: String(project._id),
+            panelId: String(panel.panelId),
+            fileName,
+            mimeType,
+            fileSize
+        }, process.env.TOKEN_KEY, { expiresIn: "30m" });
+        return res.status(201).json({ status: "ok", uploadToken, chunkSize: 3 * 1024 * 1024 });
+    } catch (error) { next(error); }
+};
+
+const uploadManufacturingFileChunk = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageManufacturingFiles(req.user, project)) return res.status(403).json({ status: "error", message: "رفع ملفات التصنيع متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || panel.manufacturing?.status !== "awaitingFiles") return res.status(409).json({ status: "error", message: "مرحلة رفع ملفات التصنيع غير مفتوحة لهذه اللوحة." });
+        if (!req.file?.buffer?.length) return res.status(400).json({ status: "error", message: "جزء الملف غير موجود." });
+        if (!process.env.TOKEN_KEY) throw new Error("TOKEN_KEY is required to secure file uploads.");
+
+        let upload;
+        try { upload = jwt.verify(String(req.body?.uploadToken || ""), process.env.TOKEN_KEY); }
+        catch { return res.status(401).json({ status: "error", message: "انتهت جلسة رفع الملف. اختر الملف مرة أخرى." }); }
+        if (upload.purpose !== "manufacturing-upload"
+            || upload.projectId !== String(project._id)
+            || upload.panelId !== String(panel.panelId)) {
+            return res.status(403).json({ status: "error", message: "جلسة رفع الملف لا تخص هذا المشروع." });
+        }
+
+        const start = Number(req.body?.start);
+        const total = Number(req.body?.total);
+        const end = start + req.file.buffer.length - 1;
+        if (!Number.isInteger(start) || start < 0 || total !== Number(upload.fileSize) || end >= total) {
+            return res.status(400).json({ status: "error", message: "ترتيب أجزاء الملف غير صحيح." });
+        }
+
+        const driveResponse = await fetch(upload.uploadUrl, {
+            method: "PUT",
+            redirect: "manual",
+            headers: {
+                "Content-Type": upload.mimeType || "application/octet-stream",
+                "Content-Length": String(req.file.buffer.length),
+                "Content-Range": `bytes ${start}-${end}/${total}`
+            },
+            body: req.file.buffer
+        });
+        if (driveResponse.status === 308) {
+            return res.status(200).json({ status: "ok", complete: false, uploadedBytes: end + 1 });
+        }
+
+        const stored = await driveResponse.json().catch(() => ({}));
+        if (!driveResponse.ok || !stored.id) {
+            throw new Error(stored?.error?.message || `تعذر إرسال جزء الملف إلى Google Drive (${driveResponse.status}).`);
+        }
+
+        const manufacturing = ensurePanelManufacturing(panel);
+        if (!manufacturing.files.some((file) => String(file.storageFileId) === String(stored.id))) {
+            manufacturing.files.push({
+                storageFileId: stored.id,
+                fileName: stored.name || upload.fileName,
+                mimeType: stored.mimeType || upload.mimeType || "application/octet-stream",
+                fileSize: Number(stored.size || upload.fileSize || 0),
+                uploadedAt: stored.createdTime ? new Date(stored.createdTime) : new Date(),
+                uploadedBy: req.user._id
+            });
+        }
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(201).json({ status: "ok", complete: true, message: "تم رفع ملف التصنيع.", project: updatedProject });
     } catch (error) { next(error); }
 };
 
@@ -1192,4 +1264,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, uploadManufacturingFileChunk, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
