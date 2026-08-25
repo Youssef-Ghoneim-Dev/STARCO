@@ -74,13 +74,14 @@ function MarketingProjectEditor() {
       optionKey: group.optionKey || "",
       count: group.count === "" ? "" : Math.max(1, Number(group.count) || 1),
     }));
-    const branches = validGroups.flatMap((group) => Array.from({ length: Math.max(0, Number(group.count) || 0) }, (_, index) => ({
-      branchId: `${group.id}-${index + 1}`,
+    const branches = validGroups.filter((group) => Number(group.count) > 0).map((group) => ({
+      branchId: `${group.id}-branch`,
       branchGroupId: group.id,
       optionKey: group.optionKey,
       direction: "one",
       barCount: 1,
-    })));
+      quantity: Math.max(1, Number(group.count) || 1),
+    }));
     patchPanel({
       copperDetails: { ...(panel.copperDetails || {}), branchGroups: validGroups },
       copper: { ...(panel.copper || {}), enabled: true, main: { ...(panel.copper?.main || {}), optionKey: panel.copperDetails?.mainKey || "" }, branches },

@@ -114,7 +114,8 @@ export const getCopperCalculation = (panel, configuration = {}) => {
         const length = branch.length ?? (branch.direction === "two"
             ? resolvedConfiguration.branchLengths?.twoDirections
             : resolvedConfiguration.branchLengths?.oneDirection);
-        return sum + getCopperWeight(getCopperOption(resolvedConfiguration, branch.optionKey), length, branch.barCount, resolvedConfiguration.weightFormula);
+        const quantity = Math.max(1, parseNumber(branch.quantity) || 1);
+        return sum + (getCopperWeight(getCopperOption(resolvedConfiguration, branch.optionKey), length, branch.barCount, resolvedConfiguration.weightFormula) * quantity);
     }, 0);
     const weight = mainWeight + branchWeights;
     const pricePerKg = parseNumber(copper.pricePerKg ?? resolvedConfiguration.pricePerKg);

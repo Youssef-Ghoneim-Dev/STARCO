@@ -53,6 +53,7 @@ const normalizeCopperForSaving = (copper = {}) => ({
     direction: branch.direction === "two" ? "two" : "one",
     length: hasValue(branch.length) ? toNumber(branch.length) : null,
     barCount: toNumber(branch.barCount, 1),
+    quantity: Math.max(1, toNumber(branch.quantity, 1)),
   })),
 });
 

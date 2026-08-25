@@ -30,7 +30,6 @@ function CopperSelect({ value, options, placeholder, onChange }) {
 }
 
 function CopperCalculator() {
-  const [newBranchCount, setNewBranchCount] = useState("");
   const { project, activePanel, systemConfig, updateCopper } = useProject();
   const panel = project.panels[activePanel] || project.panels[0];
   const configuration = resolveCopperConfiguration(systemConfig?.copperConfiguration);
@@ -59,12 +58,11 @@ function CopperCalculator() {
   }));
   const updateBranch = (index, field, value) => updateCopper((current) => {
     const groupId = current.branches?.[index]?.branchGroupId;
-    const groupFields = ["optionKey", "direction", "barCount"];
     return {
       ...current,
       enabled: true,
       branches: (current.branches || []).map((branch, currentIndex) =>
-        currentIndex === index || (groupFields.includes(field) && groupId && branch.branchGroupId === groupId)
+        currentIndex === index || (field === "direction" && groupId && branch.branchGroupId === groupId)
           ? { ...branch, [field]: value }
           : branch
       )
@@ -75,27 +73,23 @@ function CopperCalculator() {
     enabled: true,
     branches: (current.branches || []).map((branch) => ({ ...branch, [field]: value })),
   }));
-  const addBranches = () => {
-    const count = Math.max(1, Number(newBranchCount) || 1);
-    const groupId = count > 1 ? branchId().replace("branch-", "branch-group-") : "";
-    updateCopper((current) => {
+  const addBranch = () => updateCopper((current) => {
       const previousBranch = current.branches?.[current.branches.length - 1];
       const direction = previousBranch?.direction || commonDirection || "one";
       const barCount = previousBranch?.barCount || commonBarCount || current.main?.barCount || barCounts[0];
       return {
         ...current,
         enabled: true,
-        branches: [...(current.branches || []), ...Array.from({ length: count }, () => ({
+        branches: [...(current.branches || []), {
           branchId: branchId(),
-          branchGroupId: groupId,
+          branchGroupId: "",
           optionKey: "",
           direction,
           barCount,
-        }))],
+          quantity: 1,
+        }],
       };
     });
-    setNewBranchCount("");
-  };
 
   if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg ?? configuration.pricePerKg ?? "" }))}>+ إضافة نحاس للوحة</button></div>;
 
@@ -111,11 +105,12 @@ function CopperCalculator() {
       <label>عدد البارات<CopperSelect value={copper.main?.barCount || barCounts[0]} options={barCountOptions} placeholder="اختر العدد" onChange={(value) => updateMain("barCount", Number(value))} /></label>
       {optionInfo(copper.main?.optionKey) && <div className="copper-readonly"><span>المقاس</span><strong>{optionInfo(copper.main?.optionKey)}</strong></div>}
     </div></div>
-    <div className="copper-branches-heading"><h4>النحاس الفرعي</h4><div className="copper-branches-bulk"><strong>تطبيق على كل الفرعيات</strong><div className="copper-bulk-group"><span>الاتجاه</span><div>{directionOptions.map((option) => <button type="button" className={commonDirection === option.value ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("direction", option.value)}>{option.label}</button>)}</div></div><div className="copper-bulk-group"><span>عدد البارات</span><div>{barCountOptions.map((option) => <button type="button" className={String(commonBarCount) === String(option.value) ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("barCount", Number(option.value))}>{option.label}</button>)}</div></div></div><div className="copper-branch-add-controls"><label>العدد<input type="number" min="1" step="1" inputMode="numeric" placeholder="1" value={newBranchCount} onChange={(event) => setNewBranchCount(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addBranches(); } }} /></label><button type="button" onClick={addBranches}>+ إضافة فرعي</button></div></div>
+    <div className="copper-branches-heading"><h4>النحاس الفرعي</h4><div className="copper-branches-bulk"><strong>تطبيق على كل الفرعيات</strong><div className="copper-bulk-group"><span>الاتجاه</span><div>{directionOptions.map((option) => <button type="button" className={commonDirection === option.value ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("direction", option.value)}>{option.label}</button>)}</div></div><div className="copper-bulk-group"><span>عدد البارات</span><div>{barCountOptions.map((option) => <button type="button" className={String(commonBarCount) === String(option.value) ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("barCount", Number(option.value))}>{option.label}</button>)}</div></div></div><button type="button" onClick={addBranch}>+ إضافة فرعي</button></div>
     {(copper.branches || []).map((branch, index) => <div className="copper-entry-card copper-branch-card" key={branch.branchId || index}><div className="copper-branch-title"><h4>فرعي {index + 1}</h4><button type="button" aria-label="حذف الفرعي" onClick={() => updateCopper((current) => ({ ...current, branches: (current.branches || []).filter((_, currentIndex) => currentIndex !== index) }))}>حذف</button></div><div className="copper-entry-grid">
       <label>الأمبير<CopperSelect value={branch.optionKey || ""} options={amperageOptions} placeholder="اختر الأمبير" onChange={(value) => updateBranch(index, "optionKey", value)} /></label>
       <label>الاتجاه<CopperSelect value={branch.direction || "one"} options={directionOptions} placeholder="اختر الاتجاه" onChange={(value) => updateBranch(index, "direction", value)} /></label>
       <label>عدد البارات<CopperSelect value={branch.barCount || barCounts[0]} options={barCountOptions} placeholder="اختر العدد" onChange={(value) => updateBranch(index, "barCount", Number(value))} /></label>
+      <label>عدد القطع<input type="number" min="1" step="1" inputMode="numeric" value={branch.quantity ?? 1} onChange={(event) => updateBranch(index, "quantity", event.target.value)} onBlur={() => { if (branch.quantity === "") updateBranch(index, "quantity", 1); }} /></label>
       <label>الطول (مم)<input type="number" min="0" step="any" value={branch.length ?? (branch.direction === "two" ? configuration.branchLengths?.twoDirections : configuration.branchLengths?.oneDirection) ?? ""} onChange={(event) => updateBranch(index, "length", event.target.value)} /></label>
       {optionInfo(branch.optionKey) && <div className="copper-readonly"><span>المقاس</span><strong>{optionInfo(branch.optionKey)}</strong></div>}
     </div></div>)}

@@ -92,7 +92,8 @@ const panelSchema = new mongoose.Schema({
             optionKey: { type: String, default: "" },
             direction: { type: String, enum: ["one", "two"], default: "one" },
             length: { type: Number, default: null },
-            barCount: { type: Number, default: 1 }
+            barCount: { type: Number, default: 1 },
+            quantity: { type: Number, default: 1, min: 1 }
         }]
     },
 
