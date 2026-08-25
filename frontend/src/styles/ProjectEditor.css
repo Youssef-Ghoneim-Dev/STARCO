@@ -666,7 +666,7 @@
     justify-content: space-between;
     gap: 12px;
 }
-.copper-branches-heading { margin-top: 24px; }
+.copper-branches-heading { flex-wrap: wrap; margin-top: 24px; }
 .copper-calculator h3, .copper-calculator h4 { margin: 0; color: var(--text); }
 .copper-calculator-heading p { margin: 6px 0 0; color: #64748b; font-size: 13px; }
 .copper-remove, .copper-branch-title button {
@@ -703,7 +703,7 @@
     background: #fff;
 }
 .copper-entry-grid select { padding-inline-end: 36px; }
-.copper-branches-bulk { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 12px; margin-inline-start: auto; border: 1px solid #cbdde3; border-radius: 13px; padding: 9px 11px; background: #fff; }
+.copper-branches-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-inline-start: auto; border: 1px solid #cbdde3; border-radius: 12px; padding: 7px 9px; background: #fff; }
 .copper-branches-bulk > strong { color: var(--primary); font-size: 13px; white-space: nowrap; }
 .copper-bulk-group { display: flex; align-items: center; gap: 7px; }
 .copper-bulk-group > span { color: #64748b; font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -712,6 +712,10 @@
 .copper-bulk-group button:first-child { border-inline-start: 0; }
 .copper-bulk-group button:hover { background: #e8f3f6; }
 .copper-bulk-group button.is-active { color: #fff; background: var(--primary); }
+.copper-branch-add-controls { display: flex; align-items: end; gap: 8px; }
+.copper-branch-add-controls label { display: grid; gap: 4px; color: #64748b; font-size: 12px; font-weight: 700; }
+.copper-branch-add-controls input { box-sizing: border-box; width: 72px; min-height: 38px; border: 1px solid var(--border); border-radius: 9px; padding: 0 9px; background: #fff; font: inherit; }
+.copper-branch-add-controls > button { min-height: 38px; border: 0; border-radius: 9px; padding: 0 13px; color: #fff; background: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
 .copper-select-control { position: relative; width: 100%; }
 .copper-select-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: 9px; padding: 0 13px; color: var(--text); background: #fff; font: inherit; text-align: right; cursor: pointer; }
 .copper-select-trigger:hover, .copper-select-trigger:focus { border-color: var(--primary); outline: none; }
@@ -771,8 +775,12 @@
 @media (max-width: 600px) {
     .copper-calculator { padding: 15px; }
     .copper-calculator-heading, .copper-branches-heading, .copper-total { align-items: flex-start; flex-direction: column; }
-    .copper-branches-bulk { width: 100%; grid-template-columns: 1fr; margin-inline-start: 0; align-items: stretch; }
+    .copper-branches-bulk { width: 100%; margin-inline-start: 0; align-items: center; }
     .copper-bulk-group { justify-content: space-between; }
+    .copper-branch-add-controls { width: 100%; }
+    .copper-branch-add-controls label { flex: 0 0 86px; }
+    .copper-branch-add-controls input { width: 100%; }
+    .copper-branch-add-controls > button { flex: 1; }
     .copper-total { gap: 7px; }
     .project-section-refresh { width: 100%; }
     .whatsapp-data-heading { padding: 16px; }

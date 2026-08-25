@@ -48,6 +48,7 @@ const normalizeCopperForSaving = (copper = {}) => ({
   },
   branches: (copper.branches || []).map((branch) => ({
     branchId: branch.branchId || `branch-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    branchGroupId: branch.branchGroupId || "",
     optionKey: branch.optionKey || "",
     direction: branch.direction === "two" ? "two" : "one",
     length: hasValue(branch.length) ? toNumber(branch.length) : null,
@@ -614,10 +615,8 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     [activePanel, updatePanel],
   );
   const updateCopper = useCallback((updater) => {
-    updatePanel(activePanel, (panel) => ({
-      ...panel,
-      hasCopper: true,
-      copper: updater({
+    updatePanel(activePanel, (panel) => {
+      const copper = updater({
         enabled: false,
         pricePerKg: "",
         earthPrice: "",
@@ -625,8 +624,13 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         main: { optionKey: "", length: "", barCount: 1 },
         branches: [],
         ...(panel.copper || {}),
-      }),
-    }));
+      });
+      return {
+        ...panel,
+        hasCopper: Boolean(copper.enabled),
+        copper,
+      };
+    });
   }, [activePanel, updatePanel]);
   const applyPanelType = useCallback((typeKey) => {
     const selectedType = (systemConfig?.panelTypes || []).find((type) => type.key === typeKey);

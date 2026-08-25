@@ -420,6 +420,8 @@
 }
 
 .copper-configuration-editor { margin-top: 22px; }
+.copper-configuration-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.copper-configuration-heading > div { min-width: 0; }
 .copper-quick-settings { display: grid; gap: 14px; padding: 18px; border: 1px solid #d8e6eb; border-radius: 16px; background: linear-gradient(145deg, #fff, #f7fbfc); box-shadow: 0 7px 18px rgba(34, 78, 100, .06); }
 .copper-setting-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .copper-setting-fields .configuration-number-field { gap: 6px; font-size: 13px; font-weight: 700; }
@@ -448,6 +450,15 @@
 .copper-catalog-item { grid-template-columns: minmax(130px, 1.2fr) repeat(3, minmax(115px, 1fr)) auto; }
 .copper-amperage-name { display: grid; align-self: stretch; gap: 6px; color: var(--text); font-size: 13px; }
 .copper-amperage-name strong { display: flex; align-items: center; min-height: 38px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; font-size: 15px; }
+.copper-catalog-settings { margin-top: 16px; overflow: hidden; border: 1px solid #d8e6eb; border-radius: 14px; background: #fff; }
+.copper-catalog-settings > summary { display: flex; align-items: center; gap: 11px; padding: 15px 17px; color: var(--primary); cursor: pointer; list-style: none; }
+.copper-catalog-settings > summary::-webkit-details-marker { display: none; }
+.copper-catalog-settings > summary svg { flex: 0 0 auto; width: 19px; height: 19px; transition: transform .2s ease; }
+.copper-catalog-settings[open] > summary svg { transform: rotate(180deg); }
+.copper-catalog-settings > summary div { display: grid; gap: 3px; }
+.copper-catalog-settings > summary strong { font-size: 16px; }
+.copper-catalog-settings > summary span { color: var(--text-light); font-size: 12px; font-weight: 600; }
+.copper-catalog-settings-body { padding: 0 16px 16px; border-top: 1px solid #e3edf1; }
 
 @media (max-width: 1050px) {
     .configured-part {
@@ -471,6 +482,8 @@
         grid-template-columns: 1fr;
     }
     .copper-quick-settings { padding: 14px; }
+    .copper-configuration-heading { align-items: stretch; flex-direction: column; }
+    .copper-configuration-heading button { width: 100%; }
     .copper-setting-fields, .copper-formula-settings, .copper-formula-variables { grid-template-columns: 1fr; }
     .copper-bar-count-controls { align-items: stretch; flex-direction: column; }
     .copper-bar-count-add { flex: 0 0 auto; width: 100%; }
