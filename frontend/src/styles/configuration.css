@@ -250,6 +250,7 @@
 .panel-type-settings[open] > summary .configuration-collapse-icon { transform: rotate(180deg); }
 .panel-type-settings > summary > span { color: var(--text-light); font-size: 13px; font-weight: 500; }
 .panel-type-summary-actions { display: flex; gap: 8px; margin-inline-start: auto; }
+.panel-type-settings:not([open]) .configuration-type-save { display: none; }
 .panel-type-settings-body { display: grid; gap: 16px; padding: 20px; border-top: 1px solid var(--border); }
 .panel-type-settings-body .configuration-grid { align-items: end; }
 
@@ -325,11 +326,45 @@
 }
 
 .additional-parts-editor {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 10px;
     min-height: 38px;
 }
+
+.additional-part-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #cbdde7;
+    border-radius: 12px;
+    background: #f5fafc;
+}
+
+.additional-part-card > div { display: grid; gap: 4px; }
+.additional-part-card strong { color: var(--primary); font-size: 15px; }
+.additional-part-card span { color: var(--text-light); font-size: 12px; }
+.additional-part-card > button { width: 26px; height: 26px; border: 0; border-radius: 50%; color: #b42318; background: #fee4e2; cursor: pointer; font-size: 18px; }
+
+.additional-part-add-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(130px, 1fr));
+    gap: 10px;
+    align-items: end;
+    padding: 14px;
+    border: 1px dashed #bfd2dc;
+    border-radius: 12px;
+    background: #fbfdfe;
+}
+
+.additional-part-add-grid > label:not(.additional-part-quantity-toggle) { display: grid; gap: 6px; color: var(--text); font-size: 13px; }
+.additional-part-add-grid input[type="text"],
+.additional-part-add-grid label > input:not([type]) { min-width: 0; min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; font: inherit; }
+.additional-part-quantity-toggle { display: flex; align-items: center; gap: 7px; min-height: 42px; white-space: nowrap; color: var(--text); font-size: 13px; font-weight: 700; }
+.additional-part-quantity-toggle input { width: 18px; height: 18px; }
+.additional-part-add-grid > button { min-height: 42px; }
 
 .additional-part-chip {
     display: inline-flex;
@@ -411,6 +446,7 @@
     .copper-catalog-item { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .copper-bar-count-editor { grid-template-columns: 1fr; gap: 10px; }
     .copper-bar-count-controls { justify-content: flex-start; }
+    .additional-part-add-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 700px) {
@@ -434,6 +470,7 @@
     }
 
     .additional-part-add { flex-direction: column; }
+    .additional-part-add-grid { grid-template-columns: 1fr; }
 
     .panel-types-editor + .pricing-form {
         margin-top: 24px;

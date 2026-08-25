@@ -90,8 +90,8 @@ function SaveActions() {
   };
 
   return <section className="project-editor-card">
-    <div className={`save-actions ${user?.role === "Engineer" ? "save-actions-three" : "save-actions-two"}`}>
-      {user?.role === "Engineer" && <button className="secondary-btn" type="button" onClick={downloadPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
+    <div className={`save-actions ${user?.role === "Engineer" && project?.source === "manual" ? "save-actions-three" : "save-actions-two"}`}>
+      {user?.role === "Engineer" && project?.source === "manual" && <button className="secondary-btn" type="button" onClick={downloadPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
       <button className="secondary-btn" type="button" onClick={previewPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "معاينة PDF"}</button>
       <button className="complete-project-btn" type="button" onClick={() => complete()} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع وإرسال رابط المعاينة</button>
     </div>

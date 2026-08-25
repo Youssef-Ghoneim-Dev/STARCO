@@ -394,6 +394,8 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     [activePanel, updatePanel],
   );
   const createPart = (type, parts) => {
+    const configuredPart = typeof type === "object" && type !== null ? type : null;
+    const typeName = configuredPart?.name || type;
     const quantities = {
       العلبة: 1,
       الجنب: 2,
@@ -402,7 +404,17 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       الجريدة: 2,
     };
 
-    if (type === "باب") {
+    if (configuredPart) {
+      const duplicateCount = parts.filter((part) => part.name === typeName || part.name.startsWith(`${typeName} `)).length;
+      return {
+        name: duplicateCount ? `${typeName} ${duplicateCount + 1}` : typeName,
+        width: hasValue(configuredPart.defaultWidth) ? Number(configuredPart.defaultWidth) : "",
+        height: hasValue(configuredPart.defaultHeight) ? Number(configuredPart.defaultHeight) : "",
+        quantity: Number(configuredPart.defaultQuantity) || 1,
+      };
+    }
+
+    if (typeName === "باب") {
       const doors = parts.filter((p) => p.name.startsWith("باب")).length;
 
       return {
@@ -412,7 +424,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         quantity: 1,
       };
     }
-    if (type === "المراية") {
+    if (typeName === "المراية") {
       const count = parts.filter((p) => p.name.startsWith("المراية")).length;
 
       return {
@@ -423,7 +435,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       };
     }
 
-    if (type === "الجلسة") {
+    if (typeName === "الجلسة") {
       const count = parts.filter((p) => p.name.startsWith("الجلسة")).length;
 
       return {
@@ -433,7 +445,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         quantity: 1,
       };
     }
-    if (type === "الكرسي") {
+    if (typeName === "الكرسي") {
       const chairConfig = systemConfig?.parts?.chair;
 
       return {
@@ -444,7 +456,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       };
     }
 
-    if (type === "أوميجا") {
+    if (typeName === "أوميجا") {
       const omegaConfig = systemConfig?.parts?.omega;
 
       return {
@@ -454,16 +466,16 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       };
     }
 
-    const duplicateCount = parts.filter((part) => part.name === type || part.name.startsWith(`${type} `)).length;
+    const duplicateCount = parts.filter((part) => part.name === typeName || part.name.startsWith(`${typeName} `)).length;
 
     return {
-      name: duplicateCount ? `${type} ${duplicateCount + 1}` : type,
+      name: duplicateCount ? `${typeName} ${duplicateCount + 1}` : typeName,
 
       width: "",
 
       height: "",
 
-      quantity: quantities[type] || 1,
+      quantity: quantities[typeName] || 1,
     };
   };
   const deletePanel = useCallback((panelIndex) => {
@@ -501,7 +513,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
         // أول كرسي فقط يضيف أوميجا إذا لم تكن موجودة
         if (
-          type === "الكرسي" &&
+          (typeof type === "string" ? type : type?.name) === "الكرسي" &&
           !panel.parts.some((part) => part.name === "أوميجا")
         ) {
           newParts.push(createPart("أوميجا", newParts));
@@ -549,10 +561,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
       if (!part) return;
 
-      const step =
-        part.name === "الكرسي"
-          ? (systemConfig?.parts?.chair?.quantityStep ?? 2)
-          : (systemConfig?.parts?.omega?.quantityStep ?? 1);
+      const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === project.panels[activePanel]?.panelTypeKey);
+      const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
+      const step = Number(configuredPart?.quantityStep) || (part.name === "الكرسي" ? (systemConfig?.parts?.chair?.quantityStep ?? 2) : (systemConfig?.parts?.omega?.quantityStep ?? 1));
 
       updatePartField(partIndex, "quantity", (part.quantity ?? 1) + step);
     },
@@ -565,10 +576,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
       if (!part) return;
 
-      const config =
-        part.name === "الكرسي"
-          ? systemConfig?.parts?.chair
-          : systemConfig?.parts?.omega;
+      const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === project.panels[activePanel]?.panelTypeKey);
+      const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
+      const config = configuredPart || (part.name === "الكرسي" ? systemConfig?.parts?.chair : systemConfig?.parts?.omega);
 
       const step = config?.quantityStep ?? 1;
       const minQuantity = config?.minQuantity ?? 1;

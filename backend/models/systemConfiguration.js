@@ -4,6 +4,27 @@ const schema = require("../DB/schema/systemConfiguration");
 const { panelTypeDefaults } = require("../utils/panelTypeDefaults");
 const { cloneCopperConfigurationDefaults } = require("../utils/copperDefaults");
 
+const normalizeAdditionalPart = (part) => {
+    if (typeof part === "string") {
+        return {
+            name: part,
+            defaultWidth: part === "الكرسي" ? 40 : part === "أوميجا" ? 45.5 : null,
+            defaultHeight: part === "الكرسي" ? 100 : null,
+            defaultQuantity: part === "الكرسي" ? 2 : 1,
+            quantityStep: part === "الكرسي" ? 2 : 1,
+            showQuantityControls: ["الكرسي", "أوميجا"].includes(part)
+        };
+    }
+    return {
+        name: part?.name || "",
+        defaultWidth: part?.defaultWidth == null || part.defaultWidth === "" ? null : Number(part.defaultWidth),
+        defaultHeight: part?.defaultHeight == null || part.defaultHeight === "" ? null : Number(part.defaultHeight),
+        defaultQuantity: Number(part?.defaultQuantity) || 1,
+        quantityStep: Number(part?.quantityStep) || 1,
+        showQuantityControls: Boolean(part?.showQuantityControls)
+    };
+};
+
 const get = async () => {
     const connection = await dbconfig.openconnection(
         collectionName,
@@ -31,7 +52,6 @@ const get = async () => {
     const defaultsByKey = new Map(panelTypeDefaults.map((type) => [type.key, type]));
     const normalizedTypes = rawConfig.panelTypes.map((type) => {
         const fallback = defaultsByKey.get(type.key);
-        if (!fallback) return type;
         const parts = (type.parts || []).map((part) => (
             type.key === "ont" && part.key === "shared" && ["المشترك", "حمل مشترك"].includes(part.name)
                 ? { ...part, name: "حامل مشترك" }
@@ -41,7 +61,7 @@ const get = async () => {
             ...type,
             name: type.key === "waterproof" && type.name === "واتربروف" ? "وتربروف" : type.name,
             whatsappType: type.key === "waterproof" && type.whatsappType === "واتربروف" ? "وتربروف" : type.whatsappType,
-            additionalParts: Array.isArray(type.additionalParts) ? type.additionalParts : fallback.additionalParts,
+            additionalParts: (Array.isArray(type.additionalParts) ? type.additionalParts : (fallback?.additionalParts || [])).map(normalizeAdditionalPart),
             parts
         };
     });

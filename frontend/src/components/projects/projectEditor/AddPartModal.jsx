@@ -14,7 +14,7 @@ function AddPartModal({ open, onClose, onSelect, options = [] }) {
               key={part.id}
               className="part-option"
               onClick={() => {
-                onSelect(part.id);
+                onSelect(part);
                 onClose();
               }}
             >

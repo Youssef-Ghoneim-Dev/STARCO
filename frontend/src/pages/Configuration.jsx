@@ -39,14 +39,38 @@ function NumberField({ label, value, onChange }) {
   return <label className="configuration-number-field">{label}<input type="number" min="0" step="any" value={value ?? ""} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
+const normalizeAdditionalPart = (part) => {
+  if (typeof part === "string") {
+    const hasQuantityControls = ["الكرسي", "أوميجا"].includes(part);
+    return {
+      name: part,
+      defaultWidth: part === "الكرسي" ? 40 : part === "أوميجا" ? 45.5 : "",
+      defaultHeight: part === "الكرسي" ? 100 : "",
+      defaultQuantity: part === "الكرسي" ? 2 : 1,
+      quantityStep: part === "الكرسي" ? 2 : 1,
+      showQuantityControls: hasQuantityControls,
+    };
+  }
+  return {
+    name: part?.name || "",
+    defaultWidth: part?.defaultWidth ?? "",
+    defaultHeight: part?.defaultHeight ?? "",
+    defaultQuantity: Number(part?.defaultQuantity) || 1,
+    quantityStep: Number(part?.quantityStep) || 1,
+    showQuantityControls: Boolean(part?.showQuantityControls),
+  };
+};
+
+const emptyAdditionalPart = () => ({ name: "", defaultWidth: "", defaultHeight: "", defaultQuantity: 1, quantityStep: 1, showQuantityControls: false });
+
 function PanelTypesEditor({ panelTypes, onChange, canEditFormulas, onSave, saving }) {
-  const [additionalNames, setAdditionalNames] = useState({});
+  const [additionalDrafts, setAdditionalDrafts] = useState({});
   const updateType = (index, updater) => onChange(panelTypes.map((type, current) => current === index ? updater(type) : type));
   const addType = () => onChange([...panelTypes, { key: `type-${Date.now()}`, name: "نوع جديد", whatsappType: "", prices: { manufacturing: 0, locks: 0, hinges: 0, transport: 0, screws: 0, stretch: 0, carton: 0 }, parts: [], additionalParts: [] }]);
   return <section className="panel-types-editor">
     <div className="configuration-heading configuration-subheading"><h2>{canEditFormulas ? "أنواع الألواح والمعادلات" : "إعدادات تسعير الألواح"}</h2><p>{canEditFormulas ? "المعادلات تستخدم: Length للطول، Width للعرض، Depth للعمق. مثال: Length - 50" : "يمكنك تعديل أسعار التصنيع والأجزاء الأساسية والإضافية. المعادلات يحافظ عليها Owner Manager."}</p></div>
     {panelTypes.map((type, typeIndex) => <details className="panel-type-settings" key={type.key || typeIndex}>
-      <summary><IoChevronDown className="configuration-collapse-icon" aria-hidden="true" /><strong>{type.name || "نوع لوحة"}</strong><span>اضغط لعرض الإعدادات</span><div className="panel-type-summary-actions"><button type="button" className="configuration-secondary" disabled={saving} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSave(); }}>{saving ? "جاري الحفظ..." : "حفظ"}</button>{canEditFormulas && <button type="button" className="configuration-delete" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onChange(panelTypes.filter((_, index) => index !== typeIndex)); }}>حذف اللوحة</button>}</div></summary>
+      <summary><IoChevronDown className="configuration-collapse-icon" aria-hidden="true" /><strong>{type.name || "نوع لوحة"}</strong><span>اضغط لعرض الإعدادات</span><div className="panel-type-summary-actions"><button type="button" className="configuration-secondary configuration-type-save" disabled={saving} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSave(); }}>{saving ? "جاري الحفظ..." : "حفظ"}</button>{canEditFormulas && <button type="button" className="configuration-delete" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onChange(panelTypes.filter((_, index) => index !== typeIndex)); }}>حذف اللوحة</button>}</div></summary>
       <div className="panel-type-settings-body">
       <div className="configuration-grid two-columns">
         {canEditFormulas && <><label className="configuration-number-field">الاسم<input value={type.name ?? ""} onChange={(e) => updateType(typeIndex, (current) => ({ ...current, name: e.target.value }))} /></label>
@@ -64,8 +88,16 @@ function PanelTypesEditor({ panelTypes, onChange, canEditFormulas, onSave, savin
       <button type="button" className="configuration-secondary" onClick={() => updateType(typeIndex, (current) => ({ ...current, parts: [...(current.parts || []), { key: `part-${Date.now()}`, name: "جزء جديد", lengthFormula: "", widthFormula: "", quantity: 1, manualDimensions: !canEditFormulas }] }))}>+ إضافة جزء أساسي</button>
       <h3>إعدادات التصنيع</h3><div className="configuration-grid">{priceFields.map(([key, label]) => <NumberField key={key} label={label} value={type.prices?.[key]} onChange={(value) => updateType(typeIndex, (current) => ({ ...current, prices: { ...current.prices, [key]: value } }))} />)}</div>
       <h3>الأجزاء الإضافية</h3>
-      <div className="additional-parts-editor">{(type.additionalParts || []).map((part, partIndex) => <span className="additional-part-chip" key={`${part}-${partIndex}`}>{part}<button type="button" aria-label={`حذف ${part}`} onClick={() => updateType(typeIndex, (current) => ({ ...current, additionalParts: current.additionalParts.filter((_, index) => index !== partIndex) }))}>×</button></span>)}</div>
-      <div className="additional-part-add"><input value={additionalNames[typeIndex] || ""} placeholder="اسم جزء إضافي" onChange={(event) => setAdditionalNames((current) => ({ ...current, [typeIndex]: event.target.value }))} /><button type="button" className="configuration-secondary" onClick={() => { const name = (additionalNames[typeIndex] || "").trim(); if (!name) return; updateType(typeIndex, (current) => ({ ...current, additionalParts: [...(current.additionalParts || []), name] })); setAdditionalNames((current) => ({ ...current, [typeIndex]: "" })); }}>+ إضافة جزء إضافي</button></div>
+      <div className="additional-parts-editor">{(type.additionalParts || []).map(normalizeAdditionalPart).map((part, partIndex) => <article className="additional-part-card" key={`${part.name}-${partIndex}`}><div><strong>{part.name}</strong><span>العرض الافتراضي: {part.defaultWidth === "" ? "يدوي" : part.defaultWidth}</span><span>الارتفاع الافتراضي: {part.defaultHeight === "" ? "يدوي" : part.defaultHeight}</span><span>الكمية الافتراضية: {part.defaultQuantity}</span><span>خطوة الكمية: {part.quantityStep}</span><span>{part.showQuantityControls ? "بأزرار كمية" : "بدون أزرار كمية"}</span></div><button type="button" aria-label={`حذف ${part.name}`} onClick={() => updateType(typeIndex, (current) => ({ ...current, additionalParts: current.additionalParts.filter((_, index) => index !== partIndex) }))}>×</button></article>)}</div>
+      <div className="additional-part-add-grid">
+        <label>اسم الجزء<input value={(additionalDrafts[typeIndex] || emptyAdditionalPart()).name} placeholder="اسم جزء إضافي" onChange={(event) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), name: event.target.value } }))} /></label>
+        <NumberField label="العرض الافتراضي (اختياري)" value={(additionalDrafts[typeIndex] || emptyAdditionalPart()).defaultWidth} onChange={(value) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), defaultWidth: value } }))} />
+        <NumberField label="الارتفاع الافتراضي (اختياري)" value={(additionalDrafts[typeIndex] || emptyAdditionalPart()).defaultHeight} onChange={(value) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), defaultHeight: value } }))} />
+        <NumberField label="الكمية الافتراضية" value={(additionalDrafts[typeIndex] || emptyAdditionalPart()).defaultQuantity} onChange={(value) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), defaultQuantity: value } }))} />
+        <NumberField label="خطوة الكمية" value={(additionalDrafts[typeIndex] || emptyAdditionalPart()).quantityStep} onChange={(value) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), quantityStep: value } }))} />
+        <label className="additional-part-quantity-toggle"><input type="checkbox" checked={Boolean((additionalDrafts[typeIndex] || emptyAdditionalPart()).showQuantityControls)} onChange={(event) => setAdditionalDrafts((current) => ({ ...current, [typeIndex]: { ...(current[typeIndex] || emptyAdditionalPart()), showQuantityControls: event.target.checked } }))} /> إظهار أزرار الكمية</label>
+        <button type="button" className="configuration-secondary" onClick={() => { const draft = normalizeAdditionalPart(additionalDrafts[typeIndex] || emptyAdditionalPart()); if (!draft.name.trim()) return; updateType(typeIndex, (current) => ({ ...current, additionalParts: [...(current.additionalParts || []).map(normalizeAdditionalPart), { ...draft, name: draft.name.trim() }] })); setAdditionalDrafts((current) => ({ ...current, [typeIndex]: emptyAdditionalPart() })); }}>+ إضافة جزء إضافي</button>
+      </div>
       </div>
     </details>)}
     {canEditFormulas && <button type="button" className="configuration-secondary" onClick={addType}>+ إضافة نوع لوحة</button>}
@@ -144,7 +176,7 @@ function Configuration() {
     setSavingPricing(true);
     try {
       const numberObject = (object, allowBlank = false) => Object.fromEntries(Object.entries(object).map(([key, value]) => [key, allowBlank && value === "" ? null : Number(value)]));
-      const panelTypes = (config.panelTypes || []).map((type) => ({ ...type, prices: numberObject(type.prices || {}), parts: (type.parts || []).map((part) => ({ ...part, quantity: Number(part.quantity) || 1 })) }));
+      const panelTypes = (config.panelTypes || []).map((type) => ({ ...type, prices: numberObject(type.prices || {}), parts: (type.parts || []).map((part) => ({ ...part, quantity: Number(part.quantity) || 1 })), additionalParts: (type.additionalParts || []).map(normalizeAdditionalPart) }));
       const copperConfiguration = { ...config.copperConfiguration, barCounts: (config.copperConfiguration?.barCounts || []).map(Number).filter((value) => Number.isFinite(value) && value > 0), branchLengths: numberObject(config.copperConfiguration?.branchLengths || {}), catalog: (config.copperConfiguration?.catalog || []).map((item) => ({ ...item, name: `${Number(item.amperage) || 0} أمبير`, amperage: Number(item.amperage), width: Number(item.width), thickness: Number(item.thickness) })).sort((first, second) => second.amperage - first.amperage) };
       const payload = { sheetPrice: Number(config.sheetPrice), paintPrice: Number(config.paintPrice), prices: numberObject(config.prices), parts: { chair: numberObject(config.parts.chair), omega: numberObject(config.parts.omega, true) }, panelTypes, copperConfiguration };
       const { data } = await updateSystemConfiguration(payload);

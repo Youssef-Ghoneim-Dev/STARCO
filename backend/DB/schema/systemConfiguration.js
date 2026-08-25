@@ -66,7 +66,9 @@ module.exports = new mongoose.Schema({
             key: { type: String, required: true },
             name: { type: String, required: true },
             whatsappType: { type: String, default: "" },
-            additionalParts: [{ type: String }],
+            // Mixed keeps older string entries readable while allowing the
+            // configurable quantity metadata used by newer entries.
+            additionalParts: [{ type: mongoose.Schema.Types.Mixed }],
             prices: {
                 manufacturing: { type: Number, default: 0 }, locks: { type: Number, default: 0 },
                 hinges: { type: Number, default: 0 }, transport: { type: Number, default: 0 },

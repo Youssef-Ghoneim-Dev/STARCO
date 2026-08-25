@@ -11,9 +11,21 @@ const part = (key, name, lengthFormula, widthFormula, quantity = 1, manualDimens
     key, name, lengthFormula, widthFormula, quantity, manualDimensions
 });
 
+const additionalPart = (name, defaultWidth = null, defaultHeight = null, defaultQuantity = 1, quantityStep = 1, showQuantityControls = false) => ({
+    name, defaultWidth, defaultHeight, defaultQuantity, quantityStep, showQuantityControls
+});
+
+const additionalParts = (...names) => names.map((name) => (
+    name === "الكرسي"
+        ? additionalPart(name, 40, 100, 2, 2, true)
+        : name === "أوميجا"
+            ? additionalPart(name, 45.5, null, 1, 1, true)
+            : additionalPart(name)
+));
+
 const panelTypeDefaults = [
     {
-        key: "control", name: "كنترول", whatsappType: "كنترول", additionalParts: ["الجلسة", "المراية", "الكرسي", "أوميجا", "باب"], prices: { ...controlPrices, carton: 0 },
+        key: "control", name: "كنترول", whatsappType: "كنترول", additionalParts: additionalParts("الجلسة", "المراية", "الكرسي", "أوميجا", "باب"), prices: { ...controlPrices, carton: 0 },
         parts: [
             part("box", "العلبة", "Length", "Width + (Depth + 50 * 2)"),
             part("side", "الجنب", "Width + 40", "Depth + 70", 2),
@@ -23,7 +35,7 @@ const panelTypeDefaults = [
         ]
     },
     {
-        key: "waterproof", name: "وتربروف", whatsappType: "وتربروف", additionalParts: ["الكرسي", "أوميجا", "المراية", "الجلسة", "باب"], prices: { manufacturing: 300, locks: 50, hinges: 75, transport: 0, screws: 25, stretch: 15, carton: 0 },
+        key: "waterproof", name: "وتربروف", whatsappType: "وتربروف", additionalParts: additionalParts("الكرسي", "أوميجا", "المراية", "الجلسة", "باب"), prices: { manufacturing: 300, locks: 50, hinges: 75, transport: 0, screws: 25, stretch: 15, carton: 0 },
         parts: [
             part("box", "العلبة", "Length + (Depth + 50 * 2)", "Width + (Depth + 50 * 2)"),
             part("door", "باب 1", "Length", "Width"),
@@ -32,7 +44,7 @@ const panelTypeDefaults = [
         ]
     },
     {
-        key: "standard", name: "نمطي", whatsappType: "نمطي", additionalParts: ["الكرسي", "أوميجا", "الجلسة"], prices: { manufacturing: 130, locks: 5, hinges: 3, transport: 30, screws: 0, stretch: 10, carton: 10 },
+        key: "standard", name: "نمطي", whatsappType: "نمطي", additionalParts: additionalParts("الكرسي", "أوميجا", "الجلسة"), prices: { manufacturing: 130, locks: 5, hinges: 3, transport: 30, screws: 0, stretch: 10, carton: 10 },
         parts: [
             part("box", "العلبة", "Length", "Width + (Depth + 10 * 2)"),
             part("side", "الجنب", "Width + 40", "Depth + 45", 2),
@@ -42,7 +54,7 @@ const panelTypeDefaults = [
         ]
     },
     {
-        key: "booths", name: "بواطات", whatsappType: "نمطي", additionalParts: ["الجلسة", "الجنب", "الخارجي", "الجريدة", "الكالون", "الداخلي"], prices: { manufacturing: 100, locks: 5, hinges: 3, transport: 25, screws: 0, stretch: 10, carton: 0 },
+        key: "booths", name: "بواطات", whatsappType: "نمطي", additionalParts: additionalParts("الجلسة", "الجنب", "الخارجي", "الجريدة", "الكالون", "الداخلي"), prices: { manufacturing: 100, locks: 5, hinges: 3, transport: 25, screws: 0, stretch: 10, carton: 0 },
         parts: [
             part("box", "العلبة", "Length", "Width + (Depth + 10 * 2)"),
             part("side", "الجنب", "Width + 40", "Depth + 45", 2),
@@ -53,7 +65,7 @@ const panelTypeDefaults = [
         ]
     },
     {
-        key: "ont", name: "O.N.T", whatsappType: "نمطي", additionalParts: ["الجلسة", "حامل مشترك"], prices: { manufacturing: 150, locks: 10, hinges: 3, transport: 35, screws: 0, stretch: 0, carton: 20 },
+        key: "ont", name: "O.N.T", whatsappType: "نمطي", additionalParts: additionalParts("الجلسة", "حامل مشترك"), prices: { manufacturing: 150, locks: 10, hinges: 3, transport: 35, screws: 0, stretch: 0, carton: 20 },
         parts: [
             part("box", "العلبة", "Length", "Width + (Depth + 15 * 2)"),
             part("side", "الجنب", "Width + 40", "Depth + 45", 2),
