@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
-import { IoPause, IoPlay, IoTrashOutline } from "react-icons/io5";
+import { IoPause, IoPlay, IoRefresh, IoTrashOutline } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useProject } from "../../../context/ProjectContext";
 import { deleteProjectMedia, getProjectMedia, getProjectMediaFile, getProjectMediaWhatsappLink, uploadProjectMedia } from "../../../services/projectsAPI";
@@ -53,6 +53,7 @@ function WhatsappProjectData({ editable = false }) {
   const [activeAudioId, setActiveAudioId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadRefresh, setUploadRefresh] = useState(0);
+  const [refreshingMedia, setRefreshingMedia] = useState(false);
   const [showUploadChoice, setShowUploadChoice] = useState(false);
   const [openingWhatsapp, setOpeningWhatsapp] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState(null);
@@ -61,7 +62,14 @@ function WhatsappProjectData({ editable = false }) {
   useEffect(() => {
     if (!project?._id) return;
     let alive = true;
-    getProjectMedia(project._id).then(({ data }) => { if (alive) setMedia(Array.isArray(data) ? data : []); }).catch(() => alive && setMediaError("تعذر تحميل مرفقات المشروع الآن."));
+    getProjectMedia(project._id)
+      .then(({ data }) => {
+        if (!alive) return;
+        setMedia(Array.isArray(data) ? data : []);
+        setMediaError("");
+      })
+      .catch(() => alive && setMediaError("تعذر تحميل مرفقات المشروع الآن."))
+      .finally(() => alive && setRefreshingMedia(false));
     return () => { alive = false; };
   }, [project?._id, uploadRefresh]);
   useEffect(() => {
@@ -126,12 +134,17 @@ function WhatsappProjectData({ editable = false }) {
       toast.error(error?.response?.data?.message || "تعذر فتح WhatsApp لإرسال المرفقات.");
     } finally { setOpeningWhatsapp(false); }
   };
+  const refreshMedia = () => {
+    if (!project?._id || refreshingMedia) return;
+    setRefreshingMedia(true);
+    setMediaError("");
+    setUploadRefresh((value) => value + 1);
+  };
   return <section className="whatsapp-project-data" dir="rtl">
-    <div className="whatsapp-data-heading"><h2>مرفقات المشروع</h2><p>{editable ? "أضف الصور والتسجيلات الخاصة باللوحة الحالية." : "الصور والتسجيلات التي أضيفت إلى المشروع."}</p></div>
     {!editable && <><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع اللوحة" value={panel.panelType} /><ReadOnlyField label="هل يوجد نحاس" value={panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : ""} />{panel.panelType === "كنترول" && <ReadOnlyField label="تركيب لوحة الكنترول" value={panel.controlInstallation} />}<ReadOnlyField label="تفاصيل إضافية" value={panel.additionalDetails} /></div>
     {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main} /><ReadOnlyField label="الفرعيات" value={copper.branches} /></div></div>}</>}
     <div className="whatsapp-media-accordions">
-      <details open><summary>صور المشروع <b>{images.length}</b></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
+      <details open><summary><span className="project-media-summary-title">صور المشروع</span><span className="project-media-summary-actions"><button type="button" className="project-media-refresh" onClick={(event) => { event.preventDefault(); event.stopPropagation(); refreshMedia(); }} disabled={refreshingMedia} aria-label="تحديث صور وتسجيلات المشروع" title="تحديث المرفقات"><IoRefresh className={refreshingMedia ? "is-spinning" : ""} /></button><b>{images.length}</b></span></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
       <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
       {mediaError && <p className="whatsapp-media-error">{mediaError}</p>}
     </div>

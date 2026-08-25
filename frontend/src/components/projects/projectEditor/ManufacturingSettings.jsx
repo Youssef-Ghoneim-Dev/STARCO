@@ -1,6 +1,7 @@
 import { useProject } from "../../../context/ProjectContext";
 import CopperCalculator from "./CopperCalculator";
 import { THICKNESS_OPTIONS } from "../../../utils/thicknessOptions";
+import { IoChevronDown } from "react-icons/io5";
 
 function ManufacturingSettings() {
   const { project, activePanel, updateThickness, updatePriceField } =
@@ -70,7 +71,10 @@ function ManufacturingSettings() {
         />
       </div>
 
-      <CopperCalculator />
+      <details className="copper-calculator-collapse">
+        <summary><span>حساب النحاس</span><IoChevronDown aria-hidden="true" /></summary>
+        <CopperCalculator />
+      </details>
 
       <div className="thickness-section">
         <label>سمك الصاج</label>

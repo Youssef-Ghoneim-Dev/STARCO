@@ -5,7 +5,7 @@ function PublicRoute() {
     const token = localStorage.getItem("token");
 
     return token
-        ? <Navigate to="/projects" replace />
+        ? <Navigate to="/dashboard" replace />
         : <Outlet />;
 
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IoChevronDown } from "react-icons/io5";
 import { useProject } from "../../../context/ProjectContext";
 import { getCopperCalculation } from "../../../utils/priceCalculator";
@@ -36,7 +36,7 @@ function CopperCalculator() {
   const copper = panel.copper || { enabled: false, main: {}, branches: [] };
   const isVisible = Boolean(panel.hasCopper || copper.enabled);
   const barCounts = configuration.barCounts?.length ? configuration.barCounts : [1, 3];
-  const totals = useMemo(() => getCopperCalculation(panel, configuration), [panel, configuration]);
+  const totals = getCopperCalculation(panel, configuration);
   const optionFor = (key) => configuration.catalog?.find((item) => item.key === key);
   const optionInfo = (key) => {
     const item = optionFor(key);
@@ -45,6 +45,9 @@ function CopperCalculator() {
   const amperageOptions = (configuration.catalog || []).map((item) => ({ value: item.key, label: item.name }));
   const barCountOptions = barCounts.map((count) => ({ value: count, label: String(count) }));
   const directionOptions = [{ value: "one", label: "اتجاه واحد" }, { value: "two", label: "اتجاهين" }];
+  const branches = copper.branches || [];
+  const commonDirection = branches.length && branches.every((branch) => (branch.direction || "one") === (branches[0].direction || "one")) ? (branches[0].direction || "one") : "";
+  const commonBarCount = branches.length && branches.every((branch) => Number(branch.barCount || barCounts[0]) === Number(branches[0].barCount || barCounts[0])) ? Number(branches[0].barCount || barCounts[0]) : "";
   const updateMain = (field, value) => updateCopper((current) => ({
     ...current,
     enabled: true,
@@ -65,6 +68,11 @@ function CopperCalculator() {
       )
     };
   });
+  const updateAllBranches = (field, value) => updateCopper((current) => ({
+    ...current,
+    enabled: true,
+    branches: (current.branches || []).map((branch) => ({ ...branch, [field]: value })),
+  }));
 
   if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg ?? configuration.pricePerKg ?? "" }))}>+ إضافة نحاس للوحة</button></div>;
 
@@ -80,7 +88,7 @@ function CopperCalculator() {
       <label>عدد البارات<CopperSelect value={copper.main?.barCount || barCounts[0]} options={barCountOptions} placeholder="اختر العدد" onChange={(value) => updateMain("barCount", Number(value))} /></label>
       {optionInfo(copper.main?.optionKey) && <div className="copper-readonly"><span>المقاس</span><strong>{optionInfo(copper.main?.optionKey)}</strong></div>}
     </div></div>
-    <div className="copper-branches-heading"><h4>النحاس الفرعي</h4><button type="button" onClick={() => updateCopper((current) => {
+    <div className="copper-branches-heading"><h4>النحاس الفرعي</h4><div className="copper-branches-bulk"><strong>تطبيق على كل الفرعيات</strong><div className="copper-bulk-group"><span>الاتجاه</span><div>{directionOptions.map((option) => <button type="button" className={commonDirection === option.value ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("direction", option.value)}>{option.label}</button>)}</div></div><div className="copper-bulk-group"><span>عدد البارات</span><div>{barCountOptions.map((option) => <button type="button" className={String(commonBarCount) === String(option.value) ? "is-active" : ""} key={option.value} onClick={() => updateAllBranches("barCount", Number(option.value))}>{option.label}</button>)}</div></div></div><button type="button" onClick={() => updateCopper((current) => {
       const previousBranch = current.branches?.[current.branches.length - 1];
       return {
         ...current,

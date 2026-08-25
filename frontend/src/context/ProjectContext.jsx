@@ -637,6 +637,19 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       return { ...panel, dimensions, ...(selectedType ? { parts: buildTypeParts(selectedType, dimensions) } : {}) };
     });
   }, [activePanel, systemConfig, updatePanel]);
+  const recalculateActivePanelParts = useCallback(async () => {
+    try {
+      const { data: savedConfig } = await getSystemConfiguration();
+      const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
+      const selectedType = (savedConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
+      if (!selectedType) return { success: false, message: "اختر نوع اللوحة أولًا لإعادة حساب الأجزاء." };
+      setSystemConfig(savedConfig);
+      updatePanel(activePanel, (panel) => ({ ...panel, parts: buildTypeParts(selectedType, panel.dimensions) }));
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: getSaveErrorMessage(error) || "تعذر إعادة حساب الأجزاء." };
+    }
+  }, [activePanel, project.panels, updatePanel]);
   const saveProject = useCallback(async ({ complete = false } = {}) => {
     if (readOnly) {
       const error = new Error("هذا المشروع للعرض فقط.");
@@ -784,6 +797,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         updatePanelName,
         applyPanelType,
         updatePanelDimensions,
+        recalculateActivePanelParts,
         prices,
       }}
     >

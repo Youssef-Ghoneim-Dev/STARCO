@@ -77,7 +77,7 @@ function App() {
           <Route path="/deleted-projects" element={<DeletedProjects />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
         {/* 
         <Route path="/clients" element={<Clients />} />

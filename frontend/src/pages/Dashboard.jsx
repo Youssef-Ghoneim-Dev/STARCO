@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
 import StatCard from "../components/dashboard/StatCard";
 import RecentProjects from "../components/dashboard/RecentProjects";
 import QuickActions from "../components/dashboard/QuickActions";
+import OwnerManagerDashboard from "../components/dashboard/OwnerManagerDashboard";
 import { useAuth } from "../context/AuthContext";
 import { getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
@@ -11,24 +12,29 @@ import toast from "react-hot-toast";
 import "../styles/dashboardHome.css";
 
 function Dashboard() {
-  const { loading, accountStatus, statusMessage, user } = useAuth();
+  const { loading, accountStatus, user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [clientsCount, setClientsCount] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const canManageClients = ["OwnerManager", "Engineer"].includes(user?.role);
 
-  useEffect(() => {
+  const loadDashboard = useCallback(() => {
     if (loading || !user || accountStatus === "pending" || accountStatus === "deleted") {
       setDashboardLoading(false);
       return;
     }
+    setDashboardLoading(true);
     const requests = [getProjects()];
     if (canManageClients) requests.push(getAllClients());
-    Promise.all(requests).then(([projectsResponse, clientsResponse]) => {
+    return Promise.all(requests).then(([projectsResponse, clientsResponse]) => {
       setProjects(Array.isArray(projectsResponse.data) ? projectsResponse.data : []);
       setClientsCount(clientsResponse?.data?.clients?.length || 0);
     }).catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل ملخص لوحة التحكم.")).finally(() => setDashboardLoading(false));
   }, [loading, user, canManageClients, accountStatus]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const summary = useMemo(() => {
     const today = new Date();
@@ -68,6 +74,10 @@ function Dashboard() {
         </div>
       </DashboardLayout>
     );
+  }
+
+  if (user?.role === "OwnerManager") {
+    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   return (

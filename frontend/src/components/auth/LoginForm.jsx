@@ -22,7 +22,7 @@ function LoginForm() {
     await reloadProfile();
     const pending = response.data.status === "pending";
     setPending(pending);
-    navigate(pending ? "/dashboard" : "/projects");
+    navigate("/dashboard");
     if (!pending) toast.success("Welcome back.");
   };
   const handleSubmit = async (event) => {

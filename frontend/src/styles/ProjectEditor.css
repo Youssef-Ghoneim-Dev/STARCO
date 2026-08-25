@@ -63,6 +63,13 @@
 
 .whatsapp-data-heading h2, .whatsapp-copper-data h3 { margin: 0; color: var(--text); }
 .whatsapp-data-heading p { margin: 8px 0 0; color: #667085; }
+.whatsapp-data-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.project-section-refresh { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; border: 1px solid #bdd3dc; border-radius: 10px; padding: 8px 13px; color: var(--primary); background: #f4fafc; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.project-section-refresh:hover:not(:disabled) { border-color: var(--primary); background: #e8f3f6; }
+.project-section-refresh:disabled { opacity: .65; cursor: wait; }
+.project-section-refresh svg { flex: 0 0 auto; font-size: 17px; }
+.project-section-refresh .is-spinning { animation: project-refresh-spin .8s linear infinite; }
+@keyframes project-refresh-spin { to { transform: rotate(360deg); } }
 .whatsapp-readonly-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .whatsapp-readonly-field { display: flex; flex-direction: column; gap: 8px; color: var(--text); font-weight: 700; }
 .whatsapp-readonly-field input { height: 50px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: #f8fafc; color: #475467; font: inherit; }
@@ -71,6 +78,13 @@
 .whatsapp-media-accordions details { padding: 0; overflow: hidden; }
 .whatsapp-media-accordions summary { display: flex; justify-content: space-between; align-items: center; padding: 19px 22px; cursor: pointer; color: var(--text); font-weight: 700; }
 .whatsapp-media-accordions summary b { display: grid; place-items: center; min-width: 26px; height: 26px; border-radius: 50%; background: #e8f1f7; color: var(--primary); }
+.project-media-summary-title { display: inline-flex; align-items: center; gap: 9px; }
+.project-media-summary-actions { display: inline-flex; align-items: center; gap: 9px; direction: ltr; }
+.project-media-refresh { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #c9dce4; border-radius: 8px; padding: 0; color: var(--primary); background: #f4fafc; cursor: pointer; }
+.project-media-refresh:hover:not(:disabled) { border-color: var(--primary); background: #e8f3f6; }
+.project-media-refresh:disabled { opacity: .6; cursor: wait; }
+.project-media-refresh svg { width: 16px; height: 16px; }
+.project-media-refresh .is-spinning { animation: project-refresh-spin .8s linear infinite; }
 .whatsapp-images-grid, .whatsapp-audio-list { padding: 0 22px 22px; display: grid; gap: 14px; }
 .whatsapp-images-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .whatsapp-image-thumb { display: block; width: 100%; aspect-ratio: 1; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: #eef4f7; cursor: zoom-in; }
@@ -622,7 +636,7 @@
 
 .copper-add-action { margin-top: 18px; }
 .copper-add-action button,
-.copper-branches-heading button {
+.copper-branches-heading > button {
     border: 0;
     border-radius: 10px;
     padding: 10px 15px;
@@ -685,6 +699,15 @@
     background: #fff;
 }
 .copper-entry-grid select { padding-inline-end: 36px; }
+.copper-branches-bulk { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 12px; margin-inline-start: auto; border: 1px solid #cbdde3; border-radius: 13px; padding: 9px 11px; background: #fff; }
+.copper-branches-bulk > strong { color: var(--primary); font-size: 13px; white-space: nowrap; }
+.copper-bulk-group { display: flex; align-items: center; gap: 7px; }
+.copper-bulk-group > span { color: #64748b; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.copper-bulk-group > div { display: inline-flex; overflow: hidden; border: 1px solid #d4e1e6; border-radius: 9px; background: #f8fafc; }
+.copper-bulk-group button { min-width: 44px; min-height: 32px; border: 0; border-inline-start: 1px solid #d4e1e6; padding: 4px 9px; color: #475569; background: transparent; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.copper-bulk-group button:first-child { border-inline-start: 0; }
+.copper-bulk-group button:hover { background: #e8f3f6; }
+.copper-bulk-group button.is-active { color: #fff; background: var(--primary); }
 .copper-select-control { position: relative; width: 100%; }
 .copper-select-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: 9px; padding: 0 13px; color: var(--text); background: #fff; font: inherit; text-align: right; cursor: pointer; }
 .copper-select-trigger:hover, .copper-select-trigger:focus { border-color: var(--primary); outline: none; }
@@ -696,6 +719,20 @@
 .copper-select-menu button.is-selected { color: #fff; background: var(--primary); }
 .project-read-only-fieldset { display: flex; flex-direction: column; gap: 24px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .project-read-only-fieldset:disabled { opacity: .72; }
+.copper-calculator-collapse { margin-top: 22px; overflow: hidden; border: 1px solid #d7e5ea; border-radius: 16px; background: #f9fcfd; }
+.copper-calculator-collapse > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; color: var(--primary); font-size: 18px; font-weight: 800; cursor: pointer; list-style: none; }
+.copper-calculator-collapse > summary::-webkit-details-marker { display: none; }
+.copper-calculator-collapse > summary svg { flex: 0 0 auto; width: 20px; height: 20px; transition: transform .2s ease; }
+.copper-calculator-collapse[open] > summary svg { transform: rotate(180deg); }
+.copper-calculator-collapse > .copper-calculator { margin: 0; border: 0; border-top: 1px solid #d7e5ea; border-radius: 0; }
+.section-title-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.section-title-row .section-title { margin: 0; }
+.section-title-row { margin-bottom: 22px; }
+.project-icon-refresh { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border: 1px solid #bdd3dc; border-radius: 10px; padding: 0; color: var(--primary); background: #f4fafc; cursor: pointer; }
+.project-icon-refresh:hover:not(:disabled) { border-color: var(--primary); background: #e8f3f6; }
+.project-icon-refresh:disabled { opacity: .6; cursor: wait; }
+.project-icon-refresh svg { width: 19px; height: 19px; }
+.project-icon-refresh .is-spinning { animation: project-refresh-spin .8s linear infinite; }
 .project-read-only-notice { margin: 0 0 16px; border: 1px solid #f3d28c; border-radius: 12px; padding: 13px 15px; color: #805a17; background: #fff8e8; font-weight: 700; }
 .app-select { position: relative; width: 100%; }
 .app-select-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 52px; border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; color: var(--text); background: #fff; font: inherit; text-align: right; cursor: pointer; }
@@ -730,7 +767,11 @@
 @media (max-width: 600px) {
     .copper-calculator { padding: 15px; }
     .copper-calculator-heading, .copper-branches-heading, .copper-total { align-items: flex-start; flex-direction: column; }
+    .copper-branches-bulk { width: 100%; grid-template-columns: 1fr; margin-inline-start: 0; align-items: stretch; }
+    .copper-bulk-group { justify-content: space-between; }
     .copper-total { gap: 7px; }
+    .project-section-refresh { width: 100%; }
+    .whatsapp-data-heading { padding: 16px; }
 }
 
 .prices-table {

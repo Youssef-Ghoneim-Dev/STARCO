@@ -54,7 +54,6 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
   const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
   const editorReadOnly = readOnly || !technicalCanEdit;
-
   const readOnlyMessage = !readOnly && isCompleted
     ? "هذا المشروع مكتمل، لذلك هو للعرض فقط ولا يمكن تعديل تسعيره أو ملف PDF الخاص به."
     : readOnly

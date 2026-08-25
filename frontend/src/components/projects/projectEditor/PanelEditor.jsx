@@ -9,9 +9,7 @@ function PanelEditor({ readOnly = false }) {
       <fieldset className="project-read-only-fieldset" disabled={readOnly}>
         <PanelName />
         <ProductParts />
-
         <ManufacturingSettings />
-
         <PriceTables />
       </fieldset>
       <AdditionalSupplies />

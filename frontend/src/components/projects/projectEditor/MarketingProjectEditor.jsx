@@ -107,7 +107,6 @@ function MarketingProjectEditor() {
     setClientResults([]);
     setClientSearchActive(false);
   };
-
   return <section className="marketing-project-editor" dir="rtl">
     <div className="marketing-editor-heading"><div><h2>بيانات المشروع</h2><p>أضف بيانات طلب العميل ومرفقاته. عرض السعر مخصص للمهندس.</p></div></div>
 

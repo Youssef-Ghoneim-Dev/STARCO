@@ -3,6 +3,32 @@
     margin: 0 auto;
 }
 
+.configuration-loading {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 14px;
+    min-height: 440px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-light);
+    font-weight: 700;
+}
+
+.configuration-loading p { margin: 0; }
+
+.configuration-loading-spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid #dce9ef;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: configuration-spin .75s linear infinite;
+}
+
+@keyframes configuration-spin { to { transform: rotate(360deg); } }
+
 .configuration-heading {
     margin-bottom: 24px;
 }
@@ -201,19 +227,41 @@
 }
 
 .panel-type-settings {
-    display: grid;
-    gap: 16px;
     margin: 0;
-    padding: 20px;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface);
+    overflow: hidden;
 }
 
-.panel-type-settings legend {
-    padding: 0 8px;
+.panel-type-settings > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    list-style: none;
     color: var(--primary);
     font-weight: 800;
+    cursor: pointer;
+    background: #f8fbfd;
+}
+.panel-type-settings > summary::-webkit-details-marker { display: none; }
+.configuration-collapse-icon { flex: 0 0 auto; width: 20px; height: 20px; transition: transform .2s ease; }
+.panel-type-settings[open] > summary .configuration-collapse-icon { transform: rotate(180deg); }
+.panel-type-settings > summary > span { color: var(--text-light); font-size: 13px; font-weight: 500; }
+.panel-type-summary-actions { display: flex; gap: 8px; margin-inline-start: auto; }
+.panel-type-settings-body { display: grid; gap: 16px; padding: 20px; border-top: 1px solid var(--border); }
+.panel-type-settings-body .configuration-grid { align-items: end; }
+
+.formula-input {
+    width: 100%;
+    min-width: 0;
+    padding: 0 14px !important;
+    direction: ltr;
+    text-align: left;
+    font-family: Consolas, "Courier New", monospace !important;
+    font-size: 14px !important;
+    letter-spacing: .2px;
 }
 
 .panel-type-settings h3 {
@@ -336,15 +384,33 @@
 }
 
 .copper-configuration-editor { margin-top: 22px; }
-.copper-counts { max-width: 430px; margin: 14px 0; }
+.copper-quick-settings { display: grid; gap: 14px; padding: 18px; border: 1px solid #d8e6eb; border-radius: 16px; background: linear-gradient(145deg, #fff, #f7fbfc); box-shadow: 0 7px 18px rgba(34, 78, 100, .06); }
+.copper-setting-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.copper-setting-fields .configuration-number-field { gap: 6px; font-size: 13px; font-weight: 700; }
+.copper-setting-fields .configuration-number-field input { min-height: 40px; height: 40px; border-radius: 9px; padding: 0 11px; background: #fff; }
+.copper-bar-count-editor { display: grid; grid-template-columns: minmax(180px, .75fr) minmax(0, 1.6fr); align-items: center; gap: 18px; padding-top: 14px; border-top: 1px solid #deeaee; color: var(--text); font-size: 13px; font-weight: 700; }
+.copper-bar-count-heading { display: grid; gap: 3px; }
+.copper-bar-count-heading strong { color: var(--primary); font-size: 16px; }
+.copper-bar-count-heading span { color: var(--text-light); font-size: 13px; font-weight: 500; }
+.copper-bar-count-controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+.copper-bar-count-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-height: 30px; }
+.copper-bar-count-chips > span { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; border: 1px solid #cbdde7; border-radius: 999px; padding: 2px 8px; color: var(--primary); background: #edf6fa; font-size: 13px; }
+.copper-bar-count-chips button { display: grid; place-items: center; width: 22px; height: 22px; border: 0; padding: 0; color: #b42318; background: transparent; cursor: pointer; }
+.copper-bar-count-add { display: grid; flex: 0 1 190px; grid-template-columns: minmax(72px, 1fr) auto; gap: 6px; }
+.copper-bar-count-add input { width: 100%; min-width: 0; min-height: 34px; height: 34px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; padding: 0 9px; font: inherit; background: #fff; }
+.copper-bar-count-add button { min-height: 34px; border: 0; border-radius: 8px; padding: 0 12px; color: #fff; background: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
 .copper-catalog-list { display: grid; gap: 12px; margin: 16px 0; }
-.copper-catalog-item { grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(115px, 1fr)) auto; }
+.copper-catalog-item { grid-template-columns: minmax(130px, 1.2fr) repeat(3, minmax(115px, 1fr)) auto; }
+.copper-amperage-name { display: grid; align-self: stretch; gap: 6px; color: var(--text); font-size: 13px; }
+.copper-amperage-name strong { display: flex; align-items: center; min-height: 38px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; font-size: 15px; }
 
 @media (max-width: 1050px) {
     .configured-part {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .copper-catalog-item { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .copper-bar-count-editor { grid-template-columns: 1fr; gap: 10px; }
+    .copper-bar-count-controls { justify-content: flex-start; }
 }
 
 @media (max-width: 700px) {
@@ -358,6 +424,10 @@
     .part-settings {
         grid-template-columns: 1fr;
     }
+    .copper-quick-settings { padding: 14px; }
+    .copper-setting-fields { grid-template-columns: 1fr; }
+    .copper-bar-count-controls { align-items: stretch; flex-direction: column; }
+    .copper-bar-count-add { flex: 0 0 auto; width: 100%; }
 
     .pricing-form>button {
         width: 100%;
@@ -368,4 +438,10 @@
     .panel-types-editor + .pricing-form {
         margin-top: 24px;
     }
+
+    .panel-type-settings > summary { flex-wrap: wrap; }
+    .panel-type-settings > summary > span { display: none; }
+    .panel-type-summary-actions { width: 100%; margin-inline-start: 0; }
+    .panel-type-summary-actions button { flex: 1; }
+    .panel-type-settings-body { padding: 15px; }
 }

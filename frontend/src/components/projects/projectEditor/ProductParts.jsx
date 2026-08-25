@@ -1,7 +1,8 @@
 import { useProject } from "../../../context/ProjectContext";
 import { useState } from "react";
 import AddPartModal from "./AddPartModal";
-import { IoClose } from "react-icons/io5";
+import { IoClose, IoRefresh } from "react-icons/io5";
+import toast from "react-hot-toast";
 const legacyAddOptions = ["المراية", "الجلسة", "الكرسي", "أوميجا", "باب"];
 function ProductParts() {
   const {
@@ -14,8 +15,10 @@ function ProductParts() {
     increasePartQuantity,
     decreasePartQuantity,
     systemConfig,
+    recalculateActivePanelParts,
   } = useProject();
   const [showModal, setShowModal] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const panel = project.panels[activePanel] || project.panels[0];
   const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === panel.panelTypeKey);
   const addOptions = (panelType?.additionalParts || legacyAddOptions).map((name) => ({ id: name, label: name }));
@@ -29,10 +32,16 @@ function ProductParts() {
   const handleSelectPart = (type) => {
     addPart(type);
   };
+  const recalculateParts = async () => {
+    setRecalculating(true);
+    const result = await recalculateActivePanelParts();
+    setRecalculating(false);
+    if (!result.success) toast.error(result.message || "تعذر إعادة حساب الأجزاء.");
+  };
 
   return (
     <section className="project-editor-card">
-      <h2 className="section-title">بيانات المنتج</h2>
+      <div className="section-title-row"><h2 className="section-title">بيانات المنتج</h2><button type="button" className="project-icon-refresh" title="إعادة حساب الأجزاء بأحدث المعادلات" aria-label="إعادة حساب الأجزاء بأحدث المعادلات" onClick={recalculateParts} disabled={recalculating}><IoRefresh className={recalculating ? "is-spinning" : ""} /></button></div>
 
       <div className="parts-grid">
         {panel.parts.map((part, index) => (
