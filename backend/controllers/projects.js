@@ -19,6 +19,36 @@ const { downloadStoredFile, deleteStoredFile, uploadFile } = require("../service
 const whatsappSessions = require("../models/whatsappSessions");
 const crypto = require("crypto");
 
+const detectExecutionFileMimeType = (file) => {
+    if (!file?.buffer?.length) return null;
+
+    const buffer = file.buffer;
+    const mimeType = String(file.mimetype || "").toLowerCase();
+    const fileName = String(file.originalname || "").toLowerCase();
+    const startsWith = (...bytes) => bytes.every((byte, index) => buffer[index] === byte);
+    const ascii = (start, end) => buffer.subarray(start, end).toString("ascii");
+
+    if (ascii(0, 5) === "%PDF-") return "application/pdf";
+    if (startsWith(0xff, 0xd8, 0xff)) return "image/jpeg";
+    if (startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+    if (["GIF87a", "GIF89a"].includes(ascii(0, 6))) return "image/gif";
+    if (ascii(0, 2) === "BM") return "image/bmp";
+    if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+    if (["II*\u0000", "MM\u0000*"].includes(ascii(0, 4))) return "image/tiff";
+
+    const isoBrand = ascii(4, 16).toLowerCase();
+    if (isoBrand.startsWith("ftyp") && /(avif|avis|heic|heix|hevc|hevx|mif1|msf1)/.test(isoBrand)) {
+        return isoBrand.includes("avi") ? "image/avif" : "image/heic";
+    }
+
+    if (mimeType === "application/pdf" || fileName.endsWith(".pdf")) return "application/pdf";
+    if (mimeType.startsWith("image/")) return mimeType;
+    if (/\.(avif|bmp|gif|heic|heif|jpe?g|png|tiff?|webp)$/i.test(fileName)) {
+        return mimeType !== "application/octet-stream" ? mimeType : "image/*";
+    }
+    return null;
+};
+
 const crcTable = Array.from({ length: 256 }, (_, index) => {
     let value = index;
     for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
@@ -807,14 +837,16 @@ const uploadExecutionPdfFile = async (req, res, next) => {
         if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "رفع PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
         if (!["executionPdfRequested", "executionPdfReady", "executionOrdered"].includes(project.status)) return res.status(409).json({ status: "error", message: "لا يوجد أمر PDF تنفيذ مفتوح لهذا المشروع." });
         if (!req.file) return res.status(400).json({ status: "error", message: "اختر ملف PDF أو صورة أولًا." });
+        const detectedMimeType = detectExecutionFileMimeType(req.file);
+        if (!detectedMimeType) return res.status(400).json({ status: "error", message: "نوع الملف غير مدعوم. اختر PDF أو صورة." });
         const panel = getPanelById(project, req.body?.panelId);
         if (!panel || panel.executionPdf?.status !== "requested") return res.status(400).json({ status: "error", message: "هذه اللوحة لا يوجد لها أمر PDF تنفيذ مفتوح." });
 
-        const stored = await uploadFile({ fileName: req.file.originalname, mimeType: req.file.mimetype, buffer: req.file.buffer });
+        const stored = await uploadFile({ fileName: req.file.originalname, mimeType: detectedMimeType, buffer: req.file.buffer });
         panel.executionPdf.files.push({
             storageFileId: stored.id,
             fileName: stored.name || req.file.originalname,
-            mimeType: stored.mimeType || req.file.mimetype,
+            mimeType: stored.mimeType || detectedMimeType,
             fileSize: Number(stored.size || req.file.size || 0),
             uploadedAt: new Date(),
             uploadedBy: req.user._id

@@ -77,19 +77,15 @@ function ExecutionPdfWorkspace() {
   };
 
   const uploadFiles = async (selectedFiles) => {
-    const allowed = [...selectedFiles].filter((file) => {
-      const mimeType = String(file.type || "").toLowerCase();
-      const fileName = String(file.name || "").toLowerCase();
-      return mimeType === "application/pdf"
-        || mimeType.startsWith("image/")
-        || fileName.endsWith(".pdf")
-        || /\.(avif|bmp|gif|heic|heif|jpe?g|png|webp)$/i.test(fileName);
-    });
-    if (!allowed.length) return toast.error("اختر ملف PDF أو صورة.");
+    // Some Android pickers omit the MIME type or expose the selected file as
+    // application/octet-stream. Keep the picker restriction here and let the
+    // backend verify the actual file contents before storing it.
+    const filesToUpload = Array.from(selectedFiles || []).filter((file) => file?.size > 0);
+    if (!filesToUpload.length) return toast.error("اختر ملف PDF أو صورة.");
     setBusy(true);
     try {
       let latestProject = project;
-      for (const file of allowed) {
+      for (const file of filesToUpload) {
         const { data } = await uploadExecutionPdfFile(project._id, panel.panelId, file);
         latestProject = data.project;
       }

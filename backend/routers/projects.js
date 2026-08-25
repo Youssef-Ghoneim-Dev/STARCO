@@ -13,16 +13,10 @@ const upload = multer({
 });
 const executionUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 25 * 1024 * 1024 },
-    fileFilter: (req, file, callback) => {
-        const mimeType = String(file.mimetype || "").toLowerCase();
-        const fileName = String(file.originalname || "").toLowerCase();
-        const allowed = mimeType === "application/pdf"
-            || mimeType.startsWith("image/")
-            || fileName.endsWith(".pdf")
-            || /\.(avif|bmp|gif|heic|heif|jpe?g|png|webp)$/i.test(fileName);
-        callback(null, allowed);
-    }
+    // Android file pickers sometimes report valid PDFs/images as
+    // application/octet-stream. Validate the in-memory content in the
+    // controller instead of silently dropping the selected file here.
+    limits: { fileSize: 25 * 1024 * 1024 }
 });
 const manufacturingUpload = multer({
     storage: multer.memoryStorage(),
