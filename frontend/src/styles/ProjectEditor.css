@@ -346,6 +346,9 @@
 .panel-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: 14px; background: #edf5fa; direction: rtl; }
 .panel-detail-heading h2 { margin: 0; font-size: 1.1rem; }
 .panel-detail-heading button { border: 0; border-radius: 9px; padding: 9px 13px; background: #fff; color: var(--primary); font: inherit; font-weight: 800; cursor: pointer; }
+.panel-detail-heading-actions { display: flex; align-items: center; gap: 9px; }
+.panel-detail-heading .panel-inline-edit-btn { background: var(--primary); color: #fff; }
+.panel-detail-heading .panel-inline-edit-btn:disabled { opacity: .65; cursor: wait; }
 
 .part-quantity {
     display: flex;

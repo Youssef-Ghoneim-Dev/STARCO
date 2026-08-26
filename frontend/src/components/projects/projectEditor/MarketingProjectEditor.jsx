@@ -127,7 +127,7 @@ function MarketingProjectEditor() {
       </div>
     </section>
 
-    <PanelsTabs readOnly={panelEditingMode} openedPanel={openedPanel} onOpenPanel={setOpenedPanel} />
+    <PanelsTabs readOnly={panelEditingMode} openedPanel={openedPanel} onOpenPanel={(index) => setOpenedPanel((current) => current === index ? null : index)} />
     {openedPanel !== null && <div className="panel-detail-shell">
     <div className="panel-detail-heading"><h2>{panel.panelName || `لوحة ${activePanel + 1}`}</h2><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div>
     {!canEditActivePanel && <div className="project-read-only-notice">هذه اللوحة للعرض فقط؛ التعديل مفتوح للوحة المحددة وحدها.</div>}

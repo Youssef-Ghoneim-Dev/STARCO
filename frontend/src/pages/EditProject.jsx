@@ -26,12 +26,11 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "", allowPanelEditing
       <ProjectInfo />
       <ProjectPrices />
     </fieldset>
-    <PanelsTabs readOnly={readOnly} openedPanel={openedPanel} onOpenPanel={setOpenedPanel} />
+    <PanelsTabs readOnly={readOnly} openedPanel={openedPanel} onOpenPanel={(index) => setOpenedPanel((current) => current === index ? null : index)} />
     {openedPanel !== null && <div className="project-read-only-fieldset panel-detail-shell">
-      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div>
+      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions">{allowPanelEditing && <StartEditingButton isMarketer={isMarketer} />}<button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
       {activePanelReadOnly && !readOnly && <div className="project-read-only-notice">هذه اللوحة للعرض فقط؛ التعديل مفتوح للوحة المحددة وحدها.</div>}
       <PanelEditor readOnly={activePanelReadOnly} />
-      {allowPanelEditing && <StartEditingPanel isMarketer={isMarketer} />}
     </div>}
     <div className="project-read-only-fieldset">
       <fieldset className="project-read-only-fieldset" disabled={readOnly}>
@@ -41,7 +40,7 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "", allowPanelEditing
   </>;
 }
 
-function StartEditingPanel({ isMarketer }) {
+function StartEditingButton({ isMarketer }) {
   const { beginEditing, savingProject, project, activePanel } = useProject();
   const [starting, setStarting] = useState(false);
   const startEditing = async () => {
@@ -51,11 +50,7 @@ function StartEditingPanel({ isMarketer }) {
     setStarting(false);
     if (!result.success) toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
   };
-  return <section className="start-editing-panel" dir="rtl">
-    <h2>{isMarketer ? "هل تريد تعديل بيانات هذه اللوحة؟" : "تعديل لوحة مكتملة"}</h2>
-    <p>{isMarketer ? "هذه اللوحة ظاهرة الآن للعرض فقط. ابدأ تعديلها دون إعادة باقي لوحات المشروع إلى التعديل." : "ابدأ تعديل هذه اللوحة فقط، وستظل بقية لوحات المشروع محفوظة بحالتها الحالية."}</p>
-    <button type="button" className="start-editing-btn" disabled={starting || savingProject} onClick={startEditing}>{starting ? "جاري التحويل..." : "التحويل إلى وضع Editing"}</button>
-  </section>;
+  return <button type="button" className="panel-inline-edit-btn" disabled={starting || savingProject} onClick={startEditing}>{starting ? "جاري التحويل..." : isMarketer ? "تعديل اللوحة" : "تحويل إلى Editing"}</button>;
 }
 
 const formatExactDate = (value) => value ? new Intl.DateTimeFormat("ar-EG", { dateStyle: "full", timeStyle: "medium" }).format(new Date(value)) : "غير محدد";
@@ -86,16 +81,15 @@ function CompletedMarketingProject({ message, showExecution }) {
   const [openedPanel, setOpenedPanel] = useState(null);
   const panel = project?.panels?.[activePanel];
   return <>
-    <div className="project-read-only-notice" dir="rtl">{message}</div>
+    {message && <div className="project-read-only-notice" dir="rtl">{message}</div>}
     <ProjectAuditSummary />
     <ProjectPreviewLink />
-    <PanelsTabs readOnly openedPanel={openedPanel} onOpenPanel={setOpenedPanel} />
-    {openedPanel !== null && <div className="panel-detail-shell">
-      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div>
-      <WhatsappProjectData />
-      <StartEditingPanel isMarketer />
-    </div>}
     {showExecution && <ExecutionPdfWorkspace />}
+    <PanelsTabs readOnly openedPanel={openedPanel} onOpenPanel={(index) => setOpenedPanel((current) => current === index ? null : index)} />
+    {openedPanel !== null && <div className="panel-detail-shell">
+      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions"><StartEditingButton isMarketer /><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
+      <WhatsappProjectData />
+    </div>}
   </>;
 }
 
@@ -111,8 +105,8 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
   const claimedByAnotherEngineer = user?.role === "Engineer" && project?.readOnlyForCurrentUser;
   const editorReadOnly = readOnly || claimedByAnotherEngineer || !technicalCanEdit;
-  const readOnlyMessage = !readOnly && (isQuoteCompleted || isExecutionPhase || isCompleted)
-    ? isCompleted ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط." : "عرض السعر مكتمل ومحفوظ. يمكنك الرجوع إليه دون تعديل أثناء مرحلة التنفيذ."
+  const readOnlyMessage = !readOnly && isCompleted
+    ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط."
     : readOnly
       ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
       : "";
@@ -120,7 +114,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   if (isMarketer) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
     const message = isQuoteCompleted
-      ? "عرض السعر مكتمل. يمكنك إصدار أمر PDF تنفيذ للوحة المطلوبة، أو تحويل عرض السعر إلى وضع التعديل."
+      ? ""
       : isExecutionPhase
         ? "المشروع دخل مرحلة التنفيذ. تابع حالة PDF التنفيذ من البطاقة التالية."
       : isCompleted
