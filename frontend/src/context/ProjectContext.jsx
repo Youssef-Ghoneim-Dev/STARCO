@@ -14,6 +14,7 @@ const ProjectContext = createContext();
 
 const AUTO_SAVE_DELAY_MS = 500;
 const AUTO_SAVE_LOCKED_STATUSES = new Set([
+  "pending",
   "quoteCompleted",
   "executionPdfRequested",
   "executionPdfReady",

@@ -18,8 +18,8 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "", allowPanelEditing
   const { project, activePanel } = useProject();
   const [openedPanel, setOpenedPanel] = useState(null);
   const panel = project?.panels?.[activePanel];
-  const panelEditingMode = ["editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
-  const activePanelReadOnly = readOnly || (panelEditingMode && panel?.quoteStatus !== "editing");
+  const activePanelReadOnly = readOnly || !["draft", "inProgress", "editing"].includes(panel?.quoteStatus);
+  const canStartPanelEditing = panel?.quoteStatus === "quoteCompleted" && (allowPanelEditing || !readOnly);
   return <>
     {readOnlyMessage && <div className="project-read-only-notice" dir="rtl">{readOnlyMessage}</div>}
     <fieldset className="project-read-only-fieldset" disabled={readOnly}>
@@ -28,7 +28,7 @@ function QuoteEditor({ readOnly = false, readOnlyMessage = "", allowPanelEditing
     </fieldset>
     <PanelsTabs readOnly={readOnly} openedPanel={openedPanel} onOpenPanel={(index) => setOpenedPanel((current) => current === index ? null : index)} />
     {openedPanel !== null && <div className="project-read-only-fieldset panel-detail-shell">
-      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions">{allowPanelEditing && <StartEditingButton isMarketer={isMarketer} />}<button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
+      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions">{canStartPanelEditing && <StartEditingButton isMarketer={isMarketer} />}<button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
       {activePanelReadOnly && !readOnly && <div className="project-read-only-notice">هذه اللوحة للعرض فقط؛ التعديل مفتوح للوحة المحددة وحدها.</div>}
       <PanelEditor readOnly={activePanelReadOnly} />
     </div>}
@@ -87,7 +87,7 @@ function CompletedMarketingProject({ message, showExecution }) {
     {showExecution && <ExecutionPdfWorkspace />}
     <PanelsTabs readOnly openedPanel={openedPanel} onOpenPanel={(index) => setOpenedPanel((current) => current === index ? null : index)} />
     {openedPanel !== null && <div className="panel-detail-shell">
-      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions"><StartEditingButton isMarketer /><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
+      <div className="panel-detail-heading"><h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2><div className="panel-detail-heading-actions">{panel?.quoteStatus === "quoteCompleted" && <StartEditingButton isMarketer />}<button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div></div>
       <WhatsappProjectData />
     </div>}
   </>;
@@ -100,14 +100,19 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
   const isQuoteCompleted = project?.status === "quoteCompleted";
-  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded"].includes(project?.status);
+  const hasPanelExecution = (project?.panels || []).some((panel) =>
+    (panel.executionPdf?.status && panel.executionPdf.status !== "notRequested")
+    || (panel.manufacturing?.status && panel.manufacturing.status !== "notStarted")
+  );
+  const hasEditableQuotePanels = (project?.panels || []).some((panel) => ["draft", "pending", "inProgress", "editing"].includes(panel.quoteStatus));
+  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded"].includes(project?.status) || hasPanelExecution;
   const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
   const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
   const claimedByAnotherEngineer = user?.role === "Engineer" && project?.readOnlyForCurrentUser;
   const editorReadOnly = readOnly || claimedByAnotherEngineer || !technicalCanEdit;
   const readOnlyMessage = !readOnly && isCompleted
     ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط."
-    : readOnly
+      : readOnly && user?.role !== "MarketingManager"
       ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
       : "";
 
@@ -124,7 +129,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   }
   if (isQuoteCompleted) {
     if (["ProductionManager", "MarketingManager"].includes(user?.role)) return <>
-      <div className="project-read-only-notice" dir="rtl">{user.role === "ProductionManager" ? "لا يمكنك التعديل على هذا المشروع لأنه لم يصل إلى مرحلة التنفيذ بعد. بيانات طلب المندوب متاحة للعرض فقط." : "بيانات طلب المندوب متاحة للعرض فقط."}</div>
+      {user.role === "ProductionManager" && <div className="project-read-only-notice" dir="rtl">لا يمكنك التعديل على هذا المشروع لأنه لم يصل إلى مرحلة التنفيذ بعد. بيانات طلب المندوب متاحة للعرض فقط.</div>}
       <ProjectAuditSummary showEngineer={user.role === "ProductionManager"} showMarketer={user.role === "MarketingManager"} />
       <ProjectPreviewLink />
       <PanelsTabs readOnly />
@@ -139,12 +144,14 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       {tab === "project-data" ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={claimedByAnotherEngineer ? "المشروع للمعاينة فقط لأنه محجوز لمهندس آخر." : readOnlyMessage} allowPanelEditing={!claimedByAnotherEngineer} />}
     </>;
   }
-  if (isExecutionPhase || isCompleted) return <><ProjectPreviewLink /><ExecutionPdfWorkspace /><details className="quote-reference-details"><summary>{isWhatsappProject ? "عرض بيانات المشروع والمندوب" : "عرض بيانات التسعير المحفوظة"}</summary>{isWhatsappProject ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />}</details></>;
+  if ((isExecutionPhase || isCompleted) && !hasEditableQuotePanels) return <><ProjectPreviewLink /><ExecutionPdfWorkspace /><details className="quote-reference-details"><summary>{isWhatsappProject ? "عرض بيانات المشروع والمندوب" : "عرض بيانات التسعير المحفوظة"}</summary>{isWhatsappProject ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />}</details></>;
   if (!isWhatsappProject) return <>
+    {isExecutionPhase && <ExecutionPdfWorkspace />}
     <QuoteEditor readOnly={editorReadOnly} readOnlyMessage={readOnlyMessage} />
   </>;
   return <>
     {claimedByAnotherEngineer && <div className="project-read-only-notice" dir="rtl">هذا المشروع يعمل عليه {project.workingEngineerName || project.assignedEngineer?.name || "مهندس آخر"}، لذلك يظهر لك للمعاينة فقط.</div>}
+    {isExecutionPhase && <ExecutionPdfWorkspace />}
     <div className="whatsapp-project-tabs" dir="rtl">
       <button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button>
       <button className={tab === "quote" ? "active" : ""} onClick={() => setTab("quote")}>عرض السعر</button>

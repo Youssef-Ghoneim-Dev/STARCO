@@ -1380,17 +1380,17 @@
 .marketing-full-field textarea { min-height: 92px; resize: vertical; }
 .marketing-copper-fields { margin-top: 26px; padding: 22px; border: 1px solid #dbe7ef; border-radius: 16px; background: #fbfdff; }
 .marketing-copper-fields h3 { margin: 0 0 12px; }
-.marketing-branches { margin-top: 18px; display: grid; gap: 12px; }
-.marketing-branches-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.marketing-branches { margin-top: 18px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.marketing-branches-heading { flex: 0 0 100%; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .marketing-branches-heading h4 { margin: 0; }
 .marketing-branches-heading button { border: 0; border-radius: 9px; padding: 9px 13px; background: #e9f2ff; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
-.marketing-branch-row { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; }
-.marketing-branch-row > strong { align-self: center; }
+.marketing-branch-row { flex: 0 1 270px; width: min(100%, 270px); box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; }
+.marketing-branch-row > strong { align-self: flex-start; }
 .marketing-branch-row > label { display: flex; flex-direction: column; gap: 7px; font-weight: 700; }
 .marketing-branch-row input { min-height: 43px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 10px; padding: 0 11px; font: inherit; }
-.marketing-branch-amp { width: min(100%, 260px); min-width: 0; }
-.marketing-branch-count { width: min(100%, 120px); min-width: 0; }
-.marketing-branch-delete { min-height: 43px; width: min(100%, 90px); }
+.marketing-branch-amp { width: 100%; min-width: 0; }
+.marketing-branch-count { width: 110px; min-width: 0; }
+.marketing-branch-delete { min-height: 40px; width: 82px; }
 .whatsapp-images-grid > p { grid-column: 1 / -1; width: 100%; white-space: nowrap; }
 .whatsapp-copper-branch-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 14px; }
 .whatsapp-copper-branch-list article { display: grid; gap: 7px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
@@ -1694,7 +1694,7 @@
   .marketing-client-card { grid-template-columns: 1fr; }
   .marketing-data-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .marketing-thickness-field { grid-column: 1 / -1; }
-  .marketing-branch-row { display: flex; flex-direction: column; align-items: stretch; }
+  .marketing-branch-row { flex-basis: 100%; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
   .marketing-branch-row > * { min-width: 0; box-sizing: border-box; }
   .marketing-branch-amp, .marketing-branch-count, .marketing-branch-delete { width: 100%; }
   .media-choice-actions { grid-template-columns: 1fr; }

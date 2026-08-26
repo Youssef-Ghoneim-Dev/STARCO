@@ -174,12 +174,29 @@ const canDownloadManufacturingFiles = (user, project) => isOwner(user)
     || isProductionManager(user)
     || (isEngineer(user) && (!project.engineerId || sameId(project.engineerId, user._id)));
 const deriveExecutionStatus = (panels = []) => {
+    const quoteStatuses = panels.map((panel) => panel.quoteStatus || "draft");
+    // The project status is only a summary.  A panel that is still being
+    // priced must not be hidden merely because another panel entered
+    // execution.
+    if (quoteStatuses.includes("editing")) return "editing";
+    if (quoteStatuses.includes("inProgress")) return "inProgress";
+    if (quoteStatuses.includes("pending")) return "pending";
+    if (quoteStatuses.includes("draft")) return "marketingDraft";
+    const manufacturingStatuses = panels.map((panel) => panel.manufacturing?.status || "notStarted");
+    if (manufacturingStatuses.includes("downloadedToLaser")) return "laserFilesDownloaded";
+    if (manufacturingStatuses.includes("filesReady")) return "manufacturingFilesReady";
+    if (manufacturingStatuses.includes("awaitingFiles")) return "manufacturingFilesPending";
     const statuses = panels.map((panel) => panel.executionPdf?.status || "notRequested");
     if (statuses.includes("requested")) return "executionPdfRequested";
     if (statuses.includes("ready")) return "executionPdfReady";
     if (statuses.includes("confirmed") || statuses.includes("skipped")) return "manufacturingFilesPending";
     return "quoteCompleted";
 };
+
+const projectHasExecutionActivity = (project) => (project.panels || []).some((panel) =>
+    (panel.executionPdf?.status && panel.executionPdf.status !== "notRequested")
+    || (panel.manufacturing?.status && panel.manufacturing.status !== "notStarted")
+);
 
 // Older WhatsApp projects may have been created before marketingId was saved
 // on the project.  Their WhatsApp session still has the correct marketer ID,
@@ -392,7 +409,11 @@ const getProjects = async (req, res, next) => {
         } else if (isEngineer(req.user)) {
             condition.status = { $nin: ["marketingDraft", "editingByMarketing"] };
         } else if (isProductionManager(req.user)) {
-            condition.status = { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] };
+            condition.$or = [
+                { status: { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] } },
+                { "panels.executionPdf.status": { $in: ["requested", "ready", "changesRequested", "confirmed", "skipped"] } },
+                { "panels.manufacturing.status": { $in: ["awaitingFiles", "filesReady", "downloadedToLaser"] } }
+            ];
         } else if (!canWorkOnProjects(req.user) && req.user.role !== "MarketingManager") {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع." });
         }
@@ -438,18 +459,27 @@ const getProject = async (req, res, next) => {
 
         // Claiming is atomic. Two engineers opening the same pending project
         // cannot both become its owner.
-        if (isEngineer(req.user) && project.status === "pending" && !project.engineerId) {
-            const claimedProject = await projectModels.claimByEngineer(projectId, req.user._id);
-            project = claimedProject || await projectModels.select_one({ _id: projectId, isDeleted: false });
-            if (claimedProject) {
-                const panels = claimedProject.panels.map((panel) => {
+        if (isEngineer(req.user) && project.status === "pending") {
+            if (!project.engineerId) {
+                const claimedProject = await projectModels.claimByEngineer(projectId, req.user._id);
+                project = claimedProject || await projectModels.select_one({ _id: projectId, isDeleted: false });
+            }
+            // A previously assigned engineer can receive another edited panel
+            // later.  Open only the pending panels while keeping completed or
+            // executing panels untouched.
+            if (sameId(project.engineerId, req.user._id)) {
+                let hasPendingPanel = false;
+                const panels = project.panels.map((panel) => {
                     if (["draft", "pending"].includes(panel.quoteStatus)) {
                         panel.quoteStatus = "inProgress";
                         panel.quoteUpdatedAt = new Date();
+                        hasPendingPanel = true;
                     }
                     return panel;
                 });
-                project = await projectModels.update({ id: projectId, panels, updatedAt: Date.now() });
+                if (hasPendingPanel) {
+                    project = await projectModels.update({ id: projectId, panels, status: "inProgress", updatedAt: Date.now() });
+                }
             }
         }
 
@@ -492,7 +522,7 @@ const getProject = async (req, res, next) => {
             }
             return res.status(200).json({ ...projectResponse, readOnlyForCurrentUser: false });
         }
-        if (isProductionManager(req.user) && ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(project.status)) {
+        if (isProductionManager(req.user) && (QUOTE_COMPLETED_STATUSES.includes(project.status) || projectHasExecutionActivity(project))) {
             return res.status(200).json(projectResponse);
         }
         return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشروع." });
@@ -645,16 +675,17 @@ const startProjectEditing = async (req, res, next) => {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية تحويل هذا المشروع إلى وضع التعديل." });
         }
 
-        if (!QUOTE_COMPLETED_STATUSES.includes(project.status)) {
-            return res.status(409).json({ status: "error", message: "هذا المشروع مفتوح بالفعل لدى مستخدم آخر أو ما زال قيد العمل." });
-        }
-
         const requestedPanelId = req.body?.panelId;
         const targetPanel = (project.panels || []).find((panel) =>
             String(panel._id) === String(requestedPanelId) || String(panel.panelId) === String(requestedPanelId)
         );
         if (!targetPanel) {
             return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لبدء التعديل." });
+        }
+        const panelCanBeReopened = targetPanel.quoteStatus === "quoteCompleted"
+            || ["requested", "ready", "changesRequested", "confirmed", "skipped"].includes(targetPanel.executionPdf?.status);
+        if (!panelCanBeReopened) {
+            return res.status(409).json({ status: "error", message: "هذه اللوحة ما زالت قيد العمل أو المراجعة بالفعل." });
         }
 
         const editingStatus = marketerRequested
@@ -876,7 +907,7 @@ const completeProject = async (req, res, next) => {
             id: project._id,
             client: projectForClientSync.client,
             panels: completedPanels,
-            status: "quoteCompleted",
+            status: deriveExecutionStatus(completedPanels),
             clientPreviewToken,
             updatedAt: Date.now()
         });
@@ -909,11 +940,11 @@ const requestExecutionPdf = async (req, res, next) => {
         if (!(await canManageExecutionRequest(req.user, project))) {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية إصدار أمر PDF تنفيذ لهذا المشروع." });
         }
-        if (!QUOTE_COMPLETED_STATUSES.includes(project.status)) {
-            return res.status(409).json({ status: "error", message: "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ." });
-        }
         const panel = getPanelById(project, req.body?.panelId);
         if (!panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإصدار أمر التنفيذ." });
+        if (panel.quoteStatus !== "quoteCompleted") {
+            return res.status(409).json({ status: "error", message: "يجب إتمام عرض سعر هذه اللوحة أولًا قبل إصدار أمر PDF التنفيذ." });
+        }
 
         panel.executionPdf = {
             ...(panel.executionPdf?.toObject?.() || panel.executionPdf || {}),
@@ -957,7 +988,6 @@ const uploadExecutionPdfFile = async (req, res, next) => {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
         if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "رفع PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
-        if (!["executionPdfRequested", "executionPdfReady", "executionOrdered"].includes(project.status)) return res.status(409).json({ status: "error", message: "لا يوجد أمر PDF تنفيذ مفتوح لهذا المشروع." });
         if (!req.file) return res.status(400).json({ status: "error", message: "اختر ملف PDF أو صورة أولًا." });
         const detectedMimeType = detectExecutionFileMimeType(req.file);
         if (!detectedMimeType) return res.status(400).json({ status: "error", message: "نوع الملف غير مدعوم. اختر PDF أو صورة." });
@@ -1050,7 +1080,7 @@ const skipExecutionPdf = async (req, res, next) => {
             startedAt: new Date(),
             startedBy: req.user._id
         };
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
         return res.status(200).json({ status: "ok", message: "تم تخطي PDF التنفيذ والانتقال إلى أمر التنفيذ.", project: updatedProject });
     } catch (error) { next(error); }
 };
@@ -1065,12 +1095,13 @@ const requestExecutionPdfChanges = async (req, res, next) => {
 
         const oldFiles = [...(panel.executionPdf.files || [])];
         panel.executionPdf.status = "changesRequested";
+        panel.quoteStatus = "editing";
         panel.executionPdf.changesRequestedAt = new Date();
         panel.executionPdf.changesRequestedBy = req.user._id;
         ensurePanelManufacturing(panel).status = "notStarted";
         await Promise.allSettled(oldFiles.map((file) => deleteStoredFile(file.storageFileId)));
         panel.executionPdf.files = [];
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "editingByEngineer", updatedAt: Date.now() });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
 
         let notification = "تم فتح التسعير للتعديل مع الاحتفاظ بجميع البيانات الحالية.";
         if (["marketing", "whatsapp"].includes(project.source)) {
@@ -1098,7 +1129,7 @@ const confirmExecution = async (req, res, next) => {
             startedAt: new Date(),
             startedBy: req.user._id
         };
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
 
         let notification = "تم تأكيد التنفيذ وفتح مرحلة ملفات التصنيع.";
         if (["marketing", "whatsapp"].includes(project.source)) {
@@ -1303,7 +1334,7 @@ const finishManufacturingFiles = async (req, res, next) => {
         panel.manufacturing.currentStage = "awaitingLaserDownload";
         panel.manufacturing.currentStageStartedAt = new Date();
         panel.manufacturing.lastReminderAt = null;
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "manufacturingFilesReady", updatedAt: Date.now() });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
         const recipients = await getActiveUsersByRoles(["OwnerManager", "ProductionManager"]);
         const results = await Promise.allSettled(recipients.map((recipient) => sendPanelFilesReady(recipient.phoneNumber, updatedProject, panel.panelName)));
         const sentCount = results.filter((result) => result.status === "fulfilled").length;
@@ -1329,7 +1360,7 @@ const markManufacturingDownloadedToLaser = async (req, res, next) => {
         laserStageDueAt.setHours(24, 0, 0, 0);
         panel.manufacturing.laserStageDueAt = laserStageDueAt;
         panel.manufacturing.lastReminderAt = null;
-        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: "laserFilesDownloaded", updatedAt: Date.now() });
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
         return res.status(200).json({ status: "ok", message: "تم تسجيل تنزيل الملفات إلى الليزر.", project: updatedProject });
     } catch (error) { next(error); }
 };
@@ -1427,12 +1458,11 @@ const updateManufacturingStage = async (req, res, next) => {
             return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم أولًا." });
         }
 
-        const allPanelsCompleted = (project.panels || []).every((item) => item.manufacturing?.currentStage === "completed");
+        const productionPanels = (project.panels || []).filter((item) => item.manufacturing?.status && item.manufacturing.status !== "notStarted");
+        const allPanelsCompleted = productionPanels.length > 0 && productionPanels.every((item) => item.manufacturing?.currentStage === "completed");
         const nextProjectStatus = allPanelsCompleted
             ? "completed"
-            : (project.panels || []).some((item) => item.manufacturing?.status === "downloadedToLaser")
-                ? "laserFilesDownloaded"
-                : "manufacturingFilesReady";
+            : deriveExecutionStatus(project.panels);
         const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: nextProjectStatus, updatedAt: Date.now() });
         return res.status(200).json({ status: "ok", message: action === "completed" ? "تم الانتقال إلى المرحلة التالية." : "تم حفظ تحديث المرحلة.", project: updatedProject });
     } catch (error) { next(error); }

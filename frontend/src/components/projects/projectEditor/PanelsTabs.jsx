@@ -1,6 +1,16 @@
 import { useProject } from "../../../context/ProjectContext";
 
 const panelStatus = (panel, projectStatus) => {
+  const executionStatus = panel.executionPdf?.status;
+  const manufacturingStatus = panel.manufacturing?.status;
+  if (manufacturingStatus === "downloadedToLaser") return ["نُزّلت إلى الليزر", "working"];
+  if (manufacturingStatus === "filesReady") return ["ملفات التصنيع جاهزة", "completed"];
+  if (manufacturingStatus === "awaitingFiles") return ["بانتظار ملفات التصنيع", "pending"];
+  if (executionStatus === "requested") return ["مطلوب PDF تنفيذ", "working"];
+  if (executionStatus === "ready") return ["PDF التنفيذ جاهز", "completed"];
+  if (executionStatus === "changesRequested") return ["مطلوب تعديل PDF التنفيذ", "editing"];
+  if (executionStatus === "confirmed") return ["تم تأكيد التنفيذ", "working"];
+  if (executionStatus === "skipped") return ["تم تخطي PDF التنفيذ", "completed"];
   const status = panel.quoteStatus || projectStatus;
   const statuses = {
     marketingDraft: ["مسودة", "draft"],
