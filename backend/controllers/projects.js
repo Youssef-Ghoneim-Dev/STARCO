@@ -432,13 +432,25 @@ const getProject = async (req, res, next) => {
         }
 
         const marketer = await getProjectMarketer(project);
+        const engineer = project.engineerId
+            ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
+            : null;
+        const latestProductionUpdate = (project.panels || [])
+            .flatMap((item) => item.manufacturing?.productionHistory || [])
+            .sort((first, second) => new Date(second.createdAt || 0) - new Date(first.createdAt || 0))[0];
         const projectResponse = {
             ...(project.toObject?.() || project),
             marketingRepresentative: marketer ? {
                 name: marketer.name,
                 phoneNumber: marketer.phoneNumber,
                 email: marketer.email
-            } : null
+            } : null,
+            assignedEngineer: engineer ? {
+                name: engineer.name,
+                phoneNumber: engineer.phoneNumber,
+                email: engineer.email
+            } : null,
+            lastUpdatedByName: latestProductionUpdate?.actorName || engineer?.name || marketer?.name || "غير محدد"
         };
 
         if (isOwner(req.user) || req.user.role === "MarketingManager") return res.status(200).json(projectResponse);
@@ -1297,7 +1309,7 @@ const updateManufacturingStage = async (req, res, next) => {
             stage.completedBy = req.user._id;
             stage.delayReason = "";
             stage.delayDetails = "";
-            manufacturing.productionHistory.push({ stageKey, action: "completed", actorRole: req.user.role, createdAt: now });
+            manufacturing.productionHistory.push({ stageKey, action: "completed", actorRole: req.user.role, actorName: req.user.name || "", createdAt: now });
 
             const nextStage = stages[stageIndex + 1];
             if (nextStage) {
@@ -1334,9 +1346,9 @@ const updateManufacturingStage = async (req, res, next) => {
             stage.delayedBy = req.user._id;
             manufacturing.delayReason = reason === "أخرى" ? details : reason;
             manufacturing.delayRecordedAt = now;
-            manufacturing.productionHistory.push({ stageKey, action: "delayed", reason, details, actorRole: req.user.role, createdAt: now });
+            manufacturing.productionHistory.push({ stageKey, action: "delayed", reason, details, actorRole: req.user.role, actorName: req.user.name || "", createdAt: now });
         } else if (action === "notes") {
-            manufacturing.productionHistory.push({ stageKey, action: "notes", details: notes, actorRole: req.user.role, createdAt: new Date() });
+            manufacturing.productionHistory.push({ stageKey, action: "notes", details: notes, actorRole: req.user.role, actorName: req.user.name || "", createdAt: new Date() });
         } else {
             return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم أولًا." });
         }

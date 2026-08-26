@@ -54,6 +54,7 @@ const productionHistorySchema = new mongoose.Schema({
     reason: { type: String, default: "" },
     details: { type: String, default: "" },
     actorRole: { type: String, default: "" },
+    actorName: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 
