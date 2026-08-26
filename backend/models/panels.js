@@ -1,0 +1,10 @@
+const dbconfig = require("../DB/config");
+const schema = require("../DB/schema/panels");
+const model = () => dbconfig.openconnection("panels", schema);
+const find = (condition) => model().find(condition).sort({ sequence: 1 });
+const findOne = (condition) => model().findOne(condition);
+const create = (payload) => model().create(payload);
+const update = (condition, value, options = {}) => model().findOneAndUpdate(condition, value, { returnDocument: "after", runValidators: true, ...options });
+const updateMany = (condition, value) => model().updateMany(condition, value);
+const deleteMany = (condition) => model().deleteMany(condition);
+module.exports = { model, find, findOne, create, update, updateMany, deleteMany };

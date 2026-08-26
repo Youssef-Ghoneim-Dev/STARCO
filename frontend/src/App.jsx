@@ -12,6 +12,8 @@ import Users from "./pages/Users";
 import PendingUsers from "./pages/PendingUsers";
 import NewProject from "./pages/NewProject";
 import EditProject from "./pages/EditProject";
+import ProjectFolder from "./pages/ProjectFolder";
+import Panels from "./pages/Panels";
 import Configuration from "./pages/Configuration";
 import Profile from "./pages/Profile";
 import Clients from "./pages/Clients";
@@ -67,7 +69,9 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/projects" element={<Projects />} />
           <Route path="/new-project" element={<NewProject />} />
-          <Route path="/projects/:id" element={<EditProject />} />
+          <Route path="/projects/:id" element={<ProjectFolder />} />
+          <Route path="/projects/:id/panels/:panelId" element={<EditProject />} />
+          <Route path="/panels" element={<Panels />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
           <Route path="/pending-users" element={<PendingUsers />} />

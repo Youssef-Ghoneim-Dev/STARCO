@@ -6,7 +6,7 @@ import { createProjectPdf, getProjectPdfFilename } from "../../../utils/projectP
 
 function SaveActions() {
   const navigate = useNavigate();
-  const { saveProject, savingProject, saveProjectError, project, prices, systemConfig } = useProject();
+  const { saveProject, savingProject, saveProjectError, project, prices, systemConfig, activePanel } = useProject();
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [defaultNamesConfirmation, setDefaultNamesConfirmation] = useState(false);
   const [pendingCompletionAction, setPendingCompletionAction] = useState("link");
@@ -19,7 +19,8 @@ function SaveActions() {
     if (client.profitPercentage === "" || client.profitPercentage == null || Number(client.profitPercentage) <= 0) errors.push("يرجى تحديد نسبة الربح.");
     if (prices.sheetPrice === "") errors.push("يرجى إدخال سعر الصاج.");
     if (prices.paintPrice === "") errors.push("يرجى إدخال سعر الدهان.");
-    project.panels.forEach((panel, index) => {
+    [project.panels[activePanel]].filter(Boolean).forEach((panel) => {
+      const index = activePanel;
       const panelLabel = panel.panelName?.trim() || `لوحة ${index + 1}`;
       if (!panel.panelName?.trim()) errors.push(`يرجى إدخال اسم ${panelLabel}.`);
       const dimensionLabels = { length: "الطول", width: "العرض", depth: "العمق" };
@@ -47,13 +48,13 @@ function SaveActions() {
       }
     });
     return errors;
-  }, [project, prices, systemConfig?.copperConfiguration?.pricePerKg]);
+  }, [activePanel, project, prices, systemConfig?.copperConfiguration?.pricePerKg]);
   const canSubmit = validationErrors.length === 0;
 
   const generatePdf = async () => {
     setGeneratingPdf(true);
     try {
-      return await createProjectPdf({ project, prices, copperConfiguration: systemConfig?.copperConfiguration });
+      return await createProjectPdf({ project: { ...project, panels: [project.panels[activePanel]] }, prices, copperConfiguration: systemConfig?.copperConfiguration });
     } catch (error) {
       console.error(error);
       toast.error("تعذر إنشاء ملف PDF.");
@@ -82,7 +83,7 @@ function SaveActions() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  const defaultPanelNames = project.panels
+  const defaultPanelNames = [project.panels[activePanel]].filter(Boolean)
     .map((panel, index) => panel.panelName?.trim() || `لوحة ${index + 1}`)
     .filter((name) => /^لوحة\s*\d+$/u.test(name));
 
@@ -104,7 +105,7 @@ function SaveActions() {
         return;
       }
       if (!isManualProject) {
-        navigate("/projects");
+        navigate(`/projects/${project._id}`);
         return;
       }
       const previewToken = result.data?.project?.clientPreviewToken;
@@ -136,7 +137,7 @@ function SaveActions() {
     <div className={`save-actions ${isManualProject ? "save-actions-three" : "save-actions-two"}`}>
       <button className="secondary-btn" type="button" onClick={previewPdf} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "معاينة PDF"}</button>
       {isManualProject && <button className="secondary-btn download-pdf-btn" type="button" onClick={() => complete({ action: "download" })} disabled={!canSubmit || generatingPdf || savingProject}>{generatingPdf ? "جاري إنشاء PDF..." : "تحميل PDF"}</button>}
-      <button className="complete-project-btn" type="button" onClick={() => complete({ action: "link" })} disabled={!canSubmit || savingProject || generatingPdf}>إتمام المشروع واستخراج رابط المعاينة</button>
+      <button className="complete-project-btn" type="button" onClick={() => complete({ action: "link" })} disabled={!canSubmit || savingProject || generatingPdf}>إتمام تسعير اللوحة</button>
     </div>
     {!canSubmit && <ul className="save-validation-list">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>}
     {defaultNamesConfirmation && <div className="panel-name-warning-backdrop" role="presentation" onMouseDown={() => setDefaultNamesConfirmation(false)}>

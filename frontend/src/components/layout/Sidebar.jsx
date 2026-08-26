@@ -9,6 +9,7 @@ import {
   HiOutlineCog,
   HiOutlineLogout,
   HiOutlineX,
+  HiOutlineViewGrid,
 } from "react-icons/hi";
 
 import logo from "../../assets/images/logo.jpg";
@@ -69,6 +70,10 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
                 <HiOutlineFolder />
                 Projects
               </NavLink>
+              <NavLink to="/panels" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
+                <HiOutlineViewGrid />
+                Panels
+              </NavLink>
 
               {(role === "Engineer" || role === "OwnerManager") && (
                 <NavLink to="/clients" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
@@ -119,6 +124,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
             <span>Projects</span>
           </NavLink>
         )}
+        {canViewProjects && <NavLink to="/panels" onClick={onClose}><HiOutlineViewGrid /><span>Panels</span></NavLink>}
         {(role === "Engineer" || role === "OwnerManager") && (
           <NavLink className="mobile-client-link" to="/clients" onClick={onClose}><HiOutlineUsers /><span>Clients</span></NavLink>
         )}

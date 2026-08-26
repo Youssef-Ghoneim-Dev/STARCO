@@ -35,78 +35,69 @@ export const restoreProject = (id) => api.patch(`/projects/${id}`);
 export const permanentlyDeleteProject = (id) => api.delete(`/projects/${id}/permanent`);
 
 export const completeProject = (id) => {
-    return api.post(`/projects/${id}/complete`);
+    return api.post(`/projects/${id}/preview`);
 };
 
-export const startProjectEditing = (id, panelId) => api.post(`/projects/${id}/start-editing`, { panelId });
+export const startProjectEditing = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/open-editing`);
 
 export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
 
-export const requestExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/request`, { panelId });
+export const requestExecutionPdf = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/request`);
+
+export const getPanels = (projectId) => api.get(`/projects/${projectId}/panels`);
+export const getAllPanels = () => api.get("/panels");
+export const getPanel = (projectId, panelId) => api.get(`/projects/${projectId}/panels/${panelId}`);
+export const createPanel = (projectId, data = {}) => api.post(`/projects/${projectId}/panels`, data);
+export const updatePanelRecord = (projectId, panelId, data) => api.put(`/projects/${projectId}/panels/${panelId}`, data);
+export const deletePanelRecord = (projectId, panelId) => api.delete(`/projects/${projectId}/panels/${panelId}`);
+export const claimPanel = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/claim`);
+export const completePanelQuote = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/complete-quote`);
+export const submitPanelEdits = (projectId) => api.post(`/projects/${projectId}/panels/submit-edits`);
+export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
+export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 
 export const uploadExecutionPdfFile = (projectId, panelId, file) => {
     const formData = new FormData();
     formData.append("panelId", panelId);
     formData.append("file", file);
-    return api.post(`/projects/${projectId}/execution-pdf/files`, formData);
+    return api.post(`/projects/${projectId}/panels/${panelId}/execution-pdf/files`, formData);
 };
 
-export const finishExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/finish`, { panelId });
+export const finishExecutionPdf = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/finish`);
 
-export const skipExecutionPdf = (id, panelId) => api.post(`/projects/${id}/execution-pdf/skip`, { panelId });
+export const skipExecutionPdf = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/skip`);
 
-export const requestExecutionPdfChanges = (id, panelId) => api.post(`/projects/${id}/execution-pdf/request-changes`, { panelId });
+export const requestExecutionPdfChanges = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/request-changes`);
 
-export const confirmProjectExecution = (id, panelId) => api.post(`/projects/${id}/execution-pdf/confirm`, { panelId });
+export const confirmProjectExecution = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution/confirm`);
 
 export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
-    `/projects/${projectId}/execution-pdf/${panelId}/files/${fileId}`,
+    `/projects/${projectId}/panels/${panelId}/execution-pdf/files/${fileId}`,
     { responseType: "blob" },
 );
 
 export const deleteExecutionPdfFile = (projectId, panelId, fileId) => api.delete(
-    `/projects/${projectId}/execution-pdf/${panelId}/files/${fileId}`,
+    `/projects/${projectId}/panels/${panelId}/execution-pdf/files/${fileId}`,
 );
 
 export const uploadManufacturingFile = async (projectId, panelId, file) => {
-    const { data: session } = await api.post(`/projects/${projectId}/manufacturing/upload-session`, {
-        panelId,
-        fileName: file.name,
-        mimeType: file.type || "application/octet-stream",
-        fileSize: file.size,
-    });
-
-    const chunkSize = Number(session.chunkSize) || (3 * 1024 * 1024);
-    let finalResponse = null;
-    for (let start = 0; start < file.size; start += chunkSize) {
-        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
-        const formData = new FormData();
-        formData.append("panelId", panelId);
-        formData.append("uploadToken", session.uploadToken);
-        formData.append("start", String(start));
-        formData.append("total", String(file.size));
-        formData.append("chunk", chunk, `${file.name}.part`);
-        finalResponse = await api.post(`/projects/${projectId}/manufacturing/upload-chunk`, formData);
-    }
-
-    if (!finalResponse?.data?.complete || !finalResponse?.data?.project) {
-        throw new Error("لم يكتمل رفع الملف. حاول مرة أخرى.");
-    }
-    return finalResponse;
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/projects/${projectId}/panels/${panelId}/manufacturing/files`, formData);
 };
 
 export const finishManufacturingFiles = (projectId, panelId, notes) => api.post(
-    `/projects/${projectId}/manufacturing/finish`,
-    { panelId, notes },
+    `/projects/${projectId}/panels/${panelId}/manufacturing/finish`,
+    { notes },
 );
 
 export const getManufacturingFile = (projectId, panelId, fileId) => api.get(
-    `/projects/${projectId}/manufacturing/${panelId}/files/${fileId}`,
+    `/projects/${projectId}/panels/${panelId}/manufacturing/files/${fileId}`,
     { responseType: "blob" },
 );
 
 export const getManufacturingArchive = (projectId, panelId) => api.get(
-    `/projects/${projectId}/manufacturing/${panelId}/archive`,
+    `/projects/${projectId}/panels/${panelId}/manufacturing/archive`,
     { responseType: "blob" },
 );
 
@@ -121,7 +112,7 @@ export const recordManufacturingDelay = (projectId, panelId, reason) => api.post
 );
 
 export const updateManufacturingStage = (projectId, payload) => api.post(
-    `/projects/${projectId}/manufacturing/stage`,
+    `/projects/${projectId}/panels/${payload.panelId}/manufacturing/stage`,
     payload,
 );
 

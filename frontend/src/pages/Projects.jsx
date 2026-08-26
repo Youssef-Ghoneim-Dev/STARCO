@@ -33,6 +33,8 @@ function Projects() {
 
   const filteredProjects = useMemo(() => {
     const statusPriority = {
+      draft: 0,
+      created: 1,
       editing: 0,
       inProgress: 1,
       pending: 2,

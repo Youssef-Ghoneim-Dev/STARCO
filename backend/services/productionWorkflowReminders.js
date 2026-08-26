@@ -1,4 +1,5 @@
 const projects = require("../models/projects");
+const panels = require("../models/panels");
 const users = require("../models/users");
 const { sendProductionStageCheck } = require("./projectWhatsappNotifications");
 
@@ -7,11 +8,7 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 
 const runProductionWorkflowReminders = async () => {
     const now = new Date();
-    const projectsToCheck = await projects.selectall({
-        isDeleted: false,
-        status: { $in: ["manufacturingFilesReady", "laserFilesDownloaded"] },
-        "panels.manufacturing.status": { $in: ["filesReady", "downloadedToLaser"] }
-    });
+    const panelsToCheck = await panels.find({ isDeleted: false, status: { $in: ["manufacturingFilesReady", "pendingLaserDownload", "laser"] } });
     const recipients = await users.selectall({
         role: { $in: ["OwnerManager", "ProductionManager"] },
         approved: true,
@@ -21,15 +18,14 @@ const runProductionWorkflowReminders = async () => {
     let remindersSent = 0;
     let delaysRecorded = 0;
 
-    for (const project of projectsToCheck) {
-        let changed = false;
-        for (const panel of project.panels || []) {
-            const workflow = panel.manufacturing;
-            if (!workflow || !["filesReady", "downloadedToLaser"].includes(workflow.status)) continue;
-            const isWaitingForLaserDownload = workflow.status === "filesReady";
-            if (!isWaitingForLaserDownload && workflow.currentStage && workflow.currentStage !== "laser") continue;
-            const dueAt = isWaitingForLaserDownload ? workflow.filesReadyAt : workflow.laserStageDueAt;
-            if (!dueAt || now < new Date(dueAt)) continue;
+    for (const panel of panelsToCheck) {
+            const project = await projects.select_one({ _id: panel.projectId, isDeleted: false }); if (!project) continue;
+            const workflow = panel.manufacturing || {};
+            const activeStage = (workflow.stages || []).find((stage) => stage.status === "active");
+            if (!activeStage || !["pendingLaserDownload", "laser"].includes(activeStage.key)) continue;
+            const isWaitingForLaserDownload = activeStage.key === "pendingLaserDownload";
+            const dueAt = activeStage.startedAt;
+            if (!dueAt || (isWaitingForLaserDownload && now.getTime() - new Date(dueAt).getTime() < TWO_HOURS) || (!isWaitingForLaserDownload && now < new Date(new Date(dueAt).setHours(24, 0, 0, 0)))) continue;
             const lastReminder = workflow.lastReminderAt ? new Date(workflow.lastReminderAt).getTime() : 0;
             if (now.getTime() - lastReminder < TWO_HOURS) continue;
 
@@ -38,17 +34,16 @@ const runProductionWorkflowReminders = async () => {
                 recipients.map((recipient) => sendProductionStageCheck(recipient.phoneNumber, project, panel, stageName))
             );
             remindersSent += results.filter((result) => result.status === "fulfilled").length;
-            workflow.lastReminderAt = now;
-            if (isWaitingForLaserDownload && now.getTime() - new Date(workflow.filesReadyAt).getTime() >= ONE_DAY && !workflow.delayRecordedAt) {
-                workflow.delayReason = "عدم تنزيل الملفات إلى الليزر";
-                workflow.delayRecordedAt = now;
+            const update = { "manufacturing.lastReminderAt": now };
+            if (isWaitingForLaserDownload && now.getTime() - new Date(dueAt).getTime() >= ONE_DAY && !activeStage.delayedAt) {
+                activeStage.delayReason = "عدم تنزيل الملفات إلى الليزر";
+                activeStage.delayedAt = now;
+                update["manufacturing.stages"] = workflow.stages;
                 delaysRecorded += 1;
             }
-            changed = true;
-        }
-        if (changed) await projects.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+            await panels.update({ _id: panel._id }, update);
     }
-    return { projectsChecked: projectsToCheck.length, remindersSent, delaysRecorded };
+    return { projectsChecked: new Set(panelsToCheck.map((panel) => String(panel.projectId))).size, remindersSent, delaysRecorded };
 };
 
 module.exports = { runProductionWorkflowReminders };

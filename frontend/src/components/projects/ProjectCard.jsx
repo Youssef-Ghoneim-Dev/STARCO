@@ -25,6 +25,8 @@ const formatProjectDate = (dateValue) => {
 };
 
 const statusDetails = {
+  draft: { label: "مسودة", className: "editing" },
+  created: { label: "جديد للتسعير", className: "pending" },
   marketingDraft: { label: "مسودة المندوب", className: "editing" },
   editingByMarketing: { label: "يعدله المندوب", className: "editing" },
   editingByEngineer: { label: "يعدله المهندس", className: "in-progress" },

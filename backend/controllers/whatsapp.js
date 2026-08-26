@@ -1,6 +1,8 @@
 const crypto = require("crypto");
 const users = require("../models/users");
 const projects = require("../models/projects");
+const panelsModel = require("../models/panels");
+const counters = require("../models/counters");
 const sessions = require("../models/whatsappSessions");
 const messages = require("../models/whatsappMessages");
 const systemConfiguration = require("../models/systemConfiguration");
@@ -25,6 +27,12 @@ const {
 
 const SESSION_HOURS = 24;
 const sameId = (first, second) => String(first || "") === String(second || "");
+const loadProjectWithPanels = async (condition) => {
+    const project = await projects.select_one(condition);
+    if (!project) return null;
+    project.panels = await panelsModel.find({ projectId: project._id, isDeleted: false });
+    return project;
+};
 
 const loadWhatsappTemplates = async () => {
     const config = await systemConfiguration.get();
@@ -165,7 +173,7 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
     }
 
     const project = await projects.select_one({ _id: outbound.projectId, isDeleted: false });
-    const panel = project?.panels?.find((item) => String(item.panelId) === String(outbound.panelId));
+    const panel = project && await panelsModel.findOne({ _id: outbound.panelId, projectId: project._id, isDeleted: false });
     if (!project || !panel?.manufacturing) {
         await sendSafeText(senderPhone, "تعذر العثور على اللوحة المرتبطة برسالة المتابعة.");
         return true;
@@ -175,7 +183,7 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
         providerMessageId: message.id,
         direction: "inbound",
         projectId: project._id,
-        panelId: panel.panelId,
+        panelId: panel._id,
         senderPhone,
         type: "production_stage_reply",
         text,
@@ -185,33 +193,30 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
 
     const stageName = outbound.rawPayload?.stageName || "";
     if (!answer) {
-        panel.manufacturing.delayReason = "بانتظار تحديد سبب التأخير";
-        panel.manufacturing.delayRecordedAt = new Date();
-        await projects.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
+        const active = stageRows.find((stage) => stage.status === "active");
+        if (active) { active.delayReason = active.key === "pendingLaserDownload" ? "برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة" : "بانتظار تحديد سبب التأخير"; active.delayedAt = new Date(); active.delayedBy = responder._id; }
+        await panelsModel.update({ _id: panel._id }, { "manufacturing.stages": stageRows });
         const link = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/projects/${project._id}`;
         await sendSafeText(senderPhone, `تم تسجيل وجود تأخير في «${stageName}». افتح المشروع واختر سبب التأخير من القائمة:\n${link}`);
         return true;
     }
 
     if (stageName.includes("تنزيل الملفات")) {
-        const nextMidnight = new Date();
-        nextMidnight.setHours(24, 0, 0, 0);
-        panel.manufacturing.status = "downloadedToLaser";
-        panel.manufacturing.downloadedToLaserAt = new Date();
-        panel.manufacturing.downloadedToLaserBy = responder._id;
-        panel.manufacturing.laserStageDueAt = nextMidnight;
-        panel.manufacturing.currentStage = "laser";
-        panel.manufacturing.currentStageStartedAt = new Date();
-        panel.manufacturing.lastReminderAt = null;
-        await projects.update({ id: project._id, panels: project.panels, status: "laserFilesDownloaded", updatedAt: Date.now() });
+        const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
+        const current = stageRows.find((stage) => stage.status === "active"); const currentIndex = stageRows.indexOf(current);
+        if (current) { current.status = "completed"; current.completedAt = new Date(); current.completedBy = responder._id; }
+        const nextStage = stageRows[currentIndex + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); }
+        await panelsModel.update({ _id: panel._id }, { status: nextStage?.key || "completed", "manufacturing.stages": stageRows, "manufacturing.lastReminderAt": null });
         await sendSafeText(senderPhone, `تم تسجيل تنزيل ملفات اللوحة «${panel.panelName}» إلى الليزر. ستبدأ متابعة مرحلة الليزر في اليوم التالي.`);
         return true;
     }
 
-    panel.manufacturing.currentStage = "manufacturing";
-    panel.manufacturing.currentStageStartedAt = new Date();
-    panel.manufacturing.lastReminderAt = null;
-    await projects.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+    const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
+    const current = stageRows.find((stage) => stage.status === "active"); const currentIndex = stageRows.indexOf(current);
+    if (current) { current.status = "completed"; current.completedAt = new Date(); current.completedBy = responder._id; }
+    const nextStage = stageRows[currentIndex + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); }
+    await panelsModel.update({ _id: panel._id }, { status: nextStage?.key || "completed", "manufacturing.stages": stageRows, "manufacturing.lastReminderAt": null });
     await sendSafeText(senderPhone, `تم تسجيل اكتمال مرحلة الليزر للوحة «${panel.panelName}» والانتقال إلى مرحلة التصنيع.`);
     return true;
 };
@@ -275,12 +280,12 @@ const createProjectFromSession = async (session) => {
 
     const baseProject = defaultProject();
     const configuredPanelPrices = systemConfig.prices || {};
-
-    return projects.create({
-        ...baseProject,
+    const year = new Date().getFullYear();
+    const projectCode = `PRJ-${year}-${String(await counters.next(`project-${year}`)).padStart(6, "0")}`;
+    const project = await projects.create({
+        projectCode,
         marketingId: session.marketingRepId,
-        engineerId: null,
-        status: "pending",
+        status: "created",
         client: {
             ...baseProject.client,
             name: session.client.name,
@@ -291,25 +296,30 @@ const createProjectFromSession = async (session) => {
             paintPrice: systemConfig.paintPrice ?? baseProject.prices.paintPrice
         },
         source: "whatsapp",
-        whatsappSessionId: session._id,
-        panels: session.panels.map((panel, index) => {
+        panelIds: []
+    });
+    const createdPanels = await Promise.all(session.panels.map((panel, index) => {
             const basePanel = JSON.parse(JSON.stringify(baseProject.panels[0]));
             const typeConfig = (systemConfig.panelTypes || []).find((item) => item.key === panelTypeKeyFor(panel.panelType, systemConfig.panelTypes));
-            return {
-                ...basePanel,
+            return panelsModel.create({
+                projectId: project._id,
+                panelCode: `${projectCode}-P${String(index + 1).padStart(2, "0")}`,
+                sequence: index + 1,
+                source: "whatsapp",
+                status: "pendingPricing",
+                marketerSaved: true,
+                marketingId: session.marketingRepId,
                 panelName: panel.panelName || `لوحة ${index + 1}`,
-                thickness: panel.requestedThicknesses,
-                panelType: panel.panelType,
-                panelTypeKey: typeConfig?.key || panelTypeKeyFor(panel.panelType, systemConfig.panelTypes),
-                hasCopper: panel.hasCopper,
-                additionalDetails: panel.details,
-                controlInstallation: panel.controlInstallation || "",
-                copperDetails: panel.copperDetails || {},
-                parts: (typeConfig?.parts || []).map((part) => ({
-                    name: part.name,
-                    quantity: part.quantity || 1
-                })),
-                prices: {
+                marketerData: {
+                    thickness: panel.requestedThicknesses,
+                    panelType: panel.panelType,
+                    panelTypeKey: typeConfig?.key || panelTypeKeyFor(panel.panelType, systemConfig.panelTypes),
+                    hasCopper: panel.hasCopper,
+                    additionalDetails: panel.details,
+                    controlInstallation: panel.controlInstallation || "",
+                    copperDetails: panel.copperDetails || {}
+                },
+                pricing: { parts: (typeConfig?.parts || []).map((part) => ({ name: part.name, quantity: part.quantity || 1 })), prices: {
                     ...basePanel.prices,
                     manufacturing: typeConfig?.prices?.manufacturing ?? configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
                     locks: typeConfig?.prices?.locks ?? configuredPanelPrices.locks ?? basePanel.prices.locks,
@@ -317,10 +327,13 @@ const createProjectFromSession = async (session) => {
                     transport: typeConfig?.prices?.transport ?? configuredPanelPrices.transport ?? basePanel.prices.transport,
                     screws: typeConfig?.prices?.screws ?? configuredPanelPrices.screws ?? basePanel.prices.screws,
                     stretch: typeConfig?.prices?.stretch ?? configuredPanelPrices.stretch ?? basePanel.prices.stretch
-                }
-            };
-        })
-    });
+                } },
+                statusHistory: [{ from: "draft", to: "pendingPricing", action: "whatsappProjectSubmitted", actorId: session.marketingRepId, actorRole: "Marketer" }]
+            });
+        }));
+    const saved = await projects.update({ _id: project._id }, { panelIds: createdPanels.map((panel) => panel._id) });
+    saved.panels = createdPanels;
+    return saved;
 };
 
 const updateProjectFromSession = async (session) => {
@@ -331,30 +344,29 @@ const updateProjectFromSession = async (session) => {
     });
     if (!targetProject) return null;
 
-    const panels = targetProject.panels.map((existingPanel, index) => {
+    const storedPanels = await panelsModel.find({ projectId: targetProject._id, isDeleted: false });
+    await Promise.all(storedPanels.map((existingPanel, index) => {
         const incomingPanel = session.panels.find((panel) => panel.targetPanelIndex === index + 1);
-        if (!incomingPanel) return existingPanel.toObject();
-
-        return {
-            ...existingPanel.toObject(),
+        if (!incomingPanel) return null;
+        return panelsModel.update({ _id: existingPanel._id }, {
+            status: "pendingPricing",
+            engineerId: null,
             panelName: existingPanel.panelName,
-            thickness: incomingPanel.requestedThicknesses,
-            panelType: incomingPanel.panelType,
-            panelTypeKey: incomingPanel.panelTypeKey || existingPanel.panelTypeKey || "",
-            hasCopper: incomingPanel.hasCopper,
-            additionalDetails: incomingPanel.details,
-            controlInstallation: incomingPanel.controlInstallation || "",
-            copperDetails: incomingPanel.copperDetails || {}
-        };
-    });
-
-    return projects.update_whatsapp_project(targetProject._id, {
-        client: session.client,
-        panels,
-        source: "whatsapp",
-        whatsappSessionId: session._id,
-        updatedAt: Date.now()
-    });
+            marketerData: {
+                ...(existingPanel.marketerData?.toObject?.() || existingPanel.marketerData || {}),
+                thickness: incomingPanel.requestedThicknesses,
+                panelType: incomingPanel.panelType,
+                panelTypeKey: incomingPanel.panelTypeKey || existingPanel.marketerData?.panelTypeKey || "",
+                hasCopper: incomingPanel.hasCopper,
+                additionalDetails: incomingPanel.details,
+                controlInstallation: incomingPanel.controlInstallation || "",
+                copperDetails: incomingPanel.copperDetails || {}
+            }
+        });
+    }));
+    const saved = await projects.update_whatsapp_project(targetProject._id, { status: "inProgress", source: "whatsapp", updatedAt: Date.now() });
+    saved.panels = await panelsModel.find({ projectId: targetProject._id, isDeleted: false });
+    return saved;
 };
 
 const attachMessagesToProject = async (session, project) => {
@@ -362,19 +374,30 @@ const attachMessagesToProject = async (session, project) => {
         session.panels.map((panel, index) => [
             panel.localPanelKey,
             ["edit", "media"].includes(session.mode)
-                ? project.panels[panel.targetPanelIndex - 1]?.panelId
-                : project.panels[index]?.panelId
+                ? project.panels[panel.targetPanelIndex - 1]?._id
+                : project.panels[index]?._id
         ])
     );
     const incomingMessages = await messages.findBySession(session._id);
 
-    await Promise.all(incomingMessages.map((message) =>
-        messages.updateByProviderMessageId(message.providerMessageId, {
+    await Promise.all(incomingMessages.map(async (message) => {
+        const panelId = panelMap.get(message.panelLocalKey) || null;
+        await messages.updateByProviderMessageId(message.providerMessageId, {
             projectId: project._id,
-            panelId: panelMap.get(message.panelLocalKey) || null,
+            panelId,
             status: "attached"
-        })
-    ));
+        });
+        if (panelId && message.media?.storageFileId) {
+            await panelsModel.update({ _id: panelId, projectId: project._id }, { $addToSet: { attachments: {
+                storageFileId: message.media.storageFileId,
+                fileName: message.media.fileName || `whatsapp-${message._id}`,
+                mimeType: message.media.mimeType || "application/octet-stream",
+                fileSize: Number(message.media.fileSize || 0),
+                uploadedAt: message.media.uploadedAt || new Date(),
+                uploadedBy: session.marketingRepId
+            } } });
+        }
+    }));
 };
 
 const projectCreatedReply = (project) => {
@@ -446,6 +469,7 @@ const finishSession = async (session, inboundMessage) => {
             isDeleted: false
         });
         if (!targetProject) return { error: "تعذر العثور على المشروع أو لا تملك صلاحية إضافة المرفقات إليه." };
+        targetProject.panels = await panelsModel.find({ projectId: targetProject._id, isDeleted: false });
 
         const sessionMessages = await messages.findBySession(session._id);
         const unuploadedMedia = sessionMessages.filter((message) => message.media?.providerMediaId && !message.media?.storageFileId);
@@ -558,27 +582,18 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
     const templates = await loadWhatsappTemplates();
 
     if (command.type === "execution-pdf") {
-        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        const targetProject = await loadProjectWithPanels({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
-        if (!["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(targetProject.status)) return "يجب إتمام عرض السعر أولًا قبل إصدار أمر PDF التنفيذ.";
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
             return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
         }
         const panel = targetProject.panels[command.panelNumber - 1];
-        panel.executionPdf = {
-            ...(panel.executionPdf?.toObject?.() || panel.executionPdf || {}),
-            status: "requested",
-            requestedAt: new Date(),
-            requestedBy: marketer._id,
-            completedAt: null,
-            completedBy: null,
-            skippedAt: null,
-            skippedBy: null
-        };
-        const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "executionPdfRequested", updatedAt: Date.now() });
-        const assignedEngineer = targetProject.engineerId
-            ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false })
+        if (panel.status !== "quoteCompleted") return "يجب إتمام عرض سعر اللوحة أولًا قبل إصدار أمر PDF التنفيذ.";
+        const savedPanel = await panelsModel.update({ _id: panel._id }, { status: "executionPdfRequested", "executionPdf.requestedAt": new Date(), "executionPdf.requestedBy": marketer._id });
+        const updatedProject = targetProject;
+        const assignedEngineer = panel.engineerId
+            ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false })
             : null;
         const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
         const managers = await users.selectall({ role: { $in: ["OwnerManager", "ProductionManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
@@ -587,7 +602,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return phone && all.findIndex((item) => String(item.phoneNumber || "").replace(/\D/g, "") === phone) === index;
         });
         const results = await Promise.allSettled(recipients.map((recipient) =>
-            sendExecutionPdfRequested(recipient.phoneNumber, updatedProject, panel.panelName)
+            sendExecutionPdfRequested(recipient.phoneNumber, updatedProject, savedPanel.panelName)
         ));
         const sentCount = results.filter((result) => result.status === "fulfilled").length;
         return sentCount
@@ -596,34 +611,27 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
     }
 
     if (command.type === "execution-decision") {
-        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        const targetProject = await loadProjectWithPanels({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
         const panel = targetProject.panels[command.panelNumber - 1];
-        if (!["ready", "skipped"].includes(panel.executionPdf?.status)) return "يجب تجهيز PDF التنفيذ أو تخطيه أولًا.";
+        if (panel.status !== "executionPdfReady") return "يجب تجهيز PDF التنفيذ أو تخطيه أولًا.";
 
         if (command.decision === "changes") {
-            const files = [...(panel.executionPdf.files || [])];
-            panel.executionPdf.status = "changesRequested";
-            panel.executionPdf.changesRequestedAt = new Date();
-            panel.executionPdf.changesRequestedBy = marketer._id;
-            panel.executionPdf.files = [];
-            if (panel.manufacturing) panel.manufacturing.status = "notStarted";
-            const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "editingByEngineer", updatedAt: Date.now() });
+            const files = [...(panel.executionPdf?.files || [])];
+            await panelsModel.update({ _id: panel._id }, { status: "editing", "executionPdf.files": [] });
+            const updatedProject = targetProject;
             await Promise.allSettled(files.map((file) => deleteStoredFile(file.storageFileId)));
-            const assignedEngineer = targetProject.engineerId ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false }) : null;
+            const assignedEngineer = panel.engineerId ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false }) : null;
             const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
             await Promise.allSettled(engineers.map((engineer) => sendProjectUpdatedReview(engineer.phoneNumber, updatedProject, marketer.name || "غير محدد")));
             return `تم فتح مشروع اللوحة «${panel.panelName}» للتعديل مع الاحتفاظ بجميع بيانات التسعير.`;
         }
 
-        panel.executionPdf.status = "confirmed";
-        panel.executionPdf.confirmedAt = new Date();
-        panel.executionPdf.confirmedBy = marketer._id;
-        panel.manufacturing = { ...(panel.manufacturing?.toObject?.() || panel.manufacturing || {}), status: "awaitingFiles", startedAt: new Date(), startedBy: marketer._id };
-        const updatedProject = await projects.update({ id: targetProject._id, panels: targetProject.panels, status: "manufacturingFilesPending", updatedAt: Date.now() });
-        const assignedEngineer = targetProject.engineerId ? await users.select_one({ _id: targetProject.engineerId, approved: true, isDeleted: false }) : null;
+        await panelsModel.update({ _id: panel._id }, { status: "manufacturingFilesPending", "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": marketer._id });
+        const updatedProject = targetProject;
+        const assignedEngineer = panel.engineerId ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false }) : null;
         const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
         await Promise.allSettled(engineers.map((engineer) => sendExecutionConfirmed(engineer.phoneNumber, updatedProject, panel.panelName)));
         return `تم تأكيد تنفيذ اللوحة «${panel.panelName}» وفتح مرحلة رفع ملفات التصنيع.`;
@@ -633,7 +641,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (await getActiveSession(senderPhone)) {
             return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
-        const targetProject = await projects.select_one({ _id: command.projectId, isDeleted: false });
+        const targetProject = await loadProjectWithPanels({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) {
             return "لم يتم العثور على مشروع بهذا ID تابع لك.";
@@ -648,8 +656,8 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             panelName: targetPanel.panelName || `لوحة ${command.panelNumber}`,
             targetPanelIndex: command.panelNumber,
             requestedThicknesses: [],
-            panelType: targetPanel.panelType || "",
-            hasCopper: targetPanel.hasCopper,
+            panelType: targetPanel.marketerData?.panelType || "",
+            hasCopper: targetPanel.marketerData?.hasCopper,
             details: ""
         };
         await sessions.create({
@@ -688,7 +696,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (await getActiveSession(senderPhone)) {
             return "لديك مشروع مفتوح بالفعل. أنهِه أو ألغِه قبل بدء التعديل.";
         }
-        const targetProject = await projects.select_one({
+        const targetProject = await loadProjectWithPanels({
             _id: command.projectId,
             marketingId: marketer._id,
             isDeleted: false
@@ -730,7 +738,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${session.targetPanelCount} لوحة.`;
         }
 
-        const targetProject = await projects.select_one({
+        const targetProject = await loadProjectWithPanels({
             _id: session.targetProjectId,
             marketingId: marketer._id,
             isDeleted: false
@@ -744,12 +752,12 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             sourceMessageId: inboundMessage.id,
             panelName: existingProjectPanel.panelName,
             targetPanelIndex: command.panelNumber,
-            requestedThicknesses: existingProjectPanel.thickness || [],
-            panelType: existingProjectPanel.panelType || "",
-            hasCopper: existingProjectPanel.hasCopper,
-            details: existingProjectPanel.additionalDetails || "",
-            controlInstallation: existingProjectPanel.controlInstallation || "",
-            copperDetails: existingProjectPanel.copperDetails || {}
+            requestedThicknesses: existingProjectPanel.marketerData?.thickness || [],
+            panelType: existingProjectPanel.marketerData?.panelType || "",
+            hasCopper: existingProjectPanel.marketerData?.hasCopper,
+            details: existingProjectPanel.marketerData?.additionalDetails || "",
+            controlInstallation: existingProjectPanel.marketerData?.controlInstallation || "",
+            copperDetails: existingProjectPanel.marketerData?.copperDetails || {}
         };
         const nextPanels = pendingPanel
             ? session.panels

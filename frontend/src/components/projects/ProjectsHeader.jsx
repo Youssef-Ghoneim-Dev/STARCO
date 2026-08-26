@@ -20,16 +20,9 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefres
           <FiFilter />
           <select value={status} onChange={(event) => onStatusChange(event.target.value)}>
             <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="editing">Editing</option>
+            <option value="draft">Draft</option>
+            <option value="created">Created</option>
             <option value="inProgress">In progress</option>
-            <option value="quoteCompleted">Quote completed</option>
-            <option value="executionPdfRequested">Execution PDF requested</option>
-            <option value="executionPdfReady">Execution PDF ready</option>
-            <option value="manufacturingFilesPending">Manufacturing files pending</option>
-            <option value="manufacturingFilesReady">Manufacturing files ready</option>
-            <option value="laserFilesDownloaded">Downloaded to laser</option>
-            <option value="executionOrdered">Execution ordered</option>
             <option value="completed">Fully completed</option>
           </select>
         </label>

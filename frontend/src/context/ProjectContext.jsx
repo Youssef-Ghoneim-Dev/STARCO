@@ -7,23 +7,13 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completeProject, getProject, startProjectEditing, submitMarketingProject as submitMarketingProjectRequest, updateProject } from "../services/projectsAPI";
+import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, updatePanelRecord, updateProject } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
 
 const AUTO_SAVE_DELAY_MS = 500;
-const AUTO_SAVE_LOCKED_STATUSES = new Set([
-  "pending",
-  "quoteCompleted",
-  "executionPdfRequested",
-  "executionPdfReady",
-  "executionOrdered",
-  "manufacturingFilesPending",
-  "manufacturingFilesReady",
-  "laserFilesDownloaded",
-  "completed",
-]);
+const AUTO_SAVE_LOCKED_STATUSES = new Set(["created", "completed"]);
 
 const configuredPriceFields = [
   "manufacturing",
@@ -246,9 +236,9 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
     ...incomingPanel,
     panelTypeKey: incomingPanel.panelTypeKey || inferredType?.key || "",
     panelType: inferredType?.name || incomingPanel.panelType || "",
-    quoteStatus: incomingPanel.quoteStatus && !(incomingPanel.quoteStatus === "draft" && completedQuoteStatuses.has(projectStatus))
-      ? incomingPanel.quoteStatus
-      : inferredQuoteStatus,
+    quoteStatus: incomingPanel.status === "pendingPricing" ? "pending"
+      : incomingPanel.status === "pricing" ? "inProgress"
+        : incomingPanel.status || incomingPanel.quoteStatus || inferredQuoteStatus,
     panelName: incomingPanel.panelName || basePanel.panelName,
     copper: {
       ...(basePanel.copper || {}),
@@ -301,6 +291,21 @@ const prepareProjectForAutoSaving = ({ client, clientNameReview, status, panels 
     }, {}),
     copper: normalizeCopperForSaving(panel.copper),
   })),
+});
+
+const panelPayload = (panel) => ({
+  panelName: panel.panelName,
+  panelType: panel.panelType,
+  panelTypeKey: panel.panelTypeKey,
+  thickness: panel.thickness,
+  hasCopper: panel.hasCopper,
+  controlInstallation: panel.controlInstallation,
+  additionalDetails: panel.additionalDetails,
+  copperDetails: panel.copperDetails,
+  dimensions: panel.dimensions,
+  parts: panel.parts,
+  prices: panel.prices,
+  copper: panel.copper,
 });
 
 export function ProjectProvider({ children, projectId, readOnly = false }) {
@@ -374,10 +379,16 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
   useEffect(() => {
     if (loadingProject || preventAutoSave || readOnly) return;
+    const editablePanel = project.panels?.[activePanel];
+    if (!editablePanel || !["draft", "pricing", "editing"].includes(editablePanel.status || editablePanel.quoteStatus)) return;
 
     const timeout = setTimeout(async () => {
       try {
-        await updateProject(projectId, prepareProjectForAutoSaving(project, prices));
+        const active = project.panels?.[activePanel];
+        await Promise.all([
+          updateProject(projectId, prepareProjectForAutoSaving(project, prices)),
+          active?._id ? updatePanelRecord(projectId, active._id, panelPayload(active)) : Promise.resolve(),
+        ]);
         setSaveProjectError(null);
       } catch (error) {
         const message = getSaveErrorMessage(error);
@@ -392,7 +403,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     }, AUTO_SAVE_DELAY_MS);
 
     return () => clearTimeout(timeout);
-  }, [project, prices, loadingProject, preventAutoSave, projectId, readOnly]);
+  }, [project, prices, activePanel, loadingProject, preventAutoSave, projectId, readOnly]);
 
   const updateClient = useCallback((clientData) => {
     setPreventAutoSave(false);
@@ -431,22 +442,14 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     });
   }, []);
 
-  const addPanel = useCallback(() => {
+  const addPanel = useCallback(async () => {
     setPreventAutoSave(false);
-
-    setProject((prev) => {
-      const newPanelIndex = prev.panels.length;
-
-      const newPanel = createPanel(newPanelIndex + 1, systemConfig);
-
-      setActivePanel(newPanelIndex);
-
-      return {
-        ...prev,
-        panels: [...prev.panels, newPanel],
-      };
-    });
-  }, [systemConfig]);
+    try {
+      const { data } = await createPanelRecord(projectId, {});
+      setProject((prev) => ({ ...prev, panels: [...prev.panels, hydratePanel(data.panel, prev.panels.length, systemConfig, prev.status)] }));
+      setActivePanel(project.panels.length);
+    } catch (error) { toast.error(getSaveErrorMessage(error)); }
+  }, [project.panels.length, projectId, systemConfig]);
   const deletePart = useCallback(
     (partIndex) => {
       updatePanel(activePanel, (panel) => ({
@@ -543,18 +546,13 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       quantity: quantities[typeName] || 1,
     };
   };
-  const deletePanel = useCallback((panelIndex) => {
-    if (panelIndex === 0) return;
-
-    setPreventAutoSave(false);
-
+  const deletePanel = useCallback(async (panelIndex) => {
+    const target = project.panels?.[panelIndex];
+    if (!target?._id) return;
+    try { await deletePanelRecord(projectId, target._id); } catch (error) { return toast.error(getSaveErrorMessage(error)); }
     setProject((prev) => {
       const panels = prev.panels.filter((_, index) => index !== panelIndex);
-
-      return {
-        ...prev,
-        panels,
-      };
+      return { ...prev, panels };
     });
 
     setActivePanel((current) => {
@@ -568,7 +566,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
       return current;
     });
-  }, []);
+  }, [project.panels, projectId]);
   const addPart = useCallback(
     (type) => {
       updatePanel(activePanel, (panel) => {
@@ -757,11 +755,12 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
     try {
       const projectToSave = prepareProjectForSaving(project, prices);
-
+      const active = project.panels?.[activePanel];
       await updateProject(projectId, projectToSave);
+      if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
       let completionData = null;
       if (complete) {
-        const { data } = await completeProject(projectId);
+        const { data } = await completePanelQuote(projectId, active._id);
         completionData = data;
         // Keep the quote editor mounted until the completion dialog displays
         // the generated preview link. The backend has already persisted the
@@ -776,33 +775,28 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } finally {
       setSavingProject(false);
     }
-  }, [prices, project, projectId, readOnly]);
+  }, [activePanel, prices, project, projectId, readOnly]);
   const saveDraftNow = useCallback(async () => {
     if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
     try {
-      const { data } = await updateProject(projectId, prepareProjectForAutoSaving(project, prices));
+      const active = project.panels?.[activePanel];
+      const [{ data }, panelResponse] = await Promise.all([updateProject(projectId, prepareProjectForAutoSaving(project, prices)), active?._id ? updatePanelRecord(projectId, active._id, panelPayload(active)) : Promise.resolve(null)]);
       const savedProject = data?.project || data;
-      if (savedProject?.panels) {
-        setProject((current) => ({
-          ...current,
-          ...savedProject,
-          panels: savedProject.panels.map((panel, index) => hydratePanel(panel, index, systemConfig, savedProject.status || current.status)),
-        }));
-      }
+      if (panelResponse?.data?.panel) setProject((current) => ({ ...current, ...savedProject, panels: current.panels.map((item, index) => index === activePanel ? hydratePanel(panelResponse.data.panel, index, systemConfig, savedProject.status || current.status) : item) }));
       return { success: true, project: savedProject };
     } catch (error) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
-  }, [prices, project, projectId, readOnly, systemConfig]);
+  }, [activePanel, prices, project, projectId, readOnly, systemConfig]);
   const beginEditing = useCallback(async (panelId) => {
     try {
       const { data } = await startProjectEditing(projectId, panelId);
       setProject((current) => ({
         ...current,
         ...(data.project || {}),
-        status: data.project?.status || "editing",
+        status: data.project?.status || current.status,
         panels: current.panels.map((panel) => (panel._id === panelId || panel.panelId === panelId)
-          ? { ...panel, quoteStatus: data.panel?.quoteStatus || "editing" }
+          ? { ...panel, ...data.panel, quoteStatus: "editing" }
           : panel),
       }));
       setPreventAutoSave(false);
@@ -817,11 +811,10 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     setSavingProject(true);
     setSaveProjectError(null);
     try {
+      const active = project.panels?.[activePanel];
       await updateProject(projectId, prepareProjectForSaving(project, prices));
-      const { data } = await submitMarketingProjectRequest(projectId);
-      setProject((current) => ({ ...current, status: data.project?.status || "pending" }));
-      setPreventAutoSave(true);
-      return { success: true, message: data.message, notification: data.notification };
+      if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
+      return { success: true, message: "تم حفظ بيانات اللوحة." };
     } catch (error) {
       const message = getSaveErrorMessage(error);
       setSaveProjectError(message);
@@ -829,7 +822,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } finally {
       setSavingProject(false);
     }
-  }, [prices, project, projectId, readOnly]);
+  }, [activePanel, prices, project, projectId, readOnly]);
   const canDeletePart = (part, parts) => {
     const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
     const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);

@@ -69,7 +69,7 @@ function ProductionManagerDashboard({ name, projects, loading, onRefresh }) {
   const executionToday = selectedProjects.filter((project) => resolveStage(project) === "notStarted").length;
   const pdfReady = projects.filter((project) => /pdf/i.test(String(project.status || ""))).length;
   const halted = projects.filter((project) => /hold|stop|paused|متوقف/i.test(String(project.status || ""))).length;
-  const delayed = sorted.filter((project) => project.status !== "completed" && Date.now() - updatedAt(project).getTime() > 48 * 60 * 60 * 1000);
+  const delayed = sorted.filter((project) => project.status !== "completed" && today.getTime() - updatedAt(project).getTime() > 48 * 60 * 60 * 1000);
   const delayedCount = delayed.length;
   const waiting = sorted.filter((project) => project.status !== "completed").slice(0, 4);
   const readyFiles = sorted.filter((project) => /manufactur|pdf|execution|inprogress/i.test(String(project.status || ""))).slice(0, 5);

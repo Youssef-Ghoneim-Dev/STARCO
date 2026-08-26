@@ -1,11 +1,12 @@
 const projectModels = require("../models/projects");
+const panelModels = require("../models/panels");
 const clientModels = require("../models/clients");
 const userModels = require("../models/users");
 const dashboardStatistics = require("../models/dashboardStatistics");
 
 const RETENTION_DAYS = 30;
-const PRODUCTION_STATUSES = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "production", "executing"];
-const APPROVAL_STATUSES = ["awaitingExecution", "approved", "readyForExecution"];
+const PRODUCTION_STATUSES = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+const APPROVAL_STATUSES = ["quoteCompleted"];
 
 const startOfDay = (value = new Date()) => {
     const date = new Date(value);
@@ -37,17 +38,18 @@ const statusBucket = (statusValue) => {
 const captureDashboardSnapshot = async (value = new Date()) => {
     const date = startOfDay(value);
     const dateKey = toDateKey(date);
-    const [projects, clients, activeEngineers, activeMarketers] = await Promise.all([
+    const [projects, panels, clients, activeEngineers, activeMarketers] = await Promise.all([
         projectModels.selectall({ isDeleted: false }),
+        panelModels.find({ isDeleted: false }),
         clientModels.select_all(),
         userModels.selectall({ role: "Engineer", approved: true, isDeleted: false }),
         userModels.selectall({ role: "Marketer", approved: true, isDeleted: false })
     ]);
     const statusCounts = { pricing: 0, approval: 0, production: 0, editing: 0, completed: 0 };
-    projects.forEach((project) => { statusCounts[statusBucket(project.status)] += 1; });
+    panels.forEach((panel) => { statusCounts[statusBucket(panel.status)] += 1; });
     const newProjects = projects.filter((project) => sameDay(project.createdAt, date)).length;
     const completed = projects.filter((project) => project.status === "completed" && sameDay(project.updatedAt, date)).length;
-    const inProgress = projects.filter((project) => PRODUCTION_STATUSES.includes(project.status)).length;
+    const inProgress = panels.filter((panel) => PRODUCTION_STATUSES.includes(panel.status)).length;
     const expiresAt = startOfDay(date);
     expiresAt.setDate(expiresAt.getDate() + RETENTION_DAYS);
 

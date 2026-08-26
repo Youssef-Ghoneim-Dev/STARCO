@@ -104,7 +104,7 @@ function MarketingProjectEditor() {
     const result = await submitMarketingProject();
     if (result.success) {
       if (result.notification?.includes("تعذر")) toast.error(result.notification, { duration: 7000 });
-      navigate("/projects");
+      navigate(`/projects/${project._id}`);
     }
     else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
   };
@@ -119,7 +119,7 @@ function MarketingProjectEditor() {
 
     <section className="project-editor-card marketing-client-card">
       <div className="marketing-client-search">
-        <label>اسم العميل<input disabled={panelEditingMode} value={clientQuery} onFocus={() => setClientSearchActive(true)} onChange={(event) => { const name = event.target.value; setClientQuery(name); setClientSearchActive(true); updateClient({ id: null, name }); }} placeholder="ابحث باسم العميل أو اكتب اسمًا جديدًا" /></label>
+        <label>اسم العميل<input disabled value={clientQuery} placeholder="اسم العميل" /></label>
         {clientSearchActive && (searchingClients || clientResults.length > 0) && <div className="client-suggestions marketing-client-suggestions">
           {searchingClients && <p className="search-loading">جاري البحث...</p>}
           {clientResults.map((client) => <button key={client._id} type="button" className="suggestion-item" onMouseDown={(event) => { event.preventDefault(); selectClient(client); }}>{client.name} — {client.type === "company" ? "شركة" : "فرد"}</button>)}
@@ -146,7 +146,7 @@ function MarketingProjectEditor() {
     </fieldset>
     <WhatsappProjectData editable={canEditActivePanel} />
     </div>}
-    <div className="marketing-save-actions"><button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ المشروع"}</button></div>
+    <div className="marketing-save-actions"><button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ اللوحة والعودة للمشروع"}</button></div>
   </section>;
 }
 

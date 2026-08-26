@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -12,6 +12,7 @@ import WhatsappProjectData from "../components/projects/projectEditor/WhatsappPr
 import MarketingProjectEditor from "../components/projects/projectEditor/MarketingProjectEditor";
 import ExecutionPdfWorkspace from "../components/projects/projectEditor/ExecutionPdfWorkspace";
 import { useAuth } from "../context/AuthContext";
+import { acquireProjectSetupLock, claimPanel, completeProjectSetup } from "../services/projectsAPI";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({ readOnly = false, readOnlyMessage = "", allowPanelEditing = false, isMarketer = false }) {
@@ -97,17 +98,18 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const { user } = useAuth();
   const { project } = useProject();
   const [tab, setTab] = useState("project-data");
+  const activePanel = project?.panels?.find((panel) => String(panel._id || panel.panelId) === String(window.location.pathname.split("/").pop())) || project?.panels?.[0];
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
-  const isQuoteCompleted = project?.status === "quoteCompleted";
+  const isQuoteCompleted = activePanel?.status === "quoteCompleted";
   const hasPanelExecution = (project?.panels || []).some((panel) =>
     (panel.executionPdf?.status && panel.executionPdf.status !== "notRequested")
     || (panel.manufacturing?.status && panel.manufacturing.status !== "notStarted")
   );
   const hasEditableQuotePanels = (project?.panels || []).some((panel) => ["draft", "pending", "inProgress", "editing"].includes(panel.quoteStatus));
-  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded"].includes(project?.status) || hasPanelExecution;
-  const marketerCanEdit = ["marketingDraft", "editingByMarketing"].includes(project?.status);
-  const technicalCanEdit = ["inProgress", "editing", "editingByEngineer", "editingByOwner"].includes(project?.status);
+  const isExecutionPhase = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"].includes(activePanel?.status) || hasPanelExecution;
+  const marketerCanEdit = project?.status === "draft" || Boolean(project?.marketingEditSession?.active && activePanel?.status === "editing");
+  const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
   const claimedByAnotherEngineer = user?.role === "Engineer" && project?.readOnlyForCurrentUser;
   const editorReadOnly = readOnly || claimedByAnotherEngineer || !technicalCanEdit;
   const readOnlyMessage = !readOnly && isCompleted
@@ -170,11 +172,52 @@ function EditProject() {
     <ProjectProvider projectId={id} readOnly={readOnly}>
       <DashboardLayout notAllowed={false}>
         <div className="project-editor-page">
-          <ProjectWorkspace readOnly={readOnly} isMarketer={isMarketer} />
+          <PanelRouteGate readOnly={readOnly} isMarketer={isMarketer} />
         </div>
       </DashboardLayout>
     </ProjectProvider>
   );
+}
+
+function PanelRouteGate({ readOnly, isMarketer }) {
+  const { panelId } = useParams();
+  const { user } = useAuth();
+  const { project, setProject, activePanel, setActivePanel, prices } = useProject();
+  const [locking, setLocking] = useState(false);
+  const [setupSaving, setSetupSaving] = useState(false);
+  const [setupReady, setSetupReady] = useState(false);
+
+  useEffect(() => {
+    const index = (project?.panels || []).findIndex((panel) => String(panel._id || panel.panelId) === String(panelId));
+    if (index >= 0 && index !== activePanel) setActivePanel(index);
+  }, [activePanel, panelId, project?.panels, setActivePanel]);
+
+  useEffect(() => {
+    if (project?.status !== "created" || user?.role !== "Engineer" || setupReady || locking) return;
+    setLocking(true);
+    acquireProjectSetupLock(project._id).then(() => setSetupReady(true)).catch((error) => toast.error(error.response?.data?.message || "تعذر حجز إعداد المشروع.")).finally(() => setLocking(false));
+  }, [locking, project?._id, project?.status, setupReady, user?.role]);
+
+  const panel = project?.panels?.[activePanel];
+  useEffect(() => {
+    if (!panel?._id || panel.status !== "pendingPricing" || user?.role !== "Engineer" || project.status !== "inProgress" || locking) return;
+    setLocking(true);
+    claimPanel(project._id, panel._id).then(({ data }) => setProject((current) => ({ ...current, panels: current.panels.map((item) => item._id === panel._id ? { ...item, ...data.panel, quoteStatus: "inProgress" } : item) }))).catch((error) => toast.error(error.response?.data?.message || "تعذر حجز اللوحة.")).finally(() => setLocking(false));
+  }, [locking, panel?._id, panel?.status, project._id, project.status, setProject, user?.role]);
+
+  if (project?.status === "created" && user?.role === "Engineer") {
+    const saveSetup = async () => {
+      setSetupSaving(true);
+      try {
+        const { data } = await completeProjectSetup(project._id, { client: project.client, prices });
+        setProject((current) => ({ ...current, ...data.project }));
+      } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ بيانات المشروع."); }
+      finally { setSetupSaving(false); }
+    };
+    return <section className="project-setup-gate" dir="rtl"><div><h1>استكمال بيانات المشروع</h1><p>أنت أول مهندس فتح المشروع. أكد البيانات المشتركة قبل أن تصبح اللوحات متاحة للحجز.</p></div><ProjectInfo /><ProjectPrices /><button type="button" onClick={saveSetup} disabled={!setupReady || setupSaving}>{setupSaving ? "جاري الحفظ..." : "حفظ وفتح اللوحات للتسعير"}</button></section>;
+  }
+  if (!panel) return <div className="route-loading" dir="rtl">اللوحة غير موجودة داخل هذا المشروع.</div>;
+  return <ProjectWorkspace readOnly={readOnly} isMarketer={isMarketer} />;
 }
 
 export default EditProject;

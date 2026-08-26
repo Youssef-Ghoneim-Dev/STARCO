@@ -1,4 +1,5 @@
 import { useProject } from "../../../context/ProjectContext";
+import { useParams } from "react-router-dom";
 
 const panelStatus = (panel, projectStatus) => {
   const executionStatus = panel.executionPdf?.status;
@@ -26,9 +27,16 @@ const panelStatus = (panel, projectStatus) => {
 };
 
 function PanelsTabs({ readOnly = false, onOpenPanel, openedPanel = null }) {
+  const { panelId } = useParams();
   const { project, activePanel, setActivePanel, addPanel, deletePanel } =
     useProject();
 
+  if (panelId) {
+    const panel = project.panels[activePanel];
+    if (!panel) return null;
+    const [statusLabel, statusClass] = panelStatus(panel, project.status);
+    return <section className="project-editor-card active-panel-route-heading" dir="rtl"><div><span>اللوحة الحالية</span><h2>{panel.panelName}</h2><code>{panel.panelCode}</code></div><span className={`panel-card-status ${statusClass}`}>{statusLabel}</span></section>;
+  }
   return (
     <section className="project-editor-card panels-overview-card">
       <div className="panels-overview-heading" dir="rtl">

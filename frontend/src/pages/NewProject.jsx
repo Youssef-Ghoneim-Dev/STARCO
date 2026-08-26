@@ -1,39 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { createProject } from "../services/projectsAPI";
+import { searchClients } from "../services/clientsAPI";
+import { useAuth } from "../context/AuthContext";
 
-// The project is created before the editor opens, so it is itself the
-// autosave record for every edit.
 function NewProject() {
   const navigate = useNavigate();
-  const [error, setError] = useState(null);
-
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const requestRef = useRef(0);
   useEffect(() => {
-    let mounted = true;
-
-    createProject({})
-      .then(({ data }) => {
-        if (mounted) navigate(`/projects/${data.project._id}`, { replace: true });
-      })
-      .catch((requestError) => {
-        if (!mounted) return;
-        const message = requestError.response?.data?.message || "تعذر بدء مشروع جديد.";
-        setError(message);
-        toast.error(message);
-      });
-
-    return () => { mounted = false; };
-  }, [navigate]);
-
-  return (
-    <DashboardLayout notAllowed={false}>
-      <div className="route-loading" dir="rtl">
-        {error || "جاري بدء مشروع جديد..."}
-      </div>
-    </DashboardLayout>
-  );
+    const term = name.trim(); const requestId = ++requestRef.current;
+    if (!term || selectedClient?.name === term) { setResults([]); return undefined; }
+    const timer = setTimeout(async () => { setSearching(true); try { const { data } = await searchClients(term); if (requestId === requestRef.current) setResults(data.clients || []); } catch { if (requestId === requestRef.current) setResults([]); } finally { if (requestId === requestRef.current) setSearching(false); } }, 250);
+    return () => clearTimeout(timer);
+  }, [name, selectedClient]);
+  const submit = async (event) => {
+    event.preventDefault(); if (!name.trim()) return toast.error("اكتب اسم العميل أو اختر عميلًا موجودًا."); setSaving(true);
+    try {
+      const client = selectedClient && selectedClient.name === name.trim() ? { id: selectedClient._id, name: selectedClient.name, type: selectedClient.type, profitPercentage: selectedClient.profitPercentage } : { name: name.trim() };
+      const { data } = await createProject({ client, source: user?.role === "Marketer" ? "marketing" : "manual" }); navigate(`/projects/${data.project._id}`, { replace: true });
+    } catch (error) { toast.error(error.response?.data?.message || "تعذر إنشاء المشروع."); } finally { setSaving(false); }
+  };
+  return <DashboardLayout notAllowed={false}><div className="project-create-backdrop" dir="rtl"><form className="project-create-dialog" onSubmit={submit}>
+    <h1>مشروع جديد</h1><p>أنشئ فولدر المشروع أولًا، ثم أضف اللوحات داخله.</p>
+    <label>اسم العميل<input autoFocus value={name} onChange={(event) => { setName(event.target.value); setSelectedClient(null); }} placeholder="ابحث باسم العميل أو اكتب اسمًا جديدًا" /></label>
+    {(searching || results.length > 0) && <div className="project-client-results">{searching && <span>جاري البحث...</span>}{results.map((client) => <button type="button" key={client._id} onClick={() => { setSelectedClient(client); setName(client.name); setResults([]); }}>{client.name}<small>{client.type === "company" ? "شركة" : "فرد"}</small></button>)}</div>}
+    <div className="project-create-actions"><button type="button" onClick={() => navigate("/projects")}>إلغاء</button><button className="primary" disabled={saving}>{saving ? "جاري الإنشاء..." : "إنشاء المشروع"}</button></div>
+  </form></div></DashboardLayout>;
 }
-
 export default NewProject;
