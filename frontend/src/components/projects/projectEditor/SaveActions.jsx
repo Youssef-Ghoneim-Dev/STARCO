@@ -93,6 +93,10 @@ function SaveActions() {
         navigate("/projects");
         return;
       }
+      if (!isManualProject) {
+        navigate("/projects");
+        return;
+      }
       const previewToken = result.data?.project?.clientPreviewToken;
       const previewUrl = result.data?.previewUrl || (previewToken ? `${window.location.origin}/p/${previewToken}` : "");
       if (previewUrl) setCompletedPreviewUrl(previewUrl);

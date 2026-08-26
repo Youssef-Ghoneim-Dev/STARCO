@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import DashboardLayout from "../components/layout/DashboardLayout";
 
@@ -17,29 +17,19 @@ function Projects() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchProjects() {
-      try {
-        const { data } = await getProjects();
-
-        if (mounted) {
-          setProjects(data);
-
-          setLoading(false);
-        }
-      } catch (error) {
-        console.log(error);
-      }
+  const fetchProjects = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await getProjects();
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    fetchProjects();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   const filteredProjects = useMemo(() => {
     const statusPriority = {
@@ -85,6 +75,8 @@ function Projects() {
         onQueryChange={setQuery}
         status={status}
         onStatusChange={setStatus}
+        onRefresh={fetchProjects}
+        refreshing={loading}
       />
 
       <ProjectsGrid

@@ -45,7 +45,7 @@ function MediaItem({ item, url, onOpen, audioProps, onDelete }) {
 }
 
 function WhatsappProjectData({ editable = false }) {
-  const { project, activePanel } = useProject();
+  const { project, activePanel, systemConfig } = useProject();
   const [media, setMedia] = useState([]);
   const [urls, setUrls] = useState({});
   const [mediaError, setMediaError] = useState("");
@@ -91,6 +91,11 @@ function WhatsappProjectData({ editable = false }) {
   const images = panelMedia.filter((item) => item.type === "image");
   const audio = panelMedia.filter((item) => item.type === "audio");
   const copper = panel.copperDetails || {};
+  const copperCatalog = systemConfig?.copperConfiguration?.catalog || [];
+  const copperName = (key) => copperCatalog.find((item) => item.key === key)?.name || key || "—";
+  const branchGroups = Array.isArray(copper.branchGroups) && copper.branchGroups.length
+    ? copper.branchGroups
+    : (panel.copper?.branches || []).map((branch, index) => ({ id: branch.branchGroupId || branch.branchId || index, optionKey: branch.optionKey, count: branch.quantity || 1 }));
   const gallerySlides = images.map((item) => ({ src: urls[item.id], alt: "مرفق من المندوب" })).filter((slide) => slide.src);
   const startNextAudio = (itemId) => {
     const currentIndex = audio.findIndex((item) => item.id === itemId);
@@ -142,7 +147,7 @@ function WhatsappProjectData({ editable = false }) {
   };
   return <section className="whatsapp-project-data" dir="rtl">
     {!editable && <><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع اللوحة" value={panel.panelType} /><ReadOnlyField label="هل يوجد نحاس" value={panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : ""} />{panel.panelType === "كنترول" && <ReadOnlyField label="تركيب لوحة الكنترول" value={panel.controlInstallation} />}<ReadOnlyField label="تفاصيل إضافية" value={panel.additionalDetails} /></div>
-    {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main} /><ReadOnlyField label="الفرعيات" value={copper.branches} /></div></div>}</>}
+    {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main || copperName(copper.mainKey || panel.copper?.main?.optionKey)} /><ReadOnlyField label="تفاصيل إضافية للنحاس" value={copper.notes} /></div><div className="whatsapp-copper-branch-list">{branchGroups.length ? branchGroups.map((group, index) => <article key={group.id || index}><strong>فرعي {index + 1}</strong><span>{copperName(group.optionKey)}</span><small>العدد: {Math.max(1, Number(group.count || group.quantity) || 1)}</small></article>) : <p>لا توجد مفاتيح فرعية مسجلة.</p>}</div></div>}</>}
     <div className="whatsapp-media-accordions">
       <details open><summary><span className="project-media-summary-title">صور المشروع</span><span className="project-media-summary-actions"><button type="button" className="project-media-refresh" onClick={(event) => { event.preventDefault(); event.stopPropagation(); refreshMedia(); }} disabled={refreshingMedia} aria-label="تحديث صور وتسجيلات المشروع" title="تحديث المرفقات"><IoRefresh className={refreshingMedia ? "is-spinning" : ""} /></button><b>{images.length}</b></span></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
       <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>

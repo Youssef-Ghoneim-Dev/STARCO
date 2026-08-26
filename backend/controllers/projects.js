@@ -388,7 +388,7 @@ const getProjects = async (req, res, next) => {
         } else if (isEngineer(req.user)) {
             condition.status = { $nin: ["marketingDraft", "editingByMarketing"] };
         } else if (isProductionManager(req.user)) {
-            condition.status = { $in: ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] };
+            condition.status = { $in: ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"] };
         } else if (!canWorkOnProjects(req.user) && req.user.role !== "MarketingManager") {
             return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشاريع." });
         }
@@ -469,10 +469,16 @@ const getProject = async (req, res, next) => {
             return res.status(200).json(projectResponse);
         }
         if (isEngineer(req.user)) {
-            if (!sameId(project.engineerId, req.user._id)) return projectAlreadyClaimed(res, project);
-            return res.status(200).json(projectResponse);
+            if (!sameId(project.engineerId, req.user._id)) {
+                return res.status(200).json({
+                    ...projectResponse,
+                    readOnlyForCurrentUser: true,
+                    workingEngineerName: engineer?.name || "مهندس آخر"
+                });
+            }
+            return res.status(200).json({ ...projectResponse, readOnlyForCurrentUser: false });
         }
-        if (isProductionManager(req.user) && ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(project.status)) {
+        if (isProductionManager(req.user) && ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(project.status)) {
             return res.status(200).json(projectResponse);
         }
         return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشروع." });
@@ -484,7 +490,7 @@ const getProject = async (req, res, next) => {
 const canReadProject = (user, project) => isOwner(user)
     || user.role === "MarketingManager"
     || isProductionManager(user)
-    || (isEngineer(user) && sameId(project.engineerId, user._id));
+    || isEngineer(user);
 
 const getProjectMedia = async (req, res, next) => {
     try {
@@ -719,7 +725,7 @@ const uploadProjectMedia = async (req, res, next) => {
         if (!type) return res.status(400).json({ status: "error", message: "يسمح بالصور والتسجيلات الصوتية فقط." });
 
         const uploaded = await uploadFile({
-            fileName: `frontend-${project._id}-${panel.panelId}-${Date.now()}-${req.file.originalname}`,
+            fileName: `frontend-${project._id}-${panel.panelId}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`,
             mimeType: req.file.mimetype,
             buffer: req.file.buffer
         });

@@ -235,7 +235,8 @@ const mediaExtension = (mimeType) => ({
 
 const savePanelMediaToGoogleDrive = async (message, media) => {
     const downloaded = await downloadMedia(media.providerMediaId);
-    const fileName = `whatsapp-${message.id}-${Date.now()}.${mediaExtension(downloaded.mimeType)}`;
+    const uniqueStamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-${Date.now()}`;
+    const fileName = `whatsapp-${uniqueStamp}-${message.id}.${mediaExtension(downloaded.mimeType)}`;
     const uploaded = await uploadFile({
         fileName,
         mimeType: downloaded.mimeType,
@@ -510,7 +511,7 @@ const finishSession = async (session, inboundMessage) => {
     const finalizingSession = await sessions.claimForFinalization(session._id);
     if (!finalizingSession) return { finalizing: true };
 
-    const project = finalizingSession.mode === "edit"
+    const project = ["edit", "media"].includes(finalizingSession.mode)
         ? await updateProjectFromSession(finalizingSession)
         : await createProjectFromSession(finalizingSession);
     if (!project) {
@@ -526,7 +527,7 @@ const finishSession = async (session, inboundMessage) => {
     });
     if (finalizingSession.mode === "edit") {
         await notifyAssignedEngineerOfMarketingEdit(project);
-    } else {
+    } else if (finalizingSession.mode !== "media") {
         await notifyEngineersOfNewProject(project);
     }
     return { project };

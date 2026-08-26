@@ -534,3 +534,5 @@
     }
 
 }
+.projects-refresh-btn { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
+.projects-refresh-btn:disabled { opacity: .65; cursor: wait; }

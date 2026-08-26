@@ -32,6 +32,7 @@ function CopperSelect({ value, options, placeholder, onChange }) {
 function CopperCalculator() {
   const { project, activePanel, systemConfig, updateCopper } = useProject();
   const panel = project.panels[activePanel] || project.panels[0];
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const configuration = resolveCopperConfiguration(systemConfig?.copperConfiguration);
   const copper = panel.copper || { enabled: false, main: {}, branches: [] };
   const isVisible = Boolean(panel.hasCopper || copper.enabled);
@@ -91,11 +92,15 @@ function CopperCalculator() {
         }],
       };
     });
+  const removeCopper = () => {
+    updateCopper(() => ({ enabled: false, pricePerKg: defaultCopperPrice, earthPrice: "", groundPrice: "", main: { optionKey: "", length: "", barCount: barCounts[0] }, branches: [] }));
+    setConfirmRemove(false);
+  };
 
   if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg === "" || current.pricePerKg == null ? defaultCopperPrice : current.pricePerKg }))}>+ إضافة نحاس للوحة</button></div>;
 
   return <section className="copper-calculator" dir="rtl">
-    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => updateCopper(() => ({ enabled: false, pricePerKg: defaultCopperPrice, earthPrice: "", groundPrice: "", main: { optionKey: "", length: "", barCount: barCounts[0] }, branches: [] }))}>حذف النحاس</button></div>
+    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => ["whatsapp", "marketing"].includes(project?.source) && panel.hasCopper ? setConfirmRemove(true) : removeCopper()}>حذف النحاس</button></div>
     <div className="copper-cost-fields">
       <label>سعر النحاس<input type="number" min="0" step="any" value={copper.pricePerKg ?? configuration.pricePerKg ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: event.target.value }))} /></label>
       <label>سعر الإرث والأرضي<input type="number" min="0" step="any" value={copper.earthPrice ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, earthPrice: event.target.value, groundPrice: 0 }))} /></label>
@@ -116,6 +121,7 @@ function CopperCalculator() {
       {optionInfo(branch.optionKey) && <div className="copper-readonly"><span>المقاس</span><strong>{optionInfo(branch.optionKey)}</strong></div>}
     </div></div>)}
     <div className="copper-total"><span>وزن النحاس: <strong>{totals.weight.toFixed(3)} كجم</strong></span><span>إجمالي النحاس: <strong>{totals.total.toFixed(2)} ج.م</strong></span></div>
+    {confirmRemove && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog media-delete-dialog"><h3>حذف النحاس</h3><p>المندوب حدّد أن هذه اللوحة تحتوي على نحاس. هل أنت متأكد من حذف بيانات النحاس؟</p><div className="media-delete-actions"><button type="button" onClick={() => setConfirmRemove(false)}>إلغاء</button><button type="button" className="media-delete-confirm" onClick={removeCopper}>نعم، حذف النحاس</button></div></div></div>}
   </section>;
 }
 

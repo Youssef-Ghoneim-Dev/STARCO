@@ -1,7 +1,7 @@
-import { FiFilter, FiPlus, FiSearch } from "react-icons/fi";
+import { FiFilter, FiPlus, FiRefreshCw, FiSearch } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
+function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefresh, refreshing }) {
   const { user } = useAuth();
   return (
     <div className="projects-header">
@@ -11,6 +11,7 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange }) {
         <p>Manage all your projects in one place.</p>
       </div>
       <div className="projects-header-actions">
+        <button type="button" className="projects-refresh-btn" onClick={onRefresh} disabled={refreshing} title="تحديث المشاريع" aria-label="تحديث المشاريع"><FiRefreshCw className={refreshing ? "is-spinning" : ""} /><span>تحديث</span></button>
         <label className="projects-search">
           <FiSearch />
           <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search by project name..." />

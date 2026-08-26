@@ -176,6 +176,9 @@ const buildTypeParts = (type, dimensions) => (type?.parts || []).map((part) => (
   }),
 }));
 
+const legacyDefaultPartNames = new Set(["العلبة", "الجنب", "المراية", "الجلسة", "الجريدة", "باب 1", "باب 2"]);
+const containsOnlyLegacyDefaultParts = (parts = []) => parts.length > 0 && parts.every((part) => legacyDefaultPartNames.has(String(part.name || "").trim()));
+
 const mergeRecalculatedParts = (existingParts = [], type, dimensions) => {
   const calculatedParts = buildTypeParts(type, dimensions);
   const remainingCalculatedParts = [...calculatedParts];
@@ -216,6 +219,10 @@ const hydratePanel = (panel, index, systemConfig) => {
       return groups;
     }, [])
     : (basePanel.copper?.branches || []);
+  const incomingParts = Array.isArray(incomingPanel.parts) ? incomingPanel.parts : [];
+  const hydratedParts = inferredType && (incomingParts.length === 0 || containsOnlyLegacyDefaultParts(incomingParts))
+    ? buildTypeParts(inferredType, incomingPanel.dimensions)
+    : (incomingParts.length ? incomingParts : basePanel.parts);
 
   return normalizePanelThickness({
     ...basePanel,
@@ -232,10 +239,7 @@ const hydratePanel = (panel, index, systemConfig) => {
       main: { ...(basePanel.copper?.main || {}), ...(incomingPanel.copper?.main || {}) },
       branches: hydratedBranches,
     },
-    parts:
-      Array.isArray(incomingPanel.parts) && incomingPanel.parts.length > 0
-        ? incomingPanel.parts
-        : basePanel.parts,
+    parts: hydratedParts,
     prices: panelPriceFields.reduce(
       (result, field) => ({
         ...result,
@@ -333,7 +337,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           });
           // Editable projects keep autosave enabled. Workflow stages that are
           // intentionally read-only are the only stages that block it.
-          setPreventAutoSave(AUTO_SAVE_LOCKED_STATUSES.has(data.status));
+          setPreventAutoSave(AUTO_SAVE_LOCKED_STATUSES.has(data.status) || Boolean(data.readOnlyForCurrentUser));
         } catch (error) {
           console.error("Failed to load project:", error);
           if (mounted) {
