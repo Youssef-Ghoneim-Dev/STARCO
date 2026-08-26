@@ -204,6 +204,18 @@ const hydratePanel = (panel, index, systemConfig) => {
     || String(type.name || "").toLowerCase().replace(/[.\-\s_]/g, "") === normalizedType
     || (normalizedType === "ont" && type.key === "ont")
   );
+  const hydratedBranches = Array.isArray(incomingPanel.copper?.branches)
+    ? incomingPanel.copper.branches.reduce((groups, branch) => {
+      const groupId = branch.branchGroupId || branch.branchId;
+      const existing = groups.find((item) => groupId && item.branchGroupId === groupId);
+      if (existing) {
+        existing.quantity += Math.max(1, Number(branch.quantity) || 1);
+        return groups;
+      }
+      groups.push({ ...branch, quantity: Math.max(1, Number(branch.quantity) || 1) });
+      return groups;
+    }, [])
+    : (basePanel.copper?.branches || []);
 
   return normalizePanelThickness({
     ...basePanel,
@@ -211,6 +223,15 @@ const hydratePanel = (panel, index, systemConfig) => {
     panelTypeKey: incomingPanel.panelTypeKey || inferredType?.key || "",
     panelType: inferredType?.name || incomingPanel.panelType || "",
     panelName: incomingPanel.panelName || basePanel.panelName,
+    copper: {
+      ...(basePanel.copper || {}),
+      ...(incomingPanel.copper || {}),
+      pricePerKg: hasValue(incomingPanel.copper?.pricePerKg)
+        ? incomingPanel.copper.pricePerKg
+        : (systemConfig?.copperConfiguration?.pricePerKg ?? basePanel.copper?.pricePerKg ?? ""),
+      main: { ...(basePanel.copper?.main || {}), ...(incomingPanel.copper?.main || {}) },
+      branches: hydratedBranches,
+    },
     parts:
       Array.isArray(incomingPanel.parts) && incomingPanel.parts.length > 0
         ? incomingPanel.parts

@@ -9,7 +9,7 @@ function PanelName() {
   const panel = project.panels[activePanel] || project.panels[0];
 
   const choosePanelType = (nextType) => {
-    const isWhatsappPanel = project?.source === "whatsapp" && panel.panelTypeKey;
+    const isWhatsappPanel = ["whatsapp", "marketing"].includes(project?.source) && panel.panelTypeKey;
     if (isWhatsappPanel && nextType !== panel.panelTypeKey) {
       setPendingPanelType(nextType);
       return;

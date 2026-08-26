@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HiOutlineArrowLeft, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineCog, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineDotsHorizontal, HiOutlineFolder, HiOutlinePhotograph, HiOutlineScissors, HiOutlineUser, HiOutlineViewGrid } from "react-icons/hi";
+import { HiOutlineArrowLeft, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
 import {
   finishExecutionPdf,
+  deleteExecutionPdfFile,
   finishManufacturingFiles,
   confirmProjectExecution,
   getExecutionPdfFile,
@@ -98,6 +99,7 @@ function ExecutionPdfWorkspace() {
     || (project?.source === "manual" && user?.role === "Engineer");
   const canPrepareManufacturing = ["Engineer", "OwnerManager"].includes(user?.role);
   const canDownloadManufacturing = ["Engineer", "OwnerManager", "ProductionManager"].includes(user?.role);
+  const canManageProductionStages = ["OwnerManager", "ProductionManager"].includes(user?.role);
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
     marketingRepresentative: project.marketingRepresentative || nextProject.marketingRepresentative,
@@ -127,8 +129,8 @@ function ExecutionPdfWorkspace() {
   const activeProductionStage = productionStages.find((stage) => stage.status === "active");
   const stageIcon = (key) => ({
     awaitingLaserDownload: <HiOutlineCloudDownload />,
-    laser: <HiOutlineScissors />,
-    manufacturing: <HiOutlineCog />,
+    laser: <HiOutlineLightningBolt />,
+    manufacturing: <HiOutlinePuzzle />,
     painting: <HiOutlineColorSwatch />,
     assembly: <HiOutlineCube />,
   }[key] || <HiOutlineViewGrid />);
@@ -188,6 +190,16 @@ function ExecutionPdfWorkspace() {
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر فتح الملف."); }
+  };
+
+  const removeExecutionFile = async (file) => {
+    setBusy(true);
+    try {
+      const { data } = await deleteExecutionPdfFile(project._id, panel.panelId, file._id);
+      setProject(withProjectMetadata(data.project));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "تعذر حذف الملف.");
+    } finally { setBusy(false); }
   };
 
   const finish = async () => {
@@ -304,9 +316,8 @@ function ExecutionPdfWorkspace() {
 
   if (["filesReady", "downloadedToLaser"].includes(manufacturing.status)) return <section className="production-tracking-page" dir="rtl">
     <header className="production-tracking-titlebar">
-      <div className="production-breadcrumbs"><span>المشاريع</span><b>‹</b><span>تفاصيل المشروع</span><b>‹</b><strong>مراحل الإنتاج</strong></div>
       <h1>متابعة مراحل الإنتاج</h1>
-      <button type="button" onClick={() => navigate(-1)}><HiOutlineArrowLeft /> رجوع لتفاصيل المشروع</button>
+      <button type="button" onClick={() => navigate("/projects")}><HiOutlineArrowLeft /> الرجوع للمشاريع</button>
     </header>
 
     <section className="production-project-overview">
@@ -318,11 +329,11 @@ function ExecutionPdfWorkspace() {
           <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {project.assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
         </div>
       </div>
-      <div className="production-project-facts">
+      <div className={`production-project-facts ${canManageProductionStages ? "" : "compact"}`}>
         <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{project.lastUpdatedByName || project.assignedEngineer?.name || "غير محدد"}</b></div>
         <div><span><HiOutlineClock /> تاريخ آخر تحديث</span><b>{formatProjectDate(project.updatedAt, true)}</b></div>
-        <div><span><HiOutlineCog /> مرحلة المشروع</span><b className="production-phase-badge">{activeProductionStage?.title || "مكتمل"}</b></div>
-        <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div>
+        {canManageProductionStages && <><div><span><HiOutlinePuzzle /> مرحلة المشروع</span><b className="production-phase-badge">{activeProductionStage?.title || "مكتمل"}</b></div>
+        <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div></>}
       </div>
     </section>
 
@@ -339,7 +350,6 @@ function ExecutionPdfWorkspace() {
             </div>
             <div className="manufacturing-file-card-actions">
               <button type="button" className="manufacturing-file-download" onClick={() => downloadManufacturingFile(file)} disabled={!canDownloadManufacturing}><HiOutlineCloudDownload /> تحميل</button>
-              <button type="button" className="manufacturing-file-more" aria-label="خيارات الملف" title="خيارات الملف"><HiOutlineDotsHorizontal /></button>
             </div>
           </article>)}
         </div>
@@ -347,7 +357,7 @@ function ExecutionPdfWorkspace() {
       </div>
     </details>
 
-    <section className="production-stages-board">
+    {canManageProductionStages && <section className="production-stages-board">
       <header><div><h2><HiOutlineViewGrid /> مراحل الإنتاج</h2><p>قم بتحديث حالة كل مرحلة يوميًا</p></div></header>
       <div className="production-stages-track">
         {productionStages.map((stage, index) => <article key={stage.key} className={`production-stage-card stage-${index + 1} ${stage.status}`}>
@@ -364,10 +374,10 @@ function ExecutionPdfWorkspace() {
           </div>}
         </article>)}
       </div>
-    </section>
+    </section>}
 
-    {["OwnerManager", "ProductionManager"].includes(user?.role) && <section className="production-footer-controls">
-      <label>ملاحظات عامة (اختياري)<textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
+    {canManageProductionStages && <section className="production-footer-controls">
+      <label><span>ملاحظات عامة (اختياري)</span><textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
       <div><button type="button" className="production-history-toggle" onClick={() => setHistoryOpen((value) => !value)}><HiOutlineClock /> عرض سجل التحديثات</button><button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !activeProductionStage || !stageDecision}>{busy ? "جاري الحفظ..." : "حفظ التحديثات"}</button></div>
       {historyOpen && <div className="production-history-list">{(manufacturing.productionHistory || []).length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...manufacturing.productionHistory].reverse().map((item, index) => <div key={`${item.createdAt}-${index}`}><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><span>{item.reason === "أخرى" ? item.details : item.reason || item.details || ""}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>)}</div>}
     </section>}
@@ -425,10 +435,13 @@ function ExecutionPdfWorkspace() {
         />
       </div>
       {files.length > 0 && <div className="execution-files-grid">
-        {files.map((file) => <button type="button" key={file._id || file.storageFileId} onClick={() => openFile(file)}>
-          {file.mimeType === "application/pdf" ? <HiOutlineDocumentText /> : <HiOutlinePhotograph />}
-          <span>{file.fileName}</span>
-        </button>)}
+        {files.map((file) => <article key={file._id || file.storageFileId} className="execution-file-card">
+          <button type="button" className="execution-file-open" onClick={() => openFile(file)}>
+            {file.mimeType === "application/pdf" ? <HiOutlineDocumentText /> : <HiOutlinePhotograph />}
+            <span><b>{file.fileName}</b><small>{formatFileSize(file.fileSize)}</small></span>
+          </button>
+          <button type="button" className="execution-file-delete" onClick={() => removeExecutionFile(file)} disabled={busy} aria-label="حذف الملف"><HiOutlineX /></button>
+        </article>)}
       </div>}
       <div className="execution-pdf-actions">
         <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy}>تخطي هذه المرحلة</button>

@@ -107,6 +107,7 @@ projectsRouter.post(
 projectsRouter.post("/:id/execution-pdf/request", authMw, CheckUserToken, projectController.requestExecutionPdf);
 projectsRouter.post("/:id/execution-pdf/files", authMw, CheckUserToken, executionUpload.single("file"), projectController.uploadExecutionPdfFile);
 projectsRouter.get("/:id/execution-pdf/:panelId/files/:fileId", authMw, CheckUserToken, projectController.getExecutionPdfFile);
+projectsRouter.delete("/:id/execution-pdf/:panelId/files/:fileId", authMw, CheckUserToken, projectController.deleteExecutionPdfFile);
 projectsRouter.post("/:id/execution-pdf/finish", authMw, CheckUserToken, projectController.finishExecutionPdf);
 projectsRouter.post("/:id/execution-pdf/skip", authMw, CheckUserToken, projectController.skipExecutionPdf);
 projectsRouter.post("/:id/execution-pdf/request-changes", authMw, CheckUserToken, projectController.requestExecutionPdfChanges);

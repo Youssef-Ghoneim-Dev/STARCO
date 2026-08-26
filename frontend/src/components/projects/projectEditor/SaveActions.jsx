@@ -25,7 +25,8 @@ function SaveActions() {
       if (!Array.isArray(panel.thickness) || panel.thickness.length === 0) errors.push(`يرجى اختيار سمك الصاج في ${panelLabel}.`);
       if (panel.hasCopper || panel.copper?.enabled) {
         const copper = panel.copper || {};
-        if (!Number(copper.pricePerKg)) errors.push(`يرجى إدخال سعر النحاس في ${panelLabel}.`);
+        const effectiveCopperPrice = copper.pricePerKg ?? systemConfig?.copperConfiguration?.pricePerKg;
+        if (!Number(effectiveCopperPrice)) errors.push(`يرجى إدخال سعر النحاس في ${panelLabel}.`);
         if (!copper.main?.optionKey) errors.push(`يرجى اختيار أمبير النحاس الرئيسي في ${panelLabel}.`);
         if (!Number(copper.main?.length)) errors.push(`يرجى إدخال طول النحاس الرئيسي في ${panelLabel}.`);
         (copper.branches || []).forEach((branch, branchIndex) => {
@@ -36,7 +37,7 @@ function SaveActions() {
       if (!hasSizedPart) errors.push(`يرجى إدخال عرض وارتفاع لجزء واحد على الأقل في ${panelLabel}.`);
     });
     return errors;
-  }, [project, prices]);
+  }, [project, prices, systemConfig?.copperConfiguration?.pricePerKg]);
   const canSubmit = validationErrors.length === 0;
 
   const generatePdf = async () => {

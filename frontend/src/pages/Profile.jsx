@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -13,14 +13,18 @@ function Profile() {
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyProfile);
   const [saving, setSaving] = useState(false);
+  const initializedUserId = useRef("");
 
   useEffect(() => {
+    const userId = String(user?._id || user?.id || "");
+    if (!userId || initializedUserId.current === userId) return;
+    initializedUserId.current = userId;
     setForm({
       name: user?.name || "",
       email: user?.email || "",
       phoneNumber: user?.phoneNumber || "",
     });
-  }, [user]);
+  }, [user?._id, user?.id, user?.name, user?.email, user?.phoneNumber]);
 
   const hasChanges =
     form.name !== (user?.name || "") ||

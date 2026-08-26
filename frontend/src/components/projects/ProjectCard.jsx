@@ -73,7 +73,7 @@ function ProjectCard({ project, setProjects }) {
           {clientPrefix} / {project.client?.name}
         </div>
 
-        {["OwnerManager", "Engineer"].includes(user?.role) && <button className="delete-project-btn" onClick={handleDelete}>
+        {["OwnerManager", "Engineer", "Marketer"].includes(user?.role) && <button className="delete-project-btn" onClick={handleDelete}>
           <HiOutlineTrash />
         </button>}
       </div>

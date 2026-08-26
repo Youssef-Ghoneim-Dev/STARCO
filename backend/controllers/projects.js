@@ -303,13 +303,14 @@ const editableMarketingProjectData = (body = {}, existingProject) => {
                 count: Math.max(1, Math.min(100, Number(group.count) || 1))
             }))
             : (currentObject.copperDetails?.branchGroups || []);
-        const branchRows = branchGroups.flatMap((group) => Array.from({ length: group.count }, (_, branchIndex) => ({
-            branchId: `${group.id}-${branchIndex + 1}`,
+        const branchRows = branchGroups.map((group) => ({
+            branchId: `${group.id}-branch`,
             branchGroupId: group.id,
             optionKey: group.optionKey,
             direction: "one",
-            barCount: 1
-        })));
+            barCount: 1,
+            quantity: group.count
+        }));
         const selectedMainKey = String(incomingCopperDetails.mainKey || incoming.copper?.main?.optionKey || currentObject.copperDetails?.mainKey || "").slice(0, 100);
 
         return {
@@ -359,6 +360,13 @@ const getAssignedEngineerName = async (project) => {
 
 const projectAlreadyClaimed = async (res, project) => {
     const engineerName = await getAssignedEngineerName(project);
+    if (!engineerName) {
+        return res.status(409).json({
+            status: "error",
+            code: "PROJECT_NOT_OPENED",
+            message: "هذا المشروع لم يتم فتحه أو بدء العمل عليه بعد."
+        });
+    }
     return res.status(409).json({
         status: "error",
         code: "PROJECT_ALREADY_CLAIMED",
@@ -433,7 +441,7 @@ const getProject = async (req, res, next) => {
 
         const marketer = await getProjectMarketer(project);
         const engineer = project.engineerId
-            ? await userModels.select_one({ _id: project.engineerId, approved: true, isDeleted: false })
+            ? await userModels.select_one({ _id: project.engineerId })
             : null;
         const latestProductionUpdate = (project.panels || [])
             .flatMap((item) => item.manufacturing?.productionHistory || [])
@@ -484,8 +492,8 @@ const getProjectMedia = async (req, res, next) => {
         if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
         const marketerCanRead = req.user.role === "Marketer" && await marketerOwnsProject(req.user, project);
         if (!canReadProject(req.user, project) && !marketerCanRead) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض مرفقات المشروع." });
-        const records = await whatsappMessages.findByProject(project._id);
-        return res.status(200).json(records.map((record) => ({
+        const records = await whatsappMessages.findAllByProject(project._id);
+        return res.status(200).json(records.filter((record) => record.media?.storageFileId).map((record) => ({
             id: record._id,
             panelId: record.panelId,
             type: record.type,
@@ -503,7 +511,7 @@ const getProjectMediaFile = async (req, res, next) => {
         if (!project) return res.status(404).end();
         const marketerCanRead = req.user.role === "Marketer" && await marketerOwnsProject(req.user, project);
         if (!canReadProject(req.user, project) && !marketerCanRead) return res.sendStatus(403);
-        const records = await whatsappMessages.findByProject(project._id);
+        const records = await whatsappMessages.findAllByProject(project._id);
         const record = records.find((item) => String(item._id) === req.params.mediaId);
         if (!record?.media?.storageFileId) return res.sendStatus(404);
         const file = await downloadStoredFile(record.media.storageFileId);
@@ -933,6 +941,21 @@ const getExecutionPdfFile = async (req, res, next) => {
         res.setHeader("Content-Type", file.mimeType || stored.mimeType);
         res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
         return res.send(stored.buffer);
+    } catch (error) { next(error); }
+};
+
+const deleteExecutionPdfFile = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canManageExecutionPdf(req.user, project)) return res.status(403).json({ status: "error", message: "حذف ملف PDF التنفيذ متاح للمهندس أو Owner Manager فقط." });
+        const panel = getPanelById(project, req.params.panelId);
+        const file = panel?.executionPdf?.files?.id(req.params.fileId);
+        if (!file) return res.status(404).json({ status: "error", message: "الملف غير موجود." });
+        if (file.storageFileId) await deleteStoredFile(file.storageFileId);
+        file.deleteOne();
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: "تم حذف الملف.", project: updatedProject });
     } catch (error) { next(error); }
 };
 
@@ -1368,7 +1391,15 @@ const deleteProject = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
         if (!project) return res.status(404).json({ status: "error", message: `project id ${req.params.id} not found` });
-        if (!isOwner(req.user) && !sameId(project.engineerId, req.user._id)) return projectAlreadyClaimed(res, project);
+        const marketerCanDelete = isMarketer(req.user) && await marketerOwnsProject(req.user, project);
+        if (isEngineer(req.user) && !project.engineerId) {
+            return res.status(409).json({
+                status: "error",
+                code: "PROJECT_NOT_OPENED",
+                message: "هذا المشروع لم يتم فتحه أو بدء العمل عليه بعد، لذلك لا يمكنك حذفه."
+            });
+        }
+        if (!isOwner(req.user) && !marketerCanDelete && !sameId(project.engineerId, req.user._id)) return projectAlreadyClaimed(res, project);
         await projectModels.deleteOne(req.params.id);
         return res.status(200).json({ status: "ok", message: "project deleted" });
     } catch (error) {
@@ -1414,4 +1445,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, uploadManufacturingFileChunk, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, updateManufacturingStage, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, deleteExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, uploadManufacturingFileChunk, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, updateManufacturingStage, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

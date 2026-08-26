@@ -64,6 +64,10 @@ export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
     { responseType: "blob" },
 );
 
+export const deleteExecutionPdfFile = (projectId, panelId, fileId) => api.delete(
+    `/projects/${projectId}/execution-pdf/${panelId}/files/${fileId}`,
+);
+
 export const uploadManufacturingFile = async (projectId, panelId, file) => {
     const { data: session } = await api.post(`/projects/${projectId}/manufacturing/upload-session`, {
         panelId,

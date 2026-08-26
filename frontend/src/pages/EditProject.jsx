@@ -83,9 +83,8 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     {isQuoteCompleted && !readOnly && <StartEditingPanel />}
     <ExecutionPdfWorkspace />
     <details className="quote-reference-details">
-      <summary>عرض بيانات التسعير المحفوظة</summary>
-      {isWhatsappProject && <><PanelsTabs readOnly /><WhatsappProjectData /></>}
-      <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
+      <summary>{isWhatsappProject ? "عرض بيانات المشروع والمندوب" : "عرض بيانات التسعير المحفوظة"}</summary>
+      {isWhatsappProject ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />}
     </details>
   </>;
   if (!isWhatsappProject) return <>
