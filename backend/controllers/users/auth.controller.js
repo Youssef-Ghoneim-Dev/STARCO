@@ -12,11 +12,35 @@ const requirePhoneNumber = (phoneNumber) => {
     return normalizedPhoneNumber;
 };
 
+const whatsappActivationUrl = () => {
+    const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, "");
+    if (!businessPhone) return null;
+    return `https://wa.me/${businessPhone}?text=${encodeURIComponent("تأكيد حساب STARCO")}`;
+};
+
 const issueSession = (res, user) => {
     const token = jwt.sign({ id: user._id, name: user.name, email: user.email, role: user.role }, process.env.TOKEN_KEY);
     res.header("Access-Control-Expose-Headers", "*");
     res.header("x-auth-token", token);
-    const account = { id: user._id, name: user.name, email: user.email, phoneNumber: user.phoneNumber, role: user.role };
+    const account = {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        whatsappOptInRequired: user.whatsappOptInRequired === true,
+        whatsappOptInVerifiedAt: user.whatsappOptInVerifiedAt || null,
+        whatsappActivationUrl: whatsappActivationUrl()
+    };
+    if (user.whatsappOptInRequired === true && !user.whatsappOptInVerifiedAt) {
+        return res.status(200).json({
+            status: "whatsappPending",
+            message: "Send a WhatsApp message from your registered number to activate your account.",
+            token,
+            approved: user.approved,
+            user: account
+        });
+    }
     return res.status(200).json(user.approved ? { status: "ok", message: "Login Successfully", token, approved: true, user: account } : { status: "pending", message: "Waiting for manager approval", token, user: account });
 };
 
@@ -33,6 +57,9 @@ const register = async (req, res, next) => {
             })
         };
         user.phoneNumber = requirePhoneNumber(user.phoneNumber);
+        user.whatsappOptInRequired = true;
+        user.whatsappOptInVerifiedAt = null;
+        user.whatsappOptInMessageId = null;
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(user.password, salt)
         user.password = hashedPassword
@@ -92,7 +119,18 @@ const googleLogin = async (req, res, next) => {
                 return res.status(400).json({ status: "error", message: "أكمل رقم الهاتف والدور أولًا لإنشاء الحساب عبر Google." });
             }
             const phoneNumber = requirePhoneNumber(req.body.phoneNumber);
-            await models.add_one({ name: profile.name || profile.email.split("@")[0], email: profile.email.toLowerCase(), phoneNumber, role: req.body.role, password: null, googleId: profile.sub, authProvider: "google" });
+            await models.add_one({
+                name: profile.name || profile.email.split("@")[0],
+                email: profile.email.toLowerCase(),
+                phoneNumber,
+                role: req.body.role,
+                password: null,
+                googleId: profile.sub,
+                authProvider: "google",
+                whatsappOptInRequired: true,
+                whatsappOptInVerifiedAt: null,
+                whatsappOptInMessageId: null
+            });
             user = await models.select_one({ email: profile.email.toLowerCase() });
         }
         if (user.isDeleted) return res.status(403).json({ status: "error", message: "Your account has been deleted" });

@@ -871,6 +871,26 @@ const handleIncomingMessage = async (message, value) => {
     if (await messages.findByProviderMessageId(message.id)) return;
 
     const text = extractText(message);
+    const activatedAccount = await users.verifyPendingWhatsappOptInByPhone(senderPhone, message.id);
+    if (activatedAccount) {
+        try {
+            await messages.create({
+                providerMessageId: message.id,
+                direction: "inbound",
+                senderPhone,
+                type: "whatsapp_opt_in",
+                text: text || null,
+                status: "processed",
+                rawPayload: message
+            });
+        } catch (error) {
+            if (error?.code === 11000) return;
+            throw error;
+        }
+        markMessageAsRead(message.id).catch((error) => console.error("Could not mark message as read:", error.message));
+        await sendSafeText(senderPhone, "تم تأكيد رقم WhatsApp لحسابك في STARCO. يمكنك الآن الرجوع إلى الموقع ومتابعة الدخول.");
+        return;
+    }
     const command = parseWhatsappCommand(text);
     const activeSession = await getActiveSession(senderPhone);
 

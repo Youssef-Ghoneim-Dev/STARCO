@@ -1,4 +1,11 @@
 const models = require("../../models/users")
+const { normalizePhoneNumber } = require("../../utils/phoneNumber")
+
+const whatsappActivationUrl = () => {
+    const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, "");
+    if (!businessPhone) return null;
+    return `https://wa.me/${businessPhone}?text=${encodeURIComponent("تأكيد حساب STARCO")}`;
+};
 const UpdateProfile = async (req, res, next) => {
     try {
         const userId = req.decodedToken.id
@@ -36,6 +43,12 @@ const UpdateProfile = async (req, res, next) => {
                 status: "error",
                 message: `user id ${user.id} not found`,
             })
+        }
+        if (
+            targetUser.whatsappOptInRequired === true &&
+            normalizePhoneNumber(user.phoneNumber) !== normalizePhoneNumber(targetUser.phoneNumber)
+        ) {
+            await models.resetWhatsappOptIn(user.id);
         }
         return res.status(200).json({
             status: "ok",
@@ -77,7 +90,6 @@ const getProfile = async (req, res, next) => {
                 message: "Account no longer exists"
             });
         }
-
         return res.status(200).json({
             id: user._id,
             name: user.name,
@@ -85,6 +97,9 @@ const getProfile = async (req, res, next) => {
             phoneNumber: user.phoneNumber,
             role: user.role,
             approved: user.approved,
+            whatsappOptInRequired: user.whatsappOptInRequired === true,
+            whatsappOptInVerifiedAt: user.whatsappOptInVerifiedAt || null,
+            whatsappActivationUrl: whatsappActivationUrl(),
             isDeleted: user.isDeleted
         });
 

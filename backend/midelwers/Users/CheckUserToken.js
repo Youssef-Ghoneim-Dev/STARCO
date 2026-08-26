@@ -27,6 +27,13 @@ module.exports = async (req, res, next) => {
             });
         }
 
+        if (currentUser.whatsappOptInRequired === true && !currentUser.whatsappOptInVerifiedAt) {
+            return res.status(403).json({
+                status: "whatsappPending",
+                message: "WhatsApp verification is required. Send a message from your registered number.",
+            });
+        }
+
         if (!currentUser.approved) {
             return res.status(403).json({
                 status: "error",

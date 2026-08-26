@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema({
         ], required: true
     },
     approved: { type: Boolean, default: false, required: true },
+    // This gate is enabled explicitly for accounts created after the WhatsApp
+    // opt-in flow was introduced. Keeping the default false avoids locking
+    // existing accounts that predate the flow.
+    whatsappOptInRequired: { type: Boolean, default: false },
+    whatsappOptInVerifiedAt: { type: Date, default: null },
+    whatsappOptInMessageId: { type: String, default: null },
     isDeleted: { type: Boolean, default: false, required: true }
 })
 

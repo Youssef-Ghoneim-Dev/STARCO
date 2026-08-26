@@ -134,7 +134,10 @@ const ensurePanelManufacturing = (panel) => {
 
 const canManageExecutionRequest = async (user, project) => {
     if (isOwner(user) || user.role === "MarketingManager") return true;
-    if (isEngineer(user)) return !project.engineerId || sameId(project.engineerId, user._id);
+    if (isEngineer(user)) {
+        return project.source === "manual"
+            && (!project.engineerId || sameId(project.engineerId, user._id));
+    }
     return isMarketer(user) && marketerOwnsProject(user, project);
 };
 

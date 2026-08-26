@@ -9,11 +9,17 @@ const namedBody = (parameterNames, values) => {
     if (parameterNames.length !== values.length) {
         throw new Error("WhatsApp template parameter names do not match the supplied values.");
     }
+    // Meta currently rejects parameter_name values longer than 20 characters.
+    // Older templates created in WhatsApp Manager could still be approved with
+    // a longer named variable (for example execution_preview_link). In that
+    // case send the body values positionally, in the exact template order,
+    // instead of sending an invalid parameter_name.
+    const usePositionalParameters = parameterNames.some((name) => String(name || "").length > 20);
     return [{
         type: "body",
         parameters: values.map((value, index) => ({
             type: "text",
-            parameter_name: parameterNames[index],
+            ...(!usePositionalParameters ? { parameter_name: parameterNames[index] } : {}),
             text: String(value ?? "غير محدد")
         }))
     }];

@@ -20,6 +20,32 @@ const select_marketer_by_phone = async (phoneNumber) => {
     });
 };
 
+const verifyPendingWhatsappOptInByPhone = async (phoneNumber, messageId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.findOneAndUpdate(
+        {
+            phoneNumber: normalizePhoneNumber(phoneNumber),
+            whatsappOptInRequired: true,
+            whatsappOptInVerifiedAt: null,
+            isDeleted: false
+        },
+        {
+            whatsappOptInVerifiedAt: new Date(),
+            whatsappOptInMessageId: messageId || null
+        },
+        { returnDocument: "after" }
+    );
+};
+
+const resetWhatsappOptIn = async (userId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.findByIdAndUpdate(userId, {
+        whatsappOptInRequired: true,
+        whatsappOptInVerifiedAt: null,
+        whatsappOptInMessageId: null
+    }, { returnDocument: "after" });
+};
+
 const add_one = async (user) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     if (user.googleId == null) {
@@ -83,6 +109,8 @@ const deleteForever = async (condtion) => {
 module.exports = {
     select_one,
     select_marketer_by_phone,
+    verifyPendingWhatsappOptInByPhone,
+    resetWhatsappOptIn,
     add_one,
     selectall,
     update,
