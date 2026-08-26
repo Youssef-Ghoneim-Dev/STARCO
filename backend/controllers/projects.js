@@ -132,6 +132,31 @@ const ensurePanelManufacturing = (panel) => {
     return panel.manufacturing;
 };
 
+const PRODUCTION_STAGE_KEYS = ["awaitingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+const PRODUCTION_STAGE_REASONS = {
+    laser: ["عطل في ماكينة الليزر", "ازدحام/ضغط على الليزر", "مشكلة في ملفات DXF", "نقص خامات/صاج", "انتظار تعديل من المهندس", "انقطاع كهرباء", "أخرى"],
+    manufacturing: ["عطل في ماكينة/معدات التصنيع", "نقص خامات", "نقص عمالة", "تأخر اللوحة من مرحلة الليزر", "إعادة تصنيع جزء بسبب خطأ", "ضغط أعمال", "أخرى"],
+    painting: ["عطل أو صيانة في معدات الرش", "نقص دهان/خامات", "انتظار تجهيز السطح", "ازدحام جدول الرش", "تأخر من مرحلة التصنيع", "إعادة رش بسبب مشكلة في الجودة", "أخرى"],
+    assembly: ["نقص مكونات كهربائية", "نقص إكسسوارات/قطع", "نقص عمالة", "تأخر وصول أجزاء اللوحة", "مشكلة اكتُشفت أثناء التجميع", "إعادة عمل/تعديل", "تأخر من المرحلة السابقة", "أخرى"]
+};
+const ensureProductionStages = (manufacturing) => {
+    const currentStage = PRODUCTION_STAGE_KEYS.includes(manufacturing.currentStage)
+        ? manufacturing.currentStage
+        : "awaitingLaserDownload";
+    const currentIndex = PRODUCTION_STAGE_KEYS.indexOf(currentStage);
+    const existing = new Map((manufacturing.productionStages || []).map((stage) => [stage.key, stage]));
+    manufacturing.productionStages = PRODUCTION_STAGE_KEYS.map((key, index) => {
+        const saved = existing.get(key)?.toObject?.() || existing.get(key) || {};
+        return {
+            ...saved,
+            key,
+            status: saved.status || (index < currentIndex ? "completed" : index === currentIndex ? "active" : "pending")
+        };
+    });
+    if (!manufacturing.productionHistory) manufacturing.productionHistory = [];
+    return manufacturing.productionStages;
+};
+
 const canManageExecutionRequest = async (user, project) => {
     if (isOwner(user) || user.role === "MarketingManager") return true;
     if (isEngineer(user)) {
@@ -406,19 +431,29 @@ const getProject = async (req, res, next) => {
             project = claimedProject || await projectModels.select_one({ _id: projectId, isDeleted: false });
         }
 
-        if (isOwner(req.user) || req.user.role === "MarketingManager") return res.status(200).json(project);
+        const marketer = await getProjectMarketer(project);
+        const projectResponse = {
+            ...(project.toObject?.() || project),
+            marketingRepresentative: marketer ? {
+                name: marketer.name,
+                phoneNumber: marketer.phoneNumber,
+                email: marketer.email
+            } : null
+        };
+
+        if (isOwner(req.user) || req.user.role === "MarketingManager") return res.status(200).json(projectResponse);
         if (req.user.role === "Marketer") {
             if (!(await marketerOwnsProject(req.user, project))) {
                 return res.status(403).json({ status: "error", message: "هذا المشروع لا يخصك." });
             }
-            return res.status(200).json(project);
+            return res.status(200).json(projectResponse);
         }
         if (isEngineer(req.user)) {
             if (!sameId(project.engineerId, req.user._id)) return projectAlreadyClaimed(res, project);
-            return res.status(200).json(project);
+            return res.status(200).json(projectResponse);
         }
         if (isProductionManager(req.user) && ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"].includes(project.status)) {
-            return res.status(200).json(project);
+            return res.status(200).json(projectResponse);
         }
         return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض المشروع." });
     } catch (error) {
@@ -1229,6 +1264,94 @@ const recordManufacturingDelay = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+const updateManufacturingStage = async (req, res, next) => {
+    try {
+        const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!isOwner(req.user) && !isProductionManager(req.user)) {
+            return res.status(403).json({ status: "error", message: "متابعة مراحل الإنتاج متاحة لمدير التنفيذ أو Owner Manager فقط." });
+        }
+
+        const panel = getPanelById(project, req.body?.panelId);
+        if (!panel || !["filesReady", "downloadedToLaser"].includes(panel.manufacturing?.status)) {
+            return res.status(409).json({ status: "error", message: "ملفات تصنيع هذه اللوحة ليست جاهزة بعد." });
+        }
+
+        const manufacturing = ensurePanelManufacturing(panel);
+        const stages = ensureProductionStages(manufacturing);
+        const stageKey = String(req.body?.stageKey || "");
+        const action = String(req.body?.action || "");
+        const stageIndex = PRODUCTION_STAGE_KEYS.indexOf(stageKey);
+        const stage = stages[stageIndex];
+        if (!stage || stage.status !== "active" || manufacturing.currentStage !== stageKey) {
+            return res.status(409).json({ status: "error", message: "يمكن تحديث مرحلة الإنتاج الحالية فقط." });
+        }
+
+        const notes = String(req.body?.notes || "").trim().slice(0, 2000);
+        manufacturing.notes = notes;
+
+        if (action === "completed") {
+            const now = new Date();
+            stage.status = "completed";
+            stage.completedAt = now;
+            stage.completedBy = req.user._id;
+            stage.delayReason = "";
+            stage.delayDetails = "";
+            manufacturing.productionHistory.push({ stageKey, action: "completed", actorRole: req.user.role, createdAt: now });
+
+            const nextStage = stages[stageIndex + 1];
+            if (nextStage) {
+                nextStage.status = "active";
+                manufacturing.currentStage = nextStage.key;
+                manufacturing.currentStageStartedAt = now;
+            } else {
+                manufacturing.currentStage = "completed";
+            }
+            if (stageKey === "awaitingLaserDownload") {
+                manufacturing.status = "downloadedToLaser";
+                manufacturing.downloadedToLaserAt = now;
+                manufacturing.downloadedToLaserBy = req.user._id;
+                const laserStageDueAt = new Date();
+                laserStageDueAt.setHours(24, 0, 0, 0);
+                manufacturing.laserStageDueAt = laserStageDueAt;
+            }
+        } else if (action === "delayed") {
+            const reason = stageKey === "awaitingLaserDownload"
+                ? "برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة"
+                : String(req.body?.reason || "").trim();
+            const details = String(req.body?.details || "").trim().slice(0, 1000);
+            const allowedReasons = PRODUCTION_STAGE_REASONS[stageKey] || [];
+            if (stageKey !== "awaitingLaserDownload" && !allowedReasons.includes(reason)) {
+                return res.status(400).json({ status: "error", message: "اختر سبب تأخير صحيحًا للمرحلة الحالية." });
+            }
+            if (reason === "أخرى" && !details) {
+                return res.status(400).json({ status: "error", message: "اكتب سبب التأخير عند اختيار أخرى." });
+            }
+            const now = new Date();
+            stage.delayReason = reason;
+            stage.delayDetails = details;
+            stage.delayedAt = now;
+            stage.delayedBy = req.user._id;
+            manufacturing.delayReason = reason === "أخرى" ? details : reason;
+            manufacturing.delayRecordedAt = now;
+            manufacturing.productionHistory.push({ stageKey, action: "delayed", reason, details, actorRole: req.user.role, createdAt: now });
+        } else if (action === "notes") {
+            manufacturing.productionHistory.push({ stageKey, action: "notes", details: notes, actorRole: req.user.role, createdAt: new Date() });
+        } else {
+            return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم أولًا." });
+        }
+
+        const allPanelsCompleted = (project.panels || []).every((item) => item.manufacturing?.currentStage === "completed");
+        const nextProjectStatus = allPanelsCompleted
+            ? "completed"
+            : (project.panels || []).some((item) => item.manufacturing?.status === "downloadedToLaser")
+                ? "laserFilesDownloaded"
+                : "manufacturingFilesReady";
+        const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: nextProjectStatus, updatedAt: Date.now() });
+        return res.status(200).json({ status: "ok", message: action === "completed" ? "تم الانتقال إلى المرحلة التالية." : "تم حفظ تحديث المرحلة.", project: updatedProject });
+    } catch (error) { next(error); }
+};
+
 const deleteProject = async (req, res, next) => {
     try {
         const project = await projectModels.select_one({ _id: req.params.id, isDeleted: false });
@@ -1279,4 +1402,4 @@ const permanentlyDeleteProject = async (req, res, next) => {
     }
 };
 
-module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, uploadManufacturingFileChunk, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };
+module.exports = { getProjects, getClientProjectPreview, getProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink, addProject, updateProject, startProjectEditing, submitMarketingProject, completeProject, requestExecutionPdf, uploadExecutionPdfFile, getExecutionPdfFile, finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, uploadManufacturingFile, startManufacturingFileUpload, uploadManufacturingFileChunk, completeManufacturingFileUpload, getManufacturingFile, downloadManufacturingArchive, finishManufacturingFiles, markManufacturingDownloadedToLaser, recordManufacturingDelay, updateManufacturingStage, deleteProject, getDeletedProjects, restoreProject, permanentlyDeleteProject };

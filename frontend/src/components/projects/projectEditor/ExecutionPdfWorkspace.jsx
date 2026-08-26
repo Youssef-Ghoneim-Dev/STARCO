@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineDocumentText, HiOutlinePhotograph } from "react-icons/hi";
+import { HiOutlineCheckCircle, HiOutlineChevronDown, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineDocumentText, HiOutlineDotsHorizontal, HiOutlineFolder, HiOutlinePhotograph, HiOutlineXCircle } from "react-icons/hi";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
@@ -10,16 +10,30 @@ import {
   getExecutionPdfFile,
   getManufacturingArchive,
   getManufacturingFile,
-  markManufacturingDownloadedToLaser,
-  recordManufacturingDelay,
   requestExecutionPdf,
   requestExecutionPdfChanges,
   skipExecutionPdf,
   uploadExecutionPdfFile,
   uploadManufacturingFile,
+  updateManufacturingStage,
 } from "../../../services/projectsAPI";
 
 const quoteFinishedStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"];
+
+const productionStageDefinitions = [
+  { key: "awaitingLaserDownload", title: "تنزيل الملفات إلى الليزر", description: "إرسال ملفات اللوحة إلى ماكينة الليزر" },
+  { key: "laser", title: "الانتهاء من العمل على الليزر", description: "إتمام قص أجزاء اللوحة على الليزر" },
+  { key: "manufacturing", title: "الانتهاء من التصنيع", description: "تصنيع وتجهيز أجزاء اللوحة" },
+  { key: "painting", title: "الانتهاء من رش/دهان اللوحة", description: "إتمام تجهيز السطح والدهان" },
+  { key: "assembly", title: "الانتهاء من التجميع", description: "إتمام تجميع اللوحة بالكامل" },
+];
+
+const productionDelayReasons = {
+  laser: ["عطل في ماكينة الليزر", "ازدحام/ضغط على الليزر", "مشكلة في ملفات DXF", "نقص خامات/صاج", "انتظار تعديل من المهندس", "انقطاع كهرباء", "أخرى"],
+  manufacturing: ["عطل في ماكينة/معدات التصنيع", "نقص خامات", "نقص عمالة", "تأخر اللوحة من مرحلة الليزر", "إعادة تصنيع جزء بسبب خطأ", "ضغط أعمال", "أخرى"],
+  painting: ["عطل أو صيانة في معدات الرش", "نقص دهان/خامات", "انتظار تجهيز السطح", "ازدحام جدول الرش", "تأخر من مرحلة التصنيع", "إعادة رش بسبب مشكلة في الجودة", "أخرى"],
+  assembly: ["نقص مكونات كهربائية", "نقص إكسسوارات/قطع", "نقص عمالة", "تأخر وصول أجزاء اللوحة", "مشكلة اكتُشفت أثناء التجميع", "إعادة عمل/تعديل", "تأخر من المرحلة السابقة", "أخرى"],
+};
 
 // Temporary test mode: manufacturing attachments are images only until the
 // storage layer is moved to Cloudflare R2.
@@ -40,6 +54,21 @@ const saveBlob = (blob, fileName) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 };
 
+const formatFileSize = (size) => {
+  const bytes = Number(size) || 0;
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const manufacturingFileType = (file) => {
+  const extension = String(file?.fileName || "").split(".").pop()?.toUpperCase();
+  if (extension && extension.length <= 5) return extension;
+  if (String(file?.mimeType || "").startsWith("image/")) return "IMG";
+  return "FILE";
+};
+
 function ExecutionPdfWorkspace() {
   const { user } = useAuth();
   const { project, setProject, activePanel, setActivePanel, savingProject } = useProject();
@@ -54,7 +83,10 @@ function ExecutionPdfWorkspace() {
   const manufacturing = panel?.manufacturing || { status: "notStarted", files: [], notes: "" };
   const manufacturingFiles = useMemo(() => manufacturing.files || [], [manufacturing.files]);
   const [manufacturingNotes, setManufacturingNotes] = useState(manufacturing.notes || "");
-  const [delayReason, setDelayReason] = useState(manufacturing.delayReason || "");
+  const [stageDecision, setStageDecision] = useState("");
+  const [delayReason, setDelayReason] = useState("");
+  const [delayDetails, setDelayDetails] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const canIssueOrder = user?.role === "OwnerManager"
     || user?.role === "MarketingManager"
     || user?.role === "Marketer"
@@ -67,8 +99,24 @@ function ExecutionPdfWorkspace() {
 
   useEffect(() => {
     setManufacturingNotes(manufacturing.notes || "");
-    setDelayReason(manufacturing.delayReason || "");
-  }, [panel?.panelId, manufacturing.notes, manufacturing.delayReason]);
+    setStageDecision("");
+    setDelayReason("");
+    setDelayDetails("");
+  }, [panel?.panelId, manufacturing.notes, manufacturing.currentStage]);
+
+  const productionStages = useMemo(() => {
+    const currentKey = productionStageDefinitions.some((stage) => stage.key === manufacturing.currentStage)
+      ? manufacturing.currentStage
+      : "awaitingLaserDownload";
+    const currentIndex = productionStageDefinitions.findIndex((stage) => stage.key === currentKey);
+    const stored = new Map((manufacturing.productionStages || []).map((stage) => [stage.key, stage]));
+    return productionStageDefinitions.map((definition, index) => ({
+      ...definition,
+      ...(stored.get(definition.key) || {}),
+      status: stored.get(definition.key)?.status || (index < currentIndex ? "completed" : index === currentIndex ? "active" : "pending"),
+    }));
+  }, [manufacturing.currentStage, manufacturing.productionStages]);
+  const activeProductionStage = productionStages.find((stage) => stage.status === "active");
 
   const copyId = async () => {
     await navigator.clipboard.writeText(project._id);
@@ -80,7 +128,7 @@ function ExecutionPdfWorkspace() {
     setBusy(true);
     try {
       const { data } = await requestExecutionPdf(project._id, panel.panelId);
-      setProject(data.project);
+      setProject({ ...data.project, marketingRepresentative: project.marketingRepresentative || data.project.marketingRepresentative });
       if (data.notification?.includes("تعذر")) toast.error(data.notification);
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر إصدار أمر PDF التنفيذ.");
@@ -198,22 +246,30 @@ function ExecutionPdfWorkspace() {
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملفات مجمعة."); }
   };
 
-  const downloadedToLaser = async () => {
+  const saveProductionStage = async () => {
+    if (!activeProductionStage) return;
+    if (!stageDecision) return toast.error("اختر تمت أو لم تتم أولًا.");
+    if (stageDecision === "delayed" && activeProductionStage.key !== "awaitingLaserDownload" && !delayReason) {
+      return toast.error("اختر سبب التأخير أولًا.");
+    }
+    if (stageDecision === "delayed" && delayReason === "أخرى" && !delayDetails.trim()) {
+      return toast.error("اكتب سبب التأخير أولًا.");
+    }
     setBusy(true);
     try {
-      const { data } = await markManufacturingDownloadedToLaser(project._id, panel.panelId);
-      setProject(data.project);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر تسجيل تنزيل الملفات إلى الليزر."); }
-    finally { setBusy(false); }
-  };
-
-  const saveDelayReason = async () => {
-    if (!delayReason) return toast.error("اختر سبب التأخير أولًا.");
-    setBusy(true);
-    try {
-      const { data } = await recordManufacturingDelay(project._id, panel.panelId, delayReason);
-      setProject(data.project);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر تسجيل سبب التأخير."); }
+      const { data } = await updateManufacturingStage(project._id, {
+        panelId: panel.panelId,
+        stageKey: activeProductionStage.key,
+        action: stageDecision,
+        reason: delayReason,
+        details: delayDetails,
+        notes: manufacturingNotes,
+      });
+      setProject({ ...data.project, marketingRepresentative: project.marketingRepresentative || data.project.marketingRepresentative });
+      setStageDecision("");
+      setDelayReason("");
+      setDelayDetails("");
+    } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ تحديث مرحلة الإنتاج."); }
     finally { setBusy(false); }
   };
 
@@ -334,30 +390,98 @@ function ExecutionPdfWorkspace() {
 
     {manufacturing.status === "awaitingFiles" && !canPrepareManufacturing && <div className="execution-status-notice waiting">تم تأكيد التنفيذ، واللوحة الآن بانتظار رفع المهندس لملفات التصنيع.</div>}
 
-    {["filesReady", "downloadedToLaser"].includes(manufacturing.status) && <section className="manufacturing-files-section">
-      <div><span className="execution-phase-label">ملفات التصنيع جاهزة</span><h3>{panel.panelName}</h3>{manufacturing.notes && <p>{manufacturing.notes}</p>}</div>
-      <div className="manufacturing-download-grid">
-        {manufacturingFiles.map((file) => <button type="button" key={file._id || file.storageFileId} onClick={() => downloadManufacturingFile(file)} disabled={!canDownloadManufacturing}>
-          <HiOutlineCloudDownload /><span>{file.fileName}</span>
-        </button>)}
-      </div>
-      {canDownloadManufacturing && <div className="manufacturing-ready-actions">
-        <button type="button" onClick={downloadAllManufacturingFiles}><HiOutlineCloudDownload /> تنزيل كل الملفات ZIP</button>
-        {manufacturing.status === "filesReady" && ["OwnerManager", "ProductionManager"].includes(user?.role) && <button type="button" className="confirm-execution-btn" onClick={downloadedToLaser} disabled={busy}>تم تنزيل الملفات إلى الليزر</button>}
-      </div>}
-      {manufacturing.status === "filesReady" && ["OwnerManager", "ProductionManager"].includes(user?.role) && <div className="manufacturing-delay-form">
-        <select value={delayReason} onChange={(event) => setDelayReason(event.target.value)}>
-          <option value="">اختر سبب التأخير عند الحاجة</option>
-          <option value="عدم تنزيل الملفات إلى الليزر">عدم تنزيل الملفات إلى الليزر</option>
-          <option value="أعطال الليزر">أعطال الليزر</option>
-          <option value="نقص خامات">نقص خامات</option>
-          <option value="أعطال التصنيع">أعطال التصنيع</option>
-          <option value="مراجعة العميل">مراجعة العميل</option>
-          <option value="أخرى">أخرى</option>
-        </select>
-        <button type="button" onClick={saveDelayReason} disabled={busy || !delayReason}>تسجيل سبب التأخير</button>
-      </div>}
-      {manufacturing.status === "downloadedToLaser" && <div className="execution-status-notice ready">تم تسجيل تنزيل الملفات إلى الليزر، وستبدأ متابعة مرحلة الليزر في اليوم التالي.</div>}
+    {["filesReady", "downloadedToLaser"].includes(manufacturing.status) && <section className="production-workspace">
+      <details className="production-project-details">
+        <summary>عرض تفاصيل المشروع <HiOutlineChevronDown /></summary>
+        <div className="production-project-details-body">
+          <div><small>اسم اللوحة</small><b>{panel.panelName}</b></div>
+          <div><small>اسم العميل</small><b>{project.client?.name || "غير محدد"}</b></div>
+          <div><small>مصدر المشروع</small><b>{project.source === "marketing" ? "المندوب" : project.source === "whatsapp" ? "WhatsApp" : "يدوي"}</b></div>
+          <div><small>رقم المشروع</small><b dir="ltr">{project._id}</b></div>
+          {project.marketingRepresentative && <>
+            <div><small>اسم المندوب</small><b>{project.marketingRepresentative.name || "غير محدد"}</b></div>
+            <div><small>رقم المندوب</small><b dir="ltr">{project.marketingRepresentative.phoneNumber || "غير محدد"}</b></div>
+          </>}
+          {files.length > 0 && <div className="production-execution-files">
+            <small>ملفات PDF التنفيذ</small>
+            {files.map((file) => <button type="button" key={file._id || file.storageFileId} onClick={() => openFile(file)}>
+              {file.mimeType === "application/pdf" ? <HiOutlineDocumentText /> : <HiOutlinePhotograph />}
+              <span>{file.fileName}</span>
+            </button>)}
+          </div>}
+          {manufacturing.notes && <p>{manufacturing.notes}</p>}
+        </div>
+      </details>
+
+      <section className="production-files-card">
+        <header>
+          <div><h3><HiOutlineFolder /> ملفات التصنيع</h3><p>جميع الملفات المرفوعة لهذه اللوحة بواسطة المهندس.</p></div>
+        </header>
+        <div className="manufacturing-download-grid">
+          {manufacturingFiles.map((file) => <article className="manufacturing-file-card" key={file._id || file.storageFileId}>
+            <div className="manufacturing-file-card-heading">
+              <span className={`manufacturing-file-icon ${manufacturingFileType(file).toLowerCase()}`}>
+                {String(file.mimeType || "").startsWith("image/") ? <HiOutlinePhotograph /> : <HiOutlineDocumentText />}
+              </span>
+              <div><b title={file.fileName}>{file.fileName}</b><small>{formatFileSize(file.fileSize)} · {manufacturingFileType(file)}</small></div>
+            </div>
+            <div className="manufacturing-file-card-actions">
+              <button type="button" className="manufacturing-file-download" onClick={() => downloadManufacturingFile(file)} disabled={!canDownloadManufacturing}><HiOutlineCloudDownload /> تحميل</button>
+              <button type="button" className="manufacturing-file-more" aria-label="خيارات الملف" title="خيارات الملف"><HiOutlineDotsHorizontal /></button>
+            </div>
+          </article>)}
+        </div>
+        {canDownloadManufacturing && <button type="button" className="manufacturing-download-all" onClick={downloadAllManufacturingFiles}>
+          <HiOutlineCloudDownload /> تنزيل كل الملفات ZIP
+        </button>}
+      </section>
+
+      <section className="production-stages-section">
+        <header><div><h3>مراحل الإنتاج</h3><p>يتم فتح كل مرحلة بعد إتمام المرحلة السابقة.</p></div></header>
+        <div className="production-stages-track">
+          {productionStages.map((stage, index) => <article key={stage.key} className={`production-stage-card ${stage.status}`}>
+            <span className="production-stage-number">{index + 1}</span>
+            <div className="production-stage-title"><h4>{stage.title}</h4><p>{stage.description}</p></div>
+            {stage.status === "completed" && <div className="production-stage-state completed"><HiOutlineCheckCircle /> تمت</div>}
+            {stage.status === "pending" && <div className="production-stage-state"><HiOutlineClock /> لم تبدأ</div>}
+            {stage.status === "active" && <div className="production-stage-decision">
+              <label className={stageDecision === "completed" ? "selected done" : ""}><input type="radio" name="stage-decision" value="completed" checked={stageDecision === "completed"} onChange={() => setStageDecision("completed")} /><HiOutlineCheckCircle /> تمت</label>
+              <label className={stageDecision === "delayed" ? "selected delayed" : ""}><input type="radio" name="stage-decision" value="delayed" checked={stageDecision === "delayed"} onChange={() => setStageDecision("delayed")} /><HiOutlineXCircle /> لم تتم</label>
+            </div>}
+            {stage.status === "active" && stageDecision === "delayed" && stage.key === "awaitingLaserDownload" && <div className="production-fixed-warning">برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}
+            {stage.status === "active" && stageDecision === "delayed" && stage.key !== "awaitingLaserDownload" && <div className="production-delay-fields">
+              <label>سبب التأخير
+                <select value={delayReason} onChange={(event) => { setDelayReason(event.target.value); if (event.target.value !== "أخرى") setDelayDetails(""); }}>
+                  <option value="">اختر سبب التأخير</option>
+                  {(productionDelayReasons[stage.key] || []).map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+                </select>
+              </label>
+              {delayReason === "أخرى" && <label>سبب التأخير
+                <textarea value={delayDetails} onChange={(event) => setDelayDetails(event.target.value)} placeholder="اكتب سبب التأخير..." />
+              </label>}
+            </div>}
+          </article>)}
+        </div>
+      </section>
+
+      {["OwnerManager", "ProductionManager"].includes(user?.role) && <section className="production-update-panel">
+        <label>ملاحظات عامة (اختياري)
+          <textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي ملاحظات إضافية هنا..." />
+        </label>
+        <div className="production-update-actions">
+          <button type="button" className="production-history-toggle" onClick={() => setHistoryOpen((value) => !value)}><HiOutlineClock /> عرض سجل التحديثات</button>
+          <button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !activeProductionStage || !stageDecision}>{busy ? "جاري الحفظ..." : "حفظ التعديلات"}</button>
+        </div>
+        {historyOpen && <div className="production-history-list">
+          {(manufacturing.productionHistory || []).length === 0
+            ? <p>لا توجد تحديثات مسجلة حتى الآن.</p>
+            : [...manufacturing.productionHistory].reverse().map((item, index) => <div key={`${item.createdAt}-${index}`}>
+              <b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b>
+              <span>{item.reason === "أخرى" ? item.details : item.reason || item.details || ""}</span>
+              <time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time>
+            </div>)}
+        </div>}
+      </section>}
     </section>}
   </section>;
 }

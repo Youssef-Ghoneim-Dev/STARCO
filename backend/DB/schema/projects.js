@@ -29,6 +29,34 @@ const storedProjectFileSchema = new mongoose.Schema({
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
 }, { _id: true });
 
+const productionStageSchema = new mongoose.Schema({
+    key: {
+        type: String,
+        enum: ["awaitingLaserDownload", "laser", "manufacturing", "painting", "assembly"],
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ["pending", "active", "completed"],
+        default: "pending"
+    },
+    completedAt: { type: Date, default: null },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+    delayReason: { type: String, default: "" },
+    delayDetails: { type: String, default: "" },
+    delayedAt: { type: Date, default: null },
+    delayedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
+}, { _id: false });
+
+const productionHistorySchema = new mongoose.Schema({
+    stageKey: { type: String, default: "" },
+    action: { type: String, enum: ["completed", "delayed", "notes"], required: true },
+    reason: { type: String, default: "" },
+    details: { type: String, default: "" },
+    actorRole: { type: String, default: "" },
+    createdAt: { type: Date, default: Date.now }
+}, { _id: false });
+
 const panelSchema = new mongoose.Schema({
 
     panelId: {
@@ -182,7 +210,9 @@ const panelSchema = new mongoose.Schema({
         currentStageStartedAt: { type: Date, default: null },
         lastReminderAt: { type: Date, default: null },
         delayReason: { type: String, default: "" },
-        delayRecordedAt: { type: Date, default: null }
+        delayRecordedAt: { type: Date, default: null },
+        productionStages: { type: [productionStageSchema], default: [] },
+        productionHistory: { type: [productionHistorySchema], default: [] }
     }
 
 }, { _id: false });

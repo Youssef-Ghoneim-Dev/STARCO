@@ -120,6 +120,7 @@ projectsRouter.get("/:id/manufacturing/:panelId/archive", authMw, CheckUserToken
 projectsRouter.post("/:id/manufacturing/finish", authMw, CheckUserToken, projectController.finishManufacturingFiles);
 projectsRouter.post("/:id/manufacturing/downloaded-to-laser", authMw, CheckUserToken, projectController.markManufacturingDownloadedToLaser);
 projectsRouter.post("/:id/manufacturing/delay", authMw, CheckUserToken, projectController.recordManufacturingDelay);
+projectsRouter.post("/:id/manufacturing/stage", authMw, CheckUserToken, projectController.updateManufacturingStage);
 
 projectsRouter.delete(
     "/:id",

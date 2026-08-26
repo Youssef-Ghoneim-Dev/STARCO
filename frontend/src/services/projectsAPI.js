@@ -116,6 +116,11 @@ export const recordManufacturingDelay = (projectId, panelId, reason) => api.post
     { panelId, reason },
 );
 
+export const updateManufacturingStage = (projectId, payload) => api.post(
+    `/projects/${projectId}/manufacturing/stage`,
+    payload,
+);
+
 export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
 
 export const getProjectMediaWhatsappLink = (id, panelId) => api.get(
