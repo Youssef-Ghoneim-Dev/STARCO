@@ -13,17 +13,19 @@ import { useAuth } from "../context/AuthContext";
 import { getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
 import toast from "react-hot-toast";
+import { FaWhatsapp } from "react-icons/fa";
+import { FiRefreshCw } from "react-icons/fi";
 import "../styles/dashboardHome.css";
 
 function Dashboard() {
-  const { loading, accountStatus, user } = useAuth();
+  const { loading, accountStatus, user, reloadProfile, refreshing } = useAuth();
   const [projects, setProjects] = useState([]);
   const [clientsCount, setClientsCount] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const canManageClients = ["OwnerManager", "Engineer"].includes(user?.role);
 
   const loadDashboard = useCallback(() => {
-    if (loading || !user || accountStatus === "pending" || accountStatus === "deleted") {
+    if (loading || !user || accountStatus === "pending" || accountStatus === "whatsappPending" || accountStatus === "deleted") {
       setDashboardLoading(false);
       return;
     }
@@ -83,6 +85,41 @@ function Dashboard() {
               إذا كان هذا بالخطأ، تواصل مع الإدارة لاستعادة الحساب.
             </p>
           )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (accountStatus === "whatsappPending") {
+    return (
+      <DashboardLayout notAllowed pending>
+        <div className="whatsapp-activation" dir="rtl">
+          <div className="whatsapp-activation-icon"><FaWhatsapp /></div>
+          <h2>فعّل حسابك برسالة WhatsApp</h2>
+          <p>
+            أرسل أي رسالة من نفس الرقم المسجل في حسابك، وبعد وصولها سيتأكد النظام من الرقم ويفعّل دخولك تلقائيًا.
+          </p>
+          <div className="whatsapp-activation-number">
+            <span>الرقم المسجل</span>
+            <strong dir="ltr">+{user?.phoneNumber}</strong>
+          </div>
+          {user?.whatsappActivationUrl ? (
+            <a className="whatsapp-activation-button" href={user.whatsappActivationUrl} target="_blank" rel="noreferrer">
+              <FaWhatsapp /> فتح WhatsApp وإرسال الرسالة
+            </a>
+          ) : (
+            <p className="whatsapp-activation-error">رقم WhatsApp الخاص بالشركة غير مضبوط حاليًا. تواصل مع الإدارة.</p>
+          )}
+          <button
+            type="button"
+            className="whatsapp-activation-refresh"
+            onClick={() => reloadProfile({ background: true })}
+            disabled={refreshing}
+          >
+            <FiRefreshCw className={refreshing ? "dashboard-refresh-spinning" : ""} />
+            {refreshing ? "جاري التحقق..." : "أرسلت الرسالة، تحقّق الآن"}
+          </button>
+          <small>يتم التحقق تلقائيًا أيضًا خلال ثوانٍ قليلة.</small>
         </div>
       </DashboardLayout>
     );

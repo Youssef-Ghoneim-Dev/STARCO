@@ -36,7 +36,9 @@ api.interceptors.response.use(
         const message = String(error.response?.data?.message || "").toLowerCase();
 
         if (error.response?.status === 403 && authStatusUpdater) {
-            if (message.includes("approval") || message.includes("approved")) {
+            if (error.response?.data?.status === "whatsappPending" || message.includes("whatsapp verification")) {
+                authStatusUpdater("whatsappPending");
+            } else if (message.includes("approval") || message.includes("approved")) {
                 authStatusUpdater("pending");
             } else if (message.includes("deleted")) {
                 authStatusUpdater("deleted");

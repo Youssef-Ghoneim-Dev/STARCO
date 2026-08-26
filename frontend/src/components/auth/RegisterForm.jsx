@@ -26,7 +26,7 @@ function RegisterForm() {
     await reloadProfile();
     setPending(response.data.status === "pending");
     navigate("/dashboard");
-    if (response.data.status !== "pending") toast.success("Account created successfully.");
+    if (!["pending", "whatsappPending"].includes(response.data.status)) toast.success("Account created successfully.");
   };
   const handleSubmit = async (event) => {
     event.preventDefault();

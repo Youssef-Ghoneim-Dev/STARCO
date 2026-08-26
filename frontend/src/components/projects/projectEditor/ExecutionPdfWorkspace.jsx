@@ -55,7 +55,10 @@ function ExecutionPdfWorkspace() {
   const manufacturingFiles = useMemo(() => manufacturing.files || [], [manufacturing.files]);
   const [manufacturingNotes, setManufacturingNotes] = useState(manufacturing.notes || "");
   const [delayReason, setDelayReason] = useState(manufacturing.delayReason || "");
-  const canIssueOrder = ["Marketer", "MarketingManager", "OwnerManager", "Engineer"].includes(user?.role);
+  const canIssueOrder = user?.role === "OwnerManager"
+    || user?.role === "MarketingManager"
+    || user?.role === "Marketer"
+    || (user?.role === "Engineer" && project?.source === "manual");
   const canPreparePdf = ["Engineer", "OwnerManager"].includes(user?.role);
   const canReviewPdf = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role)
     || (project?.source === "manual" && user?.role === "Engineer");

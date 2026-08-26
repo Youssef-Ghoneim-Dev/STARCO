@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [pending, setPending] = useState(false);
+  const [whatsappPending, setWhatsappPending] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [accountStatus, setAccountStatus] = useState("idle");
   const [statusMessage, setStatusMessage] = useState("");
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
   const checkPendingStatus = useCallback((profile) => {
     if (!profile) {
       setPending(false);
+      setWhatsappPending(false);
       setDeleted(false);
       setAccountStatus("idle");
       setStatusMessage("");
@@ -30,8 +32,22 @@ export function AuthProvider({ children }) {
     if (isDeleted) {
       setDeleted(true);
       setPending(false);
+      setWhatsappPending(false);
       setAccountStatus("deleted");
       setStatusMessage("Your account has been deleted.");
+      return;
+    }
+
+    const isWhatsappPending =
+      profile?.status === "whatsappPending" ||
+      (profile?.whatsappOptInRequired === true && !profile?.whatsappOptInVerifiedAt);
+
+    if (isWhatsappPending) {
+      setWhatsappPending(true);
+      setPending(false);
+      setDeleted(false);
+      setAccountStatus("whatsappPending");
+      setStatusMessage("Send a WhatsApp message from your registered number to activate your account.");
       return;
     }
 
@@ -42,6 +58,7 @@ export function AuthProvider({ children }) {
 
     if (isPending) {
       setPending(true);
+      setWhatsappPending(false);
       setDeleted(false);
       setAccountStatus("pending");
       setStatusMessage("Your account is waiting for manager approval.");
@@ -49,6 +66,7 @@ export function AuthProvider({ children }) {
     }
 
     setPending(false);
+    setWhatsappPending(false);
     setDeleted(false);
     setAccountStatus("active");
     setStatusMessage("");
@@ -64,6 +82,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
       setUser(null);
       setPending(false);
+      setWhatsappPending(false);
       setDeleted(false);
       setAccountStatus("idle");
       setStatusMessage("");
@@ -87,6 +106,7 @@ export function AuthProvider({ children }) {
       if (error?.response?.status === 404) {
         setUser(null);
         setPending(false);
+        setWhatsappPending(false);
         setDeleted(true);
         setAccountStatus("deleted");
         setStatusMessage("Your account is no longer available.");
@@ -97,6 +117,7 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("token");
         setUser(null);
         setPending(false);
+        setWhatsappPending(false);
         setDeleted(false);
         setAccountStatus("idle");
         setStatusMessage("");
@@ -114,14 +135,22 @@ export function AuthProvider({ children }) {
     registerAuthStatusUpdater((status) => {
       if (status === "pending") {
         setPending(true);
+        setWhatsappPending(false);
         setDeleted(false);
         setAccountStatus("pending");
         setStatusMessage("Your account is waiting for manager approval.");
       } else if (status === "deleted") {
         setDeleted(true);
         setPending(false);
+        setWhatsappPending(false);
         setAccountStatus("deleted");
         setStatusMessage("Your account has been deleted.");
+      } else if (status === "whatsappPending") {
+        setWhatsappPending(true);
+        setPending(false);
+        setDeleted(false);
+        setAccountStatus("whatsappPending");
+        setStatusMessage("Send a WhatsApp message from your registered number to activate your account.");
       }
     });
 
@@ -152,6 +181,7 @@ export function AuthProvider({ children }) {
         accountStatus,
         statusMessage,
         pending,
+        whatsappPending,
         deleted,
         refreshing,
         reloadProfile: loadProfile,

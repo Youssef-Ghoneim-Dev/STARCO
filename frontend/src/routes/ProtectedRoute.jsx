@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 function ProtectedRoute() {
   const token = localStorage.getItem("token");
   const location = useLocation();
-  const { loading, pending, deleted } = useAuth();
+  const { loading, pending, whatsappPending, deleted } = useAuth();
 
   if (loading) {
     return (
@@ -24,7 +24,7 @@ function ProtectedRoute() {
     return <Navigate to="/login" state={{ accountDeleted: true }} replace />;
   }
 
-  if (pending && !["/dashboard", "/profile"].includes(location.pathname)) {
+  if ((pending || whatsappPending) && !["/dashboard", "/profile"].includes(location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
 

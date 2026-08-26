@@ -33,7 +33,7 @@ function GoogleRegistrationCompletion() {
       await reloadProfile();
       setPending(response.data.status === "pending");
       navigate("/dashboard");
-      if (response.data.status !== "pending") toast.success("Account created successfully.");
+      if (!["pending", "whatsappPending"].includes(response.data.status)) toast.success("Account created successfully.");
     } catch (error) {
       const message = error?.response?.data?.message || "تعذر إكمال التسجيل عبر Google.";
       if (/phone number|WhatsApp/.test(message)) setPhoneError(message);

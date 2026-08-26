@@ -21,9 +21,10 @@ function LoginForm() {
     localStorage.setItem("token", response.headers["x-auth-token"]);
     await reloadProfile();
     const pending = response.data.status === "pending";
+    const restricted = pending || response.data.status === "whatsappPending";
     setPending(pending);
     navigate("/dashboard");
-    if (!pending) toast.success("Welcome back.");
+    if (!restricted) toast.success("Welcome back.");
   };
   const handleSubmit = async (event) => {
     event.preventDefault(); setLoading(true);
