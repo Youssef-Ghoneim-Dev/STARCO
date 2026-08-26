@@ -37,6 +37,11 @@ module.exports = (req, res, next) => {
 
                 panelId: joi.string().optional(),
 
+                quoteStatus: joi.string().valid("draft", "pending", "inProgress", "editing", "quoteCompleted").optional(),
+                quoteEditingBy: joi.any().allow(null).optional(),
+                quoteEditingRole: joi.string().allow("").optional(),
+                quoteUpdatedAt: joi.date().allow(null).optional(),
+
                 panelName: joi.string().allow("").max(100).optional(),
 
                 panelType: joi.string().allow("").optional(),

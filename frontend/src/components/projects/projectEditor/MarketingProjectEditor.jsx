@@ -25,12 +25,15 @@ function MarketingProjectEditor() {
   const [clientResults, setClientResults] = useState([]);
   const [clientSearchActive, setClientSearchActive] = useState(false);
   const [searchingClients, setSearchingClients] = useState(false);
+  const [openedPanel, setOpenedPanel] = useState(null);
   const clientSearchRef = useRef(0);
   const panel = project.panels?.[activePanel] || project.panels?.[0] || {};
   const panelTypes = systemConfig?.panelTypes || [];
   const copperConfiguration = resolveCopperConfiguration(systemConfig?.copperConfiguration);
   const amperageOptions = (copperConfiguration.catalog || []).map((item) => ({ value: item.key, label: item.name }));
   const branchGroups = Array.isArray(panel.copperDetails?.branchGroups) ? panel.copperDetails.branchGroups : [];
+  const panelEditingMode = project.status === "editingByMarketing";
+  const canEditActivePanel = !panelEditingMode || panel.quoteStatus === "editing";
 
   useEffect(() => { setClientQuery(project.client?.name || ""); }, [project.client?.name]);
   useEffect(() => {
@@ -51,7 +54,10 @@ function MarketingProjectEditor() {
     return () => clearTimeout(timer);
   }, [clientQuery, clientSearchActive]);
 
-  const patchPanel = (patch) => updatePanel(activePanel, (current) => ({ ...current, ...patch }));
+  const patchPanel = (patch) => {
+    if (!canEditActivePanel) return;
+    updatePanel(activePanel, (current) => ({ ...current, ...patch }));
+  };
   const toggleThickness = (thickness) => {
     const selected = (panel.thickness || []).map(String);
     patchPanel({
@@ -113,7 +119,7 @@ function MarketingProjectEditor() {
 
     <section className="project-editor-card marketing-client-card">
       <div className="marketing-client-search">
-        <label>اسم العميل<input value={clientQuery} onFocus={() => setClientSearchActive(true)} onChange={(event) => { const name = event.target.value; setClientQuery(name); setClientSearchActive(true); updateClient({ id: null, name }); }} placeholder="ابحث باسم العميل أو اكتب اسمًا جديدًا" /></label>
+        <label>اسم العميل<input disabled={panelEditingMode} value={clientQuery} onFocus={() => setClientSearchActive(true)} onChange={(event) => { const name = event.target.value; setClientQuery(name); setClientSearchActive(true); updateClient({ id: null, name }); }} placeholder="ابحث باسم العميل أو اكتب اسمًا جديدًا" /></label>
         {clientSearchActive && (searchingClients || clientResults.length > 0) && <div className="client-suggestions marketing-client-suggestions">
           {searchingClients && <p className="search-loading">جاري البحث...</p>}
           {clientResults.map((client) => <button key={client._id} type="button" className="suggestion-item" onMouseDown={(event) => { event.preventDefault(); selectClient(client); }}>{client.name} — {client.type === "company" ? "شركة" : "فرد"}</button>)}
@@ -121,7 +127,11 @@ function MarketingProjectEditor() {
       </div>
     </section>
 
-    <PanelsTabs readOnly={false} />
+    <PanelsTabs readOnly={panelEditingMode} openedPanel={openedPanel} onOpenPanel={setOpenedPanel} />
+    {openedPanel !== null && <div className="panel-detail-shell">
+    <div className="panel-detail-heading"><h2>{panel.panelName || `لوحة ${activePanel + 1}`}</h2><button type="button" onClick={() => setOpenedPanel(null)}>العودة إلى اللوحات</button></div>
+    {!canEditActivePanel && <div className="project-read-only-notice">هذه اللوحة للعرض فقط؛ التعديل مفتوح للوحة المحددة وحدها.</div>}
+    <fieldset className="project-read-only-fieldset" disabled={!canEditActivePanel}>
     <section className="project-editor-card marketing-panel-card">
       <div className="marketing-panel-title"><h3>بيانات اللوحة {activePanel + 1}</h3>{activePanel > 0 && <button type="button" className="delete-panel-data-btn" onClick={() => deletePanel(activePanel)}>حذف اللوحة</button>}</div>
       <div className="marketing-data-grid">
@@ -133,7 +143,9 @@ function MarketingProjectEditor() {
       <label className="marketing-full-field">تفاصيل إضافية<textarea value={panel.additionalDetails || ""} onChange={(event) => patchPanel({ additionalDetails: event.target.value })} placeholder="اكتب أي تفاصيل إضافية" /></label>
       {panel.hasCopper === true && <section className="marketing-copper-fields"><h3>بيانات النحاس</h3><div className="marketing-data-grid"><label>نوع المفاتيح<StyledSelect value={panel.copperDetails?.switches || ""} placeholder="اختر النوع" onChange={(value) => setCopperDetail("switches", value)} options={[{ value: "My Nature", label: "My Nature" }, { value: "Molded", label: "Molded" }]} /></label><label>الرئيسي<StyledSelect value={panel.copperDetails?.mainKey || panel.copper?.main?.optionKey || ""} placeholder="اختر الأمبير" onChange={setCopperMain} options={amperageOptions} /></label></div><div className="marketing-branches"><div className="marketing-branches-heading"><h4>المفاتيح الفرعية</h4><button type="button" onClick={() => setBranchGroups([...branchGroups, { id: `branch-group-${Date.now()}`, optionKey: "", count: 1 }])}>+ إضافة فرعي</button></div>{branchGroups.map((group, index) => <div className="marketing-branch-row" key={group.id || index}><strong className="marketing-branch-name">فرعي {index + 1}</strong><div className="marketing-branch-amp"><StyledSelect value={group.optionKey || ""} placeholder="اختر الأمبير" onChange={(optionKey) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, optionKey } : entry))} options={amperageOptions} /></div><label className="marketing-branch-count">العدد<input type="number" min="1" step="1" value={group.count ?? ""} onChange={(event) => setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: event.target.value } : entry))} onBlur={() => { if (group.count === "") setBranchGroups(branchGroups.map((entry, current) => current === index ? { ...entry, count: 1 } : entry)); }} /></label><button type="button" className="delete-panel-data-btn marketing-branch-delete" onClick={() => setBranchGroups(branchGroups.filter((_, current) => current !== index))}>حذف</button></div>)}</div><label className="marketing-full-field">تفاصيل إضافية للنحاس<textarea value={panel.copperDetails?.notes || ""} onChange={(event) => setCopperDetail("notes", event.target.value)} placeholder="اكتب أي تفاصيل خاصة بالنحاس" /></label></section>}
     </section>
-    <WhatsappProjectData editable />
+    </fieldset>
+    <WhatsappProjectData editable={canEditActivePanel} />
+    </div>}
     <div className="marketing-save-actions"><button type="button" className="primary-btn" onClick={save} disabled={savingProject}>{savingProject ? "جاري الحفظ..." : "حفظ المشروع"}</button></div>
   </section>;
 }

@@ -22,6 +22,12 @@ function SaveActions() {
     project.panels.forEach((panel, index) => {
       const panelLabel = panel.panelName?.trim() || `لوحة ${index + 1}`;
       if (!panel.panelName?.trim()) errors.push(`يرجى إدخال اسم ${panelLabel}.`);
+      const dimensionLabels = { length: "الطول", width: "العرض", depth: "العمق" };
+      Object.entries(dimensionLabels).forEach(([field, label]) => {
+        if (!Number(panel.dimensions?.[field]) || Number(panel.dimensions?.[field]) <= 0) {
+          errors.push(`${panelLabel}: يرجى إدخال ${label} اللوحة.`);
+        }
+      });
       if (!Array.isArray(panel.thickness) || panel.thickness.length === 0) errors.push(`يرجى اختيار سمك الصاج في ${panelLabel}.`);
       if (panel.hasCopper || panel.copper?.enabled) {
         const copper = panel.copper || {};
@@ -33,8 +39,12 @@ function SaveActions() {
           if (!branch.optionKey) errors.push(`يرجى اختيار أمبير الفرعي ${branchIndex + 1} في ${panelLabel}.`);
         });
       }
-      const hasSizedPart = (panel.parts || []).some((part) => part.width !== "" && part.height !== "" && part.width != null && part.height != null);
-      if (!hasSizedPart) errors.push(`يرجى إدخال عرض وارتفاع لجزء واحد على الأقل في ${panelLabel}.`);
+      const incompleteParts = (panel.parts || []).filter((part) => !Number(part.width) || Number(part.width) <= 0 || !Number(part.height) || Number(part.height) <= 0);
+      if (!(panel.parts || []).length) errors.push(`${panelLabel}: بيانات المنتج لم تُحسب بعد.`);
+      else if (incompleteParts.length) {
+        const names = incompleteParts.slice(0, 3).map((part) => part.name).join("، ");
+        errors.push(`${panelLabel}: أكمل أبعاد بيانات المنتج${names ? ` (${names}${incompleteParts.length > 3 ? "..." : ""})` : ""}.`);
+      }
     });
     return errors;
   }, [project, prices, systemConfig?.copperConfiguration?.pricePerKg]);

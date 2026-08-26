@@ -260,7 +260,11 @@ const preservePanelWorkflow = (incomingPanels, existingPanels = []) => {
         return {
             ...incoming,
             executionPdf: existingObject.executionPdf,
-            manufacturing: existingObject.manufacturing
+            manufacturing: existingObject.manufacturing,
+            quoteStatus: existingObject.quoteStatus,
+            quoteEditingBy: existingObject.quoteEditingBy,
+            quoteEditingRole: existingObject.quoteEditingRole,
+            quoteUpdatedAt: existingObject.quoteUpdatedAt
         };
     });
 };
@@ -437,6 +441,16 @@ const getProject = async (req, res, next) => {
         if (isEngineer(req.user) && project.status === "pending" && !project.engineerId) {
             const claimedProject = await projectModels.claimByEngineer(projectId, req.user._id);
             project = claimedProject || await projectModels.select_one({ _id: projectId, isDeleted: false });
+            if (claimedProject) {
+                const panels = claimedProject.panels.map((panel) => {
+                    if (["draft", "pending"].includes(panel.quoteStatus)) {
+                        panel.quoteStatus = "inProgress";
+                        panel.quoteUpdatedAt = new Date();
+                    }
+                    return panel;
+                });
+                project = await projectModels.update({ id: projectId, panels, updatedAt: Date.now() });
+            }
         }
 
         const marketer = await getProjectMarketer(project);
@@ -635,10 +649,22 @@ const startProjectEditing = async (req, res, next) => {
             return res.status(409).json({ status: "error", message: "هذا المشروع مفتوح بالفعل لدى مستخدم آخر أو ما زال قيد العمل." });
         }
 
+        const requestedPanelId = req.body?.panelId;
+        const targetPanel = (project.panels || []).find((panel) =>
+            String(panel._id) === String(requestedPanelId) || String(panel.panelId) === String(requestedPanelId)
+        );
+        if (!targetPanel) {
+            return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لبدء التعديل." });
+        }
+
         const editingStatus = marketerRequested
             ? "editingByMarketing"
             : isOwner(req.user) ? "editingByOwner" : "editingByEngineer";
-        const editingProject = await projectModels.update({ id: project._id, status: editingStatus, updatedAt: Date.now() });
+        targetPanel.quoteStatus = "editing";
+        targetPanel.quoteEditingBy = req.user._id;
+        targetPanel.quoteEditingRole = req.user.role;
+        targetPanel.quoteUpdatedAt = new Date();
+        const editingProject = await projectModels.update({ id: project._id, panels: project.panels, status: editingStatus, updatedAt: Date.now() });
         let notification = "تم تحويل المشروع إلى وضع التعديل.";
 
         if (project.status === "quoteCompleted") {
@@ -661,7 +687,7 @@ const startProjectEditing = async (req, res, next) => {
             }
         }
 
-        return res.status(200).json({ status: "ok", message: "تم تحويل المشروع إلى وضع التعديل.", notification, project: editingProject });
+        return res.status(200).json({ status: "ok", message: "تم تحويل اللوحة إلى وضع التعديل.", notification, panel: targetPanel, project: editingProject });
     } catch (error) { next(error); }
 };
 
@@ -680,7 +706,16 @@ const submitMarketingProject = async (req, res, next) => {
         }
         const wasUpdatedProject = project.status === "editingByMarketing";
         const clientNameReview = await buildClientNameReview(project.client);
-        const submittedProject = await projectModels.update({ id: project._id, status: "pending", clientNameReview, updatedAt: Date.now() });
+        const submittedPanels = project.panels.map((panel) => {
+            if (["draft", "editing"].includes(panel.quoteStatus)) {
+                panel.quoteStatus = "pending";
+                panel.quoteEditingBy = null;
+                panel.quoteEditingRole = "";
+                panel.quoteUpdatedAt = new Date();
+            }
+            return panel;
+        });
+        const submittedProject = await projectModels.update({ id: project._id, panels: submittedPanels, status: "pending", clientNameReview, updatedAt: Date.now() });
         try {
             const notification = await notifyEngineersAboutSubmittedProject(submittedProject, wasUpdatedProject);
             return res.status(200).json({ status: "ok", message: "تم حفظ المشروع.", notification, project: submittedProject });
@@ -828,9 +863,19 @@ const completeProject = async (req, res, next) => {
         // A compact, URL-safe 128-bit key. It is still unguessable but keeps
         // the WhatsApp preview link short and readable.
         const clientPreviewToken = crypto.randomBytes(16).toString("base64url");
+        const completedPanels = project.panels.map((panel) => {
+            if (panel.quoteStatus !== "quoteCompleted") {
+                panel.quoteStatus = "quoteCompleted";
+                panel.quoteEditingBy = null;
+                panel.quoteEditingRole = "";
+                panel.quoteUpdatedAt = new Date();
+            }
+            return panel;
+        });
         const completedProject = await projectModels.update({
             id: project._id,
             client: projectForClientSync.client,
+            panels: completedPanels,
             status: "quoteCompleted",
             clientPreviewToken,
             updatedAt: Date.now()

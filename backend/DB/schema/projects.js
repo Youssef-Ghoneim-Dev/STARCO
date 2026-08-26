@@ -65,6 +65,16 @@ const panelSchema = new mongoose.Schema({
         default: () => new mongoose.Types.ObjectId().toString()
     },
 
+    quoteStatus: {
+        type: String,
+        enum: ["draft", "pending", "inProgress", "editing", "quoteCompleted"],
+        default: "draft"
+    },
+
+    quoteEditingBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+    quoteEditingRole: { type: String, default: "" },
+    quoteUpdatedAt: { type: Date, default: Date.now },
+
     panelName: {
         type: String,
         required: true

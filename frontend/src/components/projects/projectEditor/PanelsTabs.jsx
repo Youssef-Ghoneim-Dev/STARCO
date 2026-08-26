@@ -1,21 +1,46 @@
 import { useProject } from "../../../context/ProjectContext";
 
-function PanelsTabs({ readOnly = false }) {
+const panelStatus = (panel, projectStatus) => {
+  const status = panel.quoteStatus || projectStatus;
+  const statuses = {
+    marketingDraft: ["مسودة", "draft"],
+    pending: ["قيد الانتظار", "pending"],
+    inProgress: ["قيد التسعير", "working"],
+    editing: ["قيد التعديل", "editing"],
+    editingByMarketing: ["قيد تعديل المندوب", "editing"],
+    editingByEngineer: ["قيد تعديل المهندس", "editing"],
+    editingByOwner: ["قيد التعديل", "editing"],
+    quoteCompleted: ["عرض السعر جاهز", "completed"],
+  };
+  return statuses[status] || ["عرض التفاصيل", "neutral"];
+};
+
+function PanelsTabs({ readOnly = false, onOpenPanel, openedPanel = null }) {
   const { project, activePanel, setActivePanel, addPanel, deletePanel } =
     useProject();
 
   return (
-    <section className="project-editor-card">
-      <div className="panels-tabs">
+    <section className="project-editor-card panels-overview-card">
+      <div className="panels-overview-heading" dir="rtl">
+        <div><h2>لوحات المشروع</h2><p>افتح اللوحة المطلوبة لعرض بياناتها أو تعديلها.</p></div>
+        <span>{project.panels.length} لوحة</span>
+      </div>
+      <div className="panels-tabs panels-card-grid">
         {project.panels.map((panel, index) => (
+          (() => {
+            const [statusLabel, statusClass] = panelStatus(panel, project.status);
+            return (
           <div
             className={
-              activePanel === index
+              (onOpenPanel ? openedPanel === index : activePanel === index)
                 ? "panel-tab-wrapper active"
                 : "panel-tab-wrapper"
             }
-            key={index}
-            onClick={() => setActivePanel(index)}
+            key={panel._id || panel.panelId || index}
+            onClick={() => {
+              setActivePanel(index);
+              onOpenPanel?.(index);
+            }}
           >
             <button
               type="button"
@@ -26,6 +51,9 @@ function PanelsTabs({ readOnly = false }) {
               <span className="panel-name-text" dir="auto">
                 {panel.panelName}
               </span>
+              <small>لوحة {index + 1}</small>
+              <span className={`panel-card-status ${statusClass}`}>{statusLabel}</span>
+              <b>فتح بيانات اللوحة</b>
             </button>
 
             {!readOnly && index > 0 && (
@@ -42,10 +70,16 @@ function PanelsTabs({ readOnly = false }) {
               </button>
             )}
           </div>
+            );
+          })()
         ))}
 
-        {!readOnly && <button type="button" className="add-panel-btn" onClick={addPanel}>
-          + إضافة لوحة
+        {!readOnly && <button type="button" className="add-panel-btn panel-add-card" onClick={() => {
+          const nextIndex = project.panels.length;
+          addPanel();
+          onOpenPanel?.(nextIndex);
+        }}>
+          <strong>＋</strong><span>إضافة لوحة جديدة</span>
         </button>}
       </div>
     </section>

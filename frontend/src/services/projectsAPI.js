@@ -38,7 +38,7 @@ export const completeProject = (id) => {
     return api.post(`/projects/${id}/complete`);
 };
 
-export const startProjectEditing = (id) => api.post(`/projects/${id}/start-editing`);
+export const startProjectEditing = (id, panelId) => api.post(`/projects/${id}/start-editing`, { panelId });
 
 export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
 

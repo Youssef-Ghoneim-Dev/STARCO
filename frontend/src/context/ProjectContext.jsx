@@ -126,6 +126,7 @@ const createPanel = (index, systemConfig) => {
 
   panel.panelName = `لوحة ${index}`;
   panel.panelId = globalThis.crypto?.randomUUID?.() || `panel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  panel.quoteStatus = "draft";
   panel.prices = { ...panel.prices };
   panel.copper = {
     ...(panel.copper || {}),
@@ -147,6 +148,8 @@ const normalizePanelThickness = (panel) => ({
 });
 
 const hasValue = (value) => value !== "" && value !== null && value !== undefined;
+const hasCompleteDimensions = (dimensions = {}) => [dimensions.length, dimensions.width, dimensions.depth]
+  .every((value) => Number.isFinite(Number(value)) && Number(value) > 0);
 
 const getAutomaticPanelName = (dimensions = {}) => {
   const values = [dimensions.length, dimensions.width, dimensions.depth].map(Number);
@@ -157,7 +160,7 @@ const getAutomaticPanelName = (dimensions = {}) => {
 const evaluateFormula = (formula, dimensions) => {
   if (!formula?.trim()) return undefined;
   const values = { Length: Number(dimensions?.length), Width: Number(dimensions?.width), Depth: Number(dimensions?.depth) };
-  if (Object.values(values).some((value) => !Number.isFinite(value))) return undefined;
+  if (Object.values(values).some((value) => !Number.isFinite(value) || value <= 0)) return undefined;
   const words = formula.match(/[A-Za-z]+/g) || [];
   if (words.some((word) => !Object.hasOwn(values, word[0].toUpperCase() + word.slice(1).toLowerCase()))) return undefined;
   const numericFormula = formula.replace(/[A-Za-z]+/g, (word) => String(values[word[0].toUpperCase() + word.slice(1).toLowerCase()]));
@@ -168,14 +171,17 @@ const evaluateFormula = (formula, dimensions) => {
   } catch { return undefined; }
 };
 
-const buildTypeParts = (type, dimensions) => (type?.parts || []).map((part) => ({
-  name: part.name,
-  quantity: Number(part.quantity) || 1,
-  ...(part.manualDimensions ? {} : {
-    width: evaluateFormula(part.widthFormula, dimensions),
-    height: evaluateFormula(part.lengthFormula, dimensions),
-  }),
-}));
+const buildTypeParts = (type, dimensions) => {
+  const ready = hasCompleteDimensions(dimensions);
+  return (type?.parts || []).map((part) => ({
+    name: part.name,
+    quantity: Number(part.quantity) || 1,
+    ...(part.manualDimensions ? {} : {
+      width: ready ? (evaluateFormula(part.widthFormula, dimensions) ?? "") : "",
+      height: ready ? (evaluateFormula(part.lengthFormula, dimensions) ?? "") : "",
+    }),
+  }));
+};
 
 const legacyDefaultPartNames = new Set(["العلبة", "الجنب", "المراية", "الجلسة", "الجريدة", "باب 1", "باب 2"]);
 const containsOnlyLegacyDefaultParts = (parts = []) => parts.length > 0 && parts.every((part) => legacyDefaultPartNames.has(String(part.name || "").trim()));
@@ -188,17 +194,19 @@ const mergeRecalculatedParts = (existingParts = [], type, dimensions) => {
     if (calculatedIndex < 0) return part;
 
     const [calculated] = remainingCalculatedParts.splice(calculatedIndex, 1);
+    const configuredPart = (type?.parts || []).find((item) => item.name === part.name);
+    if (configuredPart?.manualDimensions) return part;
     return {
       ...part,
-      ...(hasValue(calculated.width) ? { width: calculated.width } : {}),
-      ...(hasValue(calculated.height) ? { height: calculated.height } : {}),
+      width: hasValue(calculated.width) ? calculated.width : "",
+      height: hasValue(calculated.height) ? calculated.height : "",
     };
   });
 
   return [...preservedParts, ...remainingCalculatedParts];
 };
 
-const hydratePanel = (panel, index, systemConfig) => {
+const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
   const basePanel = createPanel(index + 1, systemConfig);
   const incomingPanel = panel || {};
   const incomingPrices = incomingPanel.prices || {};
@@ -225,11 +233,21 @@ const hydratePanel = (panel, index, systemConfig) => {
     ? buildTypeParts(inferredType, incomingPanel.dimensions)
     : (incomingParts.length ? incomingParts : basePanel.parts);
 
+  const completedQuoteStatuses = new Set(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"]);
+  const inferredQuoteStatus = completedQuoteStatuses.has(projectStatus)
+    ? "quoteCompleted"
+    : projectStatus === "pending" ? "pending"
+      : projectStatus === "inProgress" ? "inProgress"
+        : ["editing", "editingByEngineer", "editingByOwner", "editingByMarketing"].includes(projectStatus) ? "editing" : "draft";
+
   return normalizePanelThickness({
     ...basePanel,
     ...incomingPanel,
     panelTypeKey: incomingPanel.panelTypeKey || inferredType?.key || "",
     panelType: inferredType?.name || incomingPanel.panelType || "",
+    quoteStatus: incomingPanel.quoteStatus && !(incomingPanel.quoteStatus === "draft" && completedQuoteStatuses.has(projectStatus))
+      ? incomingPanel.quoteStatus
+      : inferredQuoteStatus,
     panelName: incomingPanel.panelName || basePanel.panelName,
     copper: {
       ...(basePanel.copper || {}),
@@ -333,7 +351,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
             ...defaultProject(),
             ...data,
             panels: (data.panels || []).map((panel, index) =>
-              hydratePanel(panel, index, savedConfig),
+              hydratePanel(panel, index, savedConfig, data.status),
             ),
           });
           // Editable projects keep autosave enabled. Workflow stages that are
@@ -767,7 +785,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         setProject((current) => ({
           ...current,
           ...savedProject,
-          panels: savedProject.panels.map((panel, index) => hydratePanel(panel, index, systemConfig)),
+          panels: savedProject.panels.map((panel, index) => hydratePanel(panel, index, systemConfig, savedProject.status || current.status)),
         }));
       }
       return { success: true, project: savedProject };
@@ -775,10 +793,17 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
   }, [prices, project, projectId, readOnly, systemConfig]);
-  const beginEditing = useCallback(async () => {
+  const beginEditing = useCallback(async (panelId) => {
     try {
-      const { data } = await startProjectEditing(projectId);
-      setProject((current) => ({ ...current, status: data.project?.status || "editing" }));
+      const { data } = await startProjectEditing(projectId, panelId);
+      setProject((current) => ({
+        ...current,
+        ...(data.project || {}),
+        status: data.project?.status || "editing",
+        panels: current.panels.map((panel) => (panel._id === panelId || panel.panelId === panelId)
+          ? { ...panel, quoteStatus: data.panel?.quoteStatus || "editing" }
+          : panel),
+      }));
       setPreventAutoSave(false);
       return { success: true, notification: data.notification };
     } catch (error) {
