@@ -1355,7 +1355,7 @@
 .marketing-branches-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .marketing-branches-heading h4 { margin: 0; }
 .marketing-branches-heading button { border: 0; border-radius: 9px; padding: 9px 13px; background: #e9f2ff; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
-.marketing-branch-row { display: grid; grid-template-columns: 90px minmax(220px, 1fr) 120px 84px; align-items: end; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; }
+.marketing-branch-row { display: grid; grid-template-columns: 90px 260px 110px 80px; justify-content: start; align-items: end; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; }
 .marketing-branch-row > strong { align-self: center; }
 .marketing-branch-row > label { display: grid; gap: 7px; font-weight: 700; }
 .marketing-branch-row input { min-height: 43px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 10px; padding: 0 11px; font: inherit; }

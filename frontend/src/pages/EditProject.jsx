@@ -49,10 +49,10 @@ function StartEditingPanel({ isMarketer }) {
 
 const formatExactDate = (value) => value ? new Intl.DateTimeFormat("ar-EG", { dateStyle: "full", timeStyle: "medium" }).format(new Date(value)) : "غير محدد";
 
-function ProjectAuditSummary({ showEngineer = false }) {
+function ProjectAuditSummary({ showMarketer = false, showEngineer = false }) {
   const { project } = useProject();
   return <section className="project-audit-summary" dir="rtl">
-    <div><span>المندوب المسؤول</span><strong>{project?.marketingRepresentative?.name || "غير محدد"}</strong></div>
+    {showMarketer && <div><span>المندوب المسؤول</span><strong>{project?.marketingRepresentative?.name || "غير محدد"}</strong></div>}
     {showEngineer && <div><span>المهندس المسؤول عن عرض السعر</span><strong>{project?.assignedEngineer?.name || "غير محدد"}</strong></div>}
     <div><span>تاريخ إنشاء المشروع</span><strong>{formatExactDate(project?.createdAt)}</strong></div>
     <div><span>آخر تحديث</span><strong>{formatExactDate(project?.updatedAt)}</strong></div>
@@ -100,6 +100,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     return <>
       {isQuoteCompleted && <StartEditingPanel isMarketer />}
       <div className="project-read-only-notice" dir="rtl">{message}</div>
+      {isQuoteCompleted && <ProjectAuditSummary />}
       {isQuoteCompleted && <ProjectPreviewLink />}
       {(isQuoteCompleted || isExecutionPhase || isCompleted) && <ExecutionPdfWorkspace />}
       <fieldset className="project-read-only-fieldset" disabled><MarketingProjectEditor /></fieldset>
@@ -108,14 +109,15 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   if (isQuoteCompleted) {
     if (["ProductionManager", "MarketingManager"].includes(user?.role)) return <>
       <div className="project-read-only-notice" dir="rtl">{user.role === "ProductionManager" ? "لا يمكنك التعديل على هذا المشروع لأنه لم يصل إلى مرحلة التنفيذ بعد. بيانات طلب المندوب متاحة للعرض فقط." : "بيانات طلب المندوب متاحة للعرض فقط."}</div>
-      <ProjectAuditSummary />
+      <ProjectAuditSummary showEngineer={user.role === "ProductionManager"} showMarketer={user.role === "MarketingManager"} />
+      <ProjectPreviewLink />
       <PanelsTabs readOnly />
       <WhatsappProjectData />
     </>;
     return <>
       {!claimedByAnotherEngineer && <StartEditingPanel />}
       {claimedByAnotherEngineer && <div className="project-read-only-notice" dir="rtl">هذا المشروع يعمل عليه {project.workingEngineerName || project.assignedEngineer?.name || "مهندس آخر"}، لذلك يظهر لك للمعاينة فقط.</div>}
-      <ProjectAuditSummary showEngineer={user?.role === "OwnerManager"} />
+      <ProjectAuditSummary showMarketer={user?.role === "OwnerManager"} showEngineer={user?.role === "OwnerManager"} />
       <ProjectPreviewLink />
       {(user?.role === "OwnerManager" || (user?.role === "Engineer" && project?.source === "manual")) && <ExecutionPdfWorkspace />}
       <div className="whatsapp-project-tabs" dir="rtl"><button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button><button className={tab === "quote" ? "active" : ""} onClick={() => setTab("quote")}>عرض السعر</button></div>

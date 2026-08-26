@@ -125,6 +125,7 @@ const createPanel = (index, systemConfig) => {
   const configuredPrices = systemConfig?.prices || {};
 
   panel.panelName = `لوحة ${index}`;
+  panel.panelId = globalThis.crypto?.randomUUID?.() || `panel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   panel.prices = { ...panel.prices };
   panel.copper = {
     ...(panel.copper || {}),
@@ -757,6 +758,23 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       setSavingProject(false);
     }
   }, [prices, project, projectId, readOnly]);
+  const saveDraftNow = useCallback(async () => {
+    if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
+    try {
+      const { data } = await updateProject(projectId, prepareProjectForAutoSaving(project, prices));
+      const savedProject = data?.project || data;
+      if (savedProject?.panels) {
+        setProject((current) => ({
+          ...current,
+          ...savedProject,
+          panels: savedProject.panels.map((panel, index) => hydratePanel(panel, index, systemConfig)),
+        }));
+      }
+      return { success: true, project: savedProject };
+    } catch (error) {
+      return { success: false, message: getSaveErrorMessage(error) };
+    }
+  }, [prices, project, projectId, readOnly, systemConfig]);
   const beginEditing = useCallback(async () => {
     try {
       const { data } = await startProjectEditing(projectId);
@@ -868,6 +886,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         updatePriceField,
         updateCopper,
         saveProject,
+        saveDraftNow,
         submitMarketingProject,
         beginEditing,
         canDeletePart,

@@ -45,7 +45,7 @@ function MediaItem({ item, url, onOpen, audioProps, onDelete }) {
 }
 
 function WhatsappProjectData({ editable = false }) {
-  const { project, activePanel, systemConfig } = useProject();
+  const { project, activePanel, systemConfig, saveDraftNow } = useProject();
   const [media, setMedia] = useState([]);
   const [urls, setUrls] = useState({});
   const [mediaError, setMediaError] = useState("");
@@ -105,13 +105,17 @@ function WhatsappProjectData({ editable = false }) {
   const uploadFiles = async (event) => {
     const files = [...(event.target.files || [])];
     event.target.value = "";
-    if (!files.length || !panel.panelId) return;
+    if (!files.length) return;
     setUploading(true);
     try {
-      await Promise.all(files.map((file) => uploadProjectMedia(project._id, panel.panelId, file)));
+      const saved = await saveDraftNow();
+      if (!saved.success) throw new Error(saved.message || "تعذر حفظ اللوحة قبل رفع المرفقات.");
+      const savedPanelId = saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
+      if (!savedPanelId) throw new Error("تعذر تحديد اللوحة المختارة.");
+      await Promise.all(files.map((file) => uploadProjectMedia(project._id, savedPanelId, file)));
       setUploadRefresh((value) => value + 1);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "تعذر رفع أحد المرفقات.");
+      toast.error(error?.response?.data?.message || error.message || "تعذر رفع أحد المرفقات.");
     } finally { setUploading(false); }
   };
   const removeMedia = async () => {
@@ -132,11 +136,15 @@ function WhatsappProjectData({ editable = false }) {
   const chooseWhatsappUpload = async () => {
     setOpeningWhatsapp(true);
     try {
-      const { data } = await getProjectMediaWhatsappLink(project._id, panel.panelId);
+      const saved = await saveDraftNow();
+      if (!saved.success) throw new Error(saved.message || "تعذر حفظ اللوحة قبل فتح WhatsApp.");
+      const savedPanelId = saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
+      if (!savedPanelId) throw new Error("تعذر تحديد اللوحة المختارة.");
+      const { data } = await getProjectMediaWhatsappLink(project._id, savedPanelId);
       setShowUploadChoice(false);
       window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "تعذر فتح WhatsApp لإرسال المرفقات.");
+      toast.error(error?.response?.data?.message || error.message || "تعذر فتح WhatsApp لإرسال المرفقات.");
     } finally { setOpeningWhatsapp(false); }
   };
   const refreshMedia = () => {
