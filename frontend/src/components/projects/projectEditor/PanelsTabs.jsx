@@ -1,5 +1,6 @@
 import { useProject } from "../../../context/ProjectContext";
 import { useParams } from "react-router-dom";
+import { getPanelNameDirection } from "../../../utils/panelNameDirection";
 
 const panelStatus = (panel, projectStatus) => {
   const executionStatus = panel.executionPdf?.status;
@@ -35,7 +36,7 @@ function PanelsTabs({ readOnly = false, onOpenPanel, openedPanel = null }) {
     const panel = project.panels[activePanel];
     if (!panel) return null;
     const [statusLabel, statusClass] = panelStatus(panel, project.status);
-    return <section className="project-editor-card active-panel-route-heading" dir="rtl"><div><span>اللوحة الحالية</span><h2>{panel.panelName}</h2><code>{panel.panelCode}</code></div><span className={`panel-card-status ${statusClass}`}>{statusLabel}</span></section>;
+    return <section className="project-editor-card active-panel-route-heading" dir="rtl"><div><span>اللوحة الحالية</span><h2><bdi dir={getPanelNameDirection(panel.panelName)}>{panel.panelName}</bdi></h2><code>{panel.panelCode}</code></div><span className={`panel-card-status ${statusClass}`}>{statusLabel}</span></section>;
   }
   return (
     <section className="project-editor-card panels-overview-card">
@@ -66,9 +67,9 @@ function PanelsTabs({ readOnly = false, onOpenPanel, openedPanel = null }) {
                 activePanel === index ? "panel-tab active" : "panel-tab"
               }
             >
-              <span className="panel-name-text" dir="auto">
+              <span className="panel-name-text"><bdi dir={getPanelNameDirection(panel.panelName)}>
                 {panel.panelName}
-              </span>
+              </bdi></span>
               <small>لوحة {index + 1}</small>
               <span className={`panel-card-status ${statusClass}`}>{statusLabel}</span>
               <b>فتح بيانات اللوحة</b>

@@ -149,6 +149,7 @@ const completeQuote = async (req, res, next) => { try {
     const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (!isOwner(req.user) && (!isEngineer(req.user) || !sameId(panel.engineerId, req.user._id))) return res.status(403).json({ status: "error", message: "إتمام التسعير متاح للمهندس المسؤول فقط." });
     if (!["pricing", "editing"].includes(panel.status)) return res.status(409).json({ status: "error", message: "اللوحة ليست في مرحلة التسعير." });
+    if (!Array.isArray(panel.pricing?.thickness) || panel.pricing.thickness.length === 0) return res.status(400).json({ status: "error", message: "يرجى اختيار سمك الصاج قبل إتمام تسعير اللوحة." });
     const saved = await panels.update({ _id: panel._id }, { status: "quoteCompleted", quoteCompletedAt: new Date(), lock: { userId: null, role: "", acquiredAt: null, expiresAt: null }, $push: { statusHistory: history(req, panel.status, "quoteCompleted", "quoteCompleted") } });
     await projects.update({ _id: panel.projectId }, { status: "inProgress", previewGeneratedAt: null }); res.json({ status: "ok", panel: publicPanel(saved) });
 } catch (error) { next(error); } };

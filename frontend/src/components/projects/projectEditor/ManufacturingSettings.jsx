@@ -8,7 +8,7 @@ function ManufacturingSettings() {
     useProject();
   const panel = project.panels[activePanel] || project.panels[0];
   const panelPrices = panel.prices || {};
-  const selectedThicknesses = panel.thickness || [];
+  const selectedThicknesses = (panel.thickness || []).map(String);
   const manufacturingFields = [
     { key: "manufacturing", label: "مصنعية" },
     { key: "locks", label: "كوالين" },

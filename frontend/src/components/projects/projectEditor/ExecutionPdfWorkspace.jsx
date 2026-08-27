@@ -4,6 +4,7 @@ import { HiOutlineArrowLeft, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiO
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
+import { getPanelNameDirection } from "../../../utils/panelNameDirection";
 import {
   finishExecutionPdf,
   deleteExecutionPdfFile,
@@ -324,7 +325,7 @@ function ExecutionPdfWorkspace() {
       <div className="production-project-identity">
         <span className="production-panel-illustration"><HiOutlineViewGrid /></span>
         <div>
-          <h2>{panel.panelName} - مشروع {project.client?.name || "غير محدد"}</h2>
+          <h2><bdi dir={getPanelNameDirection(panel.panelName)}>{panel.panelName}</bdi> - مشروع {project.client?.name || "غير محدد"}</h2>
           <button type="button" onClick={copyId} className="production-code-copy"><HiOutlineClipboardCopy /><b dir="ltr">PRJ-{String(project._id || "").slice(-6).toUpperCase()}</b></button>
           <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {project.assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
         </div>
@@ -387,7 +388,7 @@ function ExecutionPdfWorkspace() {
     <header className="execution-pdf-heading">
       <div>
         <span className="execution-phase-label">مرحلة التنفيذ</span>
-        <h2>PDF التنفيذ — {panel?.panelName}</h2>
+        <h2>PDF التنفيذ — <bdi dir={getPanelNameDirection(panel?.panelName)}>{panel?.panelName}</bdi></h2>
         <p>عرض السعر محفوظ، وهذه المساحة مخصصة لملفات اعتماد تنفيذ اللوحة.</p>
       </div>
       <button type="button" className="project-id-copy" onClick={copyId} title="نسخ ID المشروع">
@@ -402,7 +403,7 @@ function ExecutionPdfWorkspace() {
         key={item.panelId || index}
         className={index === activePanel ? "active" : ""}
         onClick={() => setActivePanel(index)}
-      >{item.panelName || `لوحة ${index + 1}`}</button>)}
+      ><bdi dir={getPanelNameDirection(item.panelName)}>{item.panelName || `لوحة ${index + 1}`}</bdi></button>)}
     </div>}
 
     {workflow.status === "notRequested" && <div className="execution-order-card">

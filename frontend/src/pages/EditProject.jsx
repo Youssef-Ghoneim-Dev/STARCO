@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import ProjectInfo from "../components/projects/projectEditor/ProjectInfo";
-import ProjectPrices from "../components/projects/projectEditor/ProjectPrices";
 import PanelsTabs from "../components/projects/projectEditor/PanelsTabs";
 import PanelEditor from "../components/projects/projectEditor/PanelEditor";
 import SaveActions from "../components/projects/projectEditor/SaveActions";
@@ -13,6 +11,7 @@ import MarketingProjectEditor from "../components/projects/projectEditor/Marketi
 import ExecutionPdfWorkspace from "../components/projects/projectEditor/ExecutionPdfWorkspace";
 import { useAuth } from "../context/AuthContext";
 import { claimPanel } from "../services/projectsAPI";
+import { getPanelNameDirection } from "../utils/panelNameDirection";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -36,10 +35,6 @@ function QuoteEditor({
           {readOnlyMessage}
         </div>
       )}
-      <fieldset className="project-read-only-fieldset" disabled={readOnly}>
-        <ProjectInfo />
-        <ProjectPrices />
-      </fieldset>
       <PanelsTabs
         readOnly={readOnly}
         openedPanel={openedPanel}
@@ -50,7 +45,9 @@ function QuoteEditor({
       {openedPanel !== null && (
         <div className="project-read-only-fieldset panel-detail-shell">
           <div className="panel-detail-heading">
-            <h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2>
+            <h2><bdi dir={getPanelNameDirection(panel?.panelName)}>
+              {panel?.panelName || `لوحة ${activePanel + 1}`}
+            </bdi></h2>
             <div className="panel-detail-heading-actions">
               {canStartPanelEditing && (
                 <StartEditingButton isMarketer={isMarketer} />
@@ -196,7 +193,9 @@ function CompletedMarketingProject({ message, showExecution }) {
       {openedPanel !== null && (
         <div className="panel-detail-shell">
           <div className="panel-detail-heading">
-            <h2>{panel?.panelName || `لوحة ${activePanel + 1}`}</h2>
+            <h2><bdi dir={getPanelNameDirection(panel?.panelName)}>
+              {panel?.panelName || `لوحة ${activePanel + 1}`}
+            </bdi></h2>
             <div className="panel-detail-heading-actions">
               {panel?.quoteStatus === "quoteCompleted" && (
                 <StartEditingButton isMarketer />

@@ -5,6 +5,7 @@ import WhatsappProjectData from "./WhatsappProjectData";
 import { useProject } from "../../../context/ProjectContext";
 import { resolveCopperConfiguration } from "../../../utils/copperDefaults";
 import { THICKNESS_OPTIONS } from "../../../utils/thicknessOptions";
+import { getPanelNameDirection } from "../../../utils/panelNameDirection";
 
 function MarketingProjectEditor() {
   const navigate = useNavigate();
@@ -123,7 +124,9 @@ function MarketingProjectEditor() {
       </div>
       <div className="panel-detail-shell">
           <div className="panel-detail-heading">
-            <h2>{panel.panelName || `لوحة ${activePanel + 1}`}</h2>
+            <h2><bdi dir={getPanelNameDirection(panel.panelName)}>
+              {panel.panelName || `لوحة ${activePanel + 1}`}
+            </bdi></h2>
             <button type="button" onClick={() => navigate(`/projects/${project._id}`)}>
               العودة إلى اللوحات
             </button>

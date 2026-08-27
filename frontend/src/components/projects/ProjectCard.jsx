@@ -6,6 +6,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
+import { getPanelNameDirection } from "../../utils/panelNameDirection";
 
 import { deleteProject } from "../../services/projectsAPI";
 import projectImage from "../../assets/images/1.svg";
@@ -84,7 +85,7 @@ function ProjectCard({ project, setProjects }) {
         <div className="project-title-row">
           <h3 dir="auto">
             {project.client?.name}
-            {firstPanelName ? ` (${firstPanelName})` : ""}
+            {firstPanelName ? <> (<bdi dir={getPanelNameDirection(firstPanelName)}>{firstPanelName}</bdi>)</> : ""}
           </h3>
           <span className={`project-status-badge ${projectStatus.className}`}>
             {projectStatus.label}

@@ -201,6 +201,14 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
   const basePanel = createPanel(index + 1, systemConfig);
   const incomingPanel = panel || {};
   const incomingPrices = incomingPanel.prices || {};
+  const effectiveThickness = Array.isArray(incomingPanel.pricing?.thickness)
+    && incomingPanel.pricing.thickness.length
+    ? incomingPanel.pricing.thickness
+    : Array.isArray(incomingPanel.thickness) && incomingPanel.thickness.length
+      ? incomingPanel.thickness
+      : Array.isArray(incomingPanel.marketerData?.thickness)
+        ? incomingPanel.marketerData.thickness
+        : [];
   const normalizedType = String(incomingPanel.panelType || "").toLowerCase().replace(/[.\-\s_]/g, "");
   const inferredType = (systemConfig?.panelTypes || []).find((type) =>
     type.key === incomingPanel.panelTypeKey
@@ -240,6 +248,7 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
       : incomingPanel.status === "pricing" ? "inProgress"
         : incomingPanel.status || incomingPanel.quoteStatus || inferredQuoteStatus,
     panelName: incomingPanel.panelName || basePanel.panelName,
+    thickness: effectiveThickness,
     copper: {
       ...(basePanel.copper || {}),
       ...(incomingPanel.copper || {}),
