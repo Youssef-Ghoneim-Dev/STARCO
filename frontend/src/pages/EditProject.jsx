@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { FiArrowRight } from "react-icons/fi";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProjectInfo from "../components/projects/projectEditor/ProjectInfo";
 import ProjectPrices from "../components/projects/projectEditor/ProjectPrices";
@@ -12,11 +13,7 @@ import WhatsappProjectData from "../components/projects/projectEditor/WhatsappPr
 import MarketingProjectEditor from "../components/projects/projectEditor/MarketingProjectEditor";
 import ExecutionPdfWorkspace from "../components/projects/projectEditor/ExecutionPdfWorkspace";
 import { useAuth } from "../context/AuthContext";
-import {
-  acquireProjectSetupLock,
-  claimPanel,
-  completeProjectSetup,
-} from "../services/projectsAPI";
+import { claimPanel } from "../services/projectsAPI";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -26,7 +23,7 @@ function QuoteEditor({
   isMarketer = false,
 }) {
   const { project, activePanel } = useProject();
-  const [openedPanel, setOpenedPanel] = useState(null);
+  const [openedPanel, setOpenedPanel] = useState(activePanel);
   const panel = project?.panels?.[activePanel];
   const activePanelReadOnly =
     readOnly ||
@@ -177,8 +174,9 @@ function ProjectPreviewLink() {
 
 function CompletedMarketingProject({ message, showExecution }) {
   const { project, activePanel } = useProject();
-  const [openedPanel, setOpenedPanel] = useState(null);
+  const [openedPanel, setOpenedPanel] = useState(activePanel);
   const panel = project?.panels?.[activePanel];
+  useEffect(() => { setOpenedPanel(activePanel); }, [activePanel]);
   return (
     <>
       {message && (
@@ -440,6 +438,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
 
 function EditProject() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isMarketer = user?.role === "Marketer";
   const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
@@ -450,6 +449,7 @@ function EditProject() {
     <ProjectProvider projectId={id} readOnly={readOnly}>
       <DashboardLayout notAllowed={false}>
         <div className="project-editor-page">
+          <button type="button" className="project-folder-back" onClick={() => navigate("/projects")}><FiArrowRight /> الرجوع للمشاريع</button>
           <PanelRouteGate readOnly={readOnly} isMarketer={isMarketer} />
         </div>
       </DashboardLayout>
@@ -459,12 +459,11 @@ function EditProject() {
 
 function PanelRouteGate({ readOnly, isMarketer }) {
   const { panelId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { project, setProject, activePanel, setActivePanel, prices } =
+  const { project, setProject, activePanel, setActivePanel } =
     useProject();
   const [locking, setLocking] = useState(false);
-  const [setupSaving, setSetupSaving] = useState(false);
-  const [setupReady, setSetupReady] = useState(false);
 
   useEffect(() => {
     const index = (project?.panels || []).findIndex(
@@ -474,21 +473,8 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [activePanel, panelId, project?.panels, setActivePanel]);
 
   useEffect(() => {
-    if (
-      project?.status !== "created" ||
-      !["Engineer", "OwnerManager"].includes(user?.role) ||
-      setupReady ||
-      locking
-    )
-      return;
-    setLocking(true);
-    acquireProjectSetupLock(project._id)
-      .then(() => setSetupReady(true))
-      .catch((error) =>
-        toast.error(error.response?.data?.message || "تعذر حجز إعداد المشروع."),
-      )
-      .finally(() => setLocking(false));
-  }, [locking, project?._id, project?.status, setupReady, user?.role]);
+    if (project?.status === "created" && ["Engineer", "OwnerManager"].includes(user?.role)) navigate(`/projects/${project._id}`, { replace: true });
+  }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
   useEffect(() => {
@@ -526,48 +512,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     user?.role,
   ]);
 
-  if (
-    project?.status === "created" &&
-    ["Engineer", "OwnerManager"].includes(user?.role)
-  ) {
-    const saveSetup = async () => {
-      setSetupSaving(true);
-      try {
-        const { data } = await completeProjectSetup(project._id, {
-          client: project.client,
-          clientNameReview: project.clientNameReview,
-          prices,
-        });
-        setProject((current) => ({ ...current, ...data.project }));
-      } catch (error) {
-        toast.error(
-          error.response?.data?.message || "تعذر حفظ بيانات المشروع.",
-        );
-      } finally {
-        setSetupSaving(false);
-      }
-    };
-    return (
-      <section className="project-setup-gate" dir="rtl">
-        <div>
-          <h1>استكمال بيانات المشروع</h1>
-          <p>
-            أنت أول مهندس فتح المشروع. أكد البيانات المشتركة قبل أن تصبح اللوحات
-            متاحة للحجز.
-          </p>
-        </div>
-        <ProjectInfo />
-        <ProjectPrices />
-        <button
-          type="button"
-          onClick={saveSetup}
-          disabled={!setupReady || setupSaving}
-        >
-          {setupSaving ? "جاري الحفظ..." : "حفظ وفتح اللوحات للتسعير"}
-        </button>
-      </section>
-    );
-  }
+  if (project?.status === "created" && ["Engineer", "OwnerManager"].includes(user?.role)) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
   if (!panel)
     return (
       <div className="route-loading" dir="rtl">

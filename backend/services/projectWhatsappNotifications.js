@@ -71,7 +71,7 @@ const sendNewProjectAssigned = (to, project, marketerName = "غير محدد") =
     "WHATSAPP_TEMPLATE_NEW_PROJECT_ASSIGNED",
     "new_project_assigned",
     ["project_id", "client_name", "marketer_name", "panels_count", "project_url"],
-    [project._id, project.client?.name || "غير محدد", marketerName, (project.panels || []).length, projectUrl(project)]
+    [project.projectCode || project._id, project.client?.name || "غير محدد", marketerName, (project.panels || []).length, projectUrl(project)]
 );
 
 const sendProjectUpdatedReview = (to, project, marketerName = "غير محدد") => sendNamedTemplate(

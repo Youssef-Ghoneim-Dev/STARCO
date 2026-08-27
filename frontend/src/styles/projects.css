@@ -972,3 +972,35 @@
         right: 22px
     }
 }
+
+.project-folder-back {
+    width: fit-content;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 8px 16px;
+    border: 1px solid #cadbe7;
+    border-radius: 12px;
+    background: #fff;
+    color: #2e607c;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.project-folder-setup {
+    max-width: 1050px;
+    margin-inline: auto;
+}
+
+.project-folder-setup select {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 14px;
+    border: 1px solid #d7e1e8;
+    border-radius: 12px;
+    background: #fff;
+    font: inherit;
+}

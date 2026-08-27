@@ -28,7 +28,9 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const executionStatus = value.status === "executionPdfRequested" ? "requested" : value.status === "executionPdfReady" ? "ready" : executionStatuses.includes(value.status) ? "confirmed" : "notRequested";
         const manufacturingStatus = value.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(value.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status) ? "downloadedToLaser" : "notStarted";
         const productionStages = (value.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
-        const withEngineer = { ...value, ...(value.marketerData || {}), ...(value.pricing || {}), panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages } };
+        const marketerThickness = value.marketerData?.thickness || [];
+        const pricingThickness = value.pricing?.thickness || [];
+        const withEngineer = { ...value, ...(value.marketerData || {}), ...(value.pricing || {}), thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages } };
         if (viewer?.role !== "ProductionManager") return withEngineer;
         const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
@@ -129,10 +131,19 @@ const submitProject = async (req, res, next) => { try {
     if (list.some((panel) => !panel.marketerSaved)) return res.status(400).json({ status: "error", message: "افتح كل لوحة واضغط حفظ اللوحة قبل إرسال المشروع للمهندسين." });
     await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
     const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
-    const engineers = await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $ne: null } });
+    const engineers = await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
     const notifications = await Promise.allSettled(engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, notificationProject, req.user.name || "غير محدد")));
-    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified: notifications.filter((item) => item.status === "fulfilled").length, project: await hydrate(saved, false, req.user) });
+    const notified = notifications.filter((item) => item.status === "fulfilled").length;
+    const notificationMessage = !engineers.length
+        ? "لا يوجد مهندس معتمد لديه رقم WhatsApp مسجل."
+        : notified === 0
+            ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب للمهندسين."
+            : notified < engineers.length
+                ? `وصل القالب إلى ${notified} من أصل ${engineers.length} مهندس.`
+                : `تم إرسال قالب المشروع إلى ${notified} مهندس.`;
+    notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
+    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationMessage, project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const regeneratePreview = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
