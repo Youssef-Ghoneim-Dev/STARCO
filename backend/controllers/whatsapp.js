@@ -27,6 +27,9 @@ const {
 
 const SESSION_HOURS = 24;
 const sameId = (first, second) => String(first || "") === String(second || "");
+const projectReferenceCondition = (reference) => /^[a-f\d]{24}$/i.test(String(reference || ""))
+    ? { _id: reference, isDeleted: false }
+    : { projectCode: String(reference || "").trim().toUpperCase(), isDeleted: false };
 const loadProjectWithPanels = async (condition) => {
     const project = await projects.select_one(condition);
     if (!project) return null;
@@ -641,7 +644,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         if (await getActiveSession(senderPhone)) {
             return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
-        const targetProject = await loadProjectWithPanels({ _id: command.projectId, isDeleted: false });
+        const targetProject = await loadProjectWithPanels(projectReferenceCondition(command.projectId));
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) {
             return "لم يتم العثور على مشروع بهذا ID تابع لك.";

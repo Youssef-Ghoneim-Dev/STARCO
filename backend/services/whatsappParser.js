@@ -45,7 +45,9 @@ const parseWhatsappCommand = (text) => {
         };
     }
 
-    const mediaMatch = firstLine.match(/^STARCO\s+MEDIA\s+#?([a-f\d]{24})\s+PANEL\s+(\d+)$/i);
+    // Accept the human-readable project code (PRJ-...) as well as the legacy
+    // Mongo id so links already sent to WhatsApp continue to work.
+    const mediaMatch = firstLine.match(/^STARCO\s+MEDIA\s+#?([a-z\d-]+)\s+PANEL\s+(\d+)$/i);
     if (mediaMatch) {
         return { type: "media", projectId: mediaMatch[1], panelNumber: parsePanelNumber(mediaMatch[2]) };
     }

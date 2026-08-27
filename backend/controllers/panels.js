@@ -18,23 +18,34 @@ const nextPanelCode = (project, sequence) => `${project.projectCode}-P${String(s
 const marketerOwns = (req, project, panel) => isMarketer(req.user) && sameId(project.marketingId, req.user._id) && sameId(panel.marketingId, req.user._id);
 const normalizePanelPayload = (body = {}) => ({
     panelName: body.panelName,
-    marketerData: body.marketerData || {
-        panelType: body.panelType, panelTypeKey: body.panelTypeKey, thickness: body.thickness,
-        hasCopper: body.hasCopper, controlInstallation: body.controlInstallation,
-        additionalDetails: body.additionalDetails, copperDetails: body.copperDetails
+    marketerData: {
+        ...(body.marketerData || {}),
+        panelType: body.marketerData?.panelType ?? body.panelType,
+        panelTypeKey: body.marketerData?.panelTypeKey ?? body.panelTypeKey,
+        thickness: body.marketerData?.thickness ?? body.thickness,
+        hasCopper: body.marketerData?.hasCopper ?? body.hasCopper,
+        controlInstallation: body.marketerData?.controlInstallation ?? body.controlInstallation,
+        additionalDetails: body.marketerData?.additionalDetails ?? body.additionalDetails,
+        copperDetails: body.marketerData?.copperDetails ?? body.copperDetails
     },
-    pricing: body.pricing || {
-        dimensions: body.dimensions, parts: body.parts, prices: body.prices,
-        copper: body.copper, thickness: body.thickness
+    pricing: {
+        ...(body.pricing || {}),
+        dimensions: body.pricing?.dimensions ?? body.dimensions,
+        parts: body.pricing?.parts ?? body.parts,
+        prices: body.pricing?.prices ?? body.prices,
+        copper: body.pricing?.copper ?? body.copper,
+        thickness: body.pricing?.thickness ?? body.thickness
     }
 });
 const publicPanel = (panel) => {
     const object = panel.toObject ? panel.toObject() : panel;
+    const marketerThickness = object.marketerData?.thickness || [];
+    const pricingThickness = object.pricing?.thickness || [];
     const executionStatus = object.status === "executionPdfRequested" ? "requested" : object.status === "executionPdfReady" ? "ready" : executionStatuses.includes(object.status) ? "confirmed" : "notRequested";
     const manufacturingStatus = object.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(object.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(object.status) ? "downloadedToLaser" : "notStarted";
     const stageRows = (object.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
     const activeStage = stageRows.find((stage) => stage.status === "active");
-    return { ...object, ...object.marketerData, ...object.pricing, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows } };
+    return { ...object, ...object.marketerData, ...object.pricing, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows } };
 };
 const refreshProjectCompletion = async (projectId) => {
     const list = await panels.find({ projectId, isDeleted: false });

@@ -231,7 +231,7 @@ const getProjectMediaWhatsappLink = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.query.panelId, projectId: req.params.id, isDeleted: false });
     if (!project || !panel || !isMarketer(req.user) || !sameId(project.marketingId, req.user._id)) return res.status(404).json({ status: "error", message: "المشروع أو اللوحة غير موجودين." });
     const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, ""); if (!businessPhone) return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
-    const text = `STARCO MEDIA #${project._id} PANEL ${panel.sequence}`; res.json({ status: "ok", text, url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}` });
+    const text = `STARCO MEDIA #${project.projectCode} PANEL ${panel.sequence}`; res.json({ status: "ok", text, url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}` });
 } catch (error) { next(error); } };
 
 module.exports = { getProjects, getProject, createProject, updateProject, acquireSetupLock, completeSetup, submitProject, regeneratePreview, getPreview, removeProject, getDeletedProjects, restoreProject, permanentlyDeleteProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink };

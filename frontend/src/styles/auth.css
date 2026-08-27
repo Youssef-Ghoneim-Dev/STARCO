@@ -430,6 +430,7 @@
     }
 
 }
+
 .route-loading {
 
     position: fixed;
@@ -458,7 +459,8 @@
     0% {
         transform: rotate(0deg);
     }
-    100%{
+
+    100% {
         transform: rotate(360deg);
     }
 }
@@ -521,32 +523,105 @@
     pointer-events: none;
 }
 
-.auth-select { direction: ltr; text-align: left; }
+.auth-select {
+    direction: ltr;
+    text-align: left;
+}
 
-.google-auth { width: 100%; display: grid; justify-items: center; gap: 10px; margin-top: 2px; }
-.google-auth > span { color: var(--text-light); font-size: 13px; }
+.google-auth {
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.google-auth>span {
+    color: var(--text-light);
+    font-size: 13px;
+}
 
 @media (max-width: 850px) {
-    .auth-card { min-height: calc(100vh - 40px); }
+    .auth-card {
+        min-height: calc(100vh - 40px);
+    }
 }
 
 @media (max-width: 500px) {
-    .auth-card { justify-content: flex-start; padding: 20px; gap: 10px; }
-    .auth-header { gap: 8px; }
-    .auth-body { gap: 8px; }
-    .input-group label { font-size: 13px; margin-bottom: 4px; }
-    .input-group input, .auth-select, .auth-btn { height: 44px; font-size: 14px; }
-    .eye-btn { top: 33px; }
-    .auth-logo { width: 48px; height: 48px; }
-    .auth-footer { margin-bottom: 0; font-size: 14px; }
+    .auth-card {
+        justify-content: flex-start;
+        padding: 20px;
+        gap: 10px;
+    }
+
+    .auth-header {
+        gap: 8px;
+    }
+
+    .auth-body {
+        gap: 8px;
+    }
+
+    .input-group label {
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .input-group input,
+    .auth-select,
+    .auth-btn {
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .eye-btn {
+        top: 33px;
+    }
+
+    .auth-logo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .auth-footer {
+        margin-bottom: 0;
+        font-size: 14px;
+    }
 }
 
 /* Keep the original full-height login composition: only the fields area scrolls. */
-.auth-page { height: 100vh; min-height: 0; max-height: 100vh; overflow: hidden; }
-.auth-container { height: calc(100vh - 77px); min-height: 0; }
-.auth-card { height: 100%; min-height: 0; overflow: hidden; }
-.auth-body { overflow-y: auto; padding: 26px 4px 30px 0; box-sizing: border-box; }
-.auth-btn { height: auto; min-height: 0; margin-top: 12px; padding: 22px 20px; line-height: 1.2; border-radius: 14px; }
+.auth-page {
+    height: 100vh;
+    min-height: 0;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+.auth-container {
+    height: calc(100vh - 77px);
+    min-height: 0;
+}
+
+.auth-card {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.auth-body {
+    overflow-y: auto;
+    padding: 26px 4px 30px 0;
+    box-sizing: border-box;
+}
+
+.auth-btn {
+    height: auto;
+    min-height: 0;
+    margin-top: 12px;
+    padding: 22px 20px;
+    line-height: 1.2;
+    border-radius: 14px;
+}
 
 @media (max-width: 850px) {
     .auth-page {
@@ -574,19 +649,43 @@
 }
 
 @media (max-width: 500px) {
-    .auth-card { padding: 18px 20px; }
-    .auth-logo { width: 50px; height: 50px; }
-    .auth-body { padding: 26px 4px 30px 0; }
-    .input-group input, .auth-select { height: 44px; }
-    .auth-btn { height: auto !important; min-height: 0; margin-top: 12px; padding: 22px 20px; line-height: 1.2; border-radius: 14px; }
-    .eye-btn { top: 33px; }
+    .auth-card {
+        padding: 18px 20px;
+    }
+
+    .auth-logo {
+        width: 50px;
+        height: 50px;
+    }
+
+    .auth-body {
+        padding: 26px 4px 30px 0;
+    }
+
+    .input-group input,
+    .auth-select {
+        height: 44px;
+    }
+
+    .auth-btn {
+        height: auto !important;
+        min-height: 0;
+        margin-top: 12px;
+        padding: 22px 20px;
+        line-height: 1.2;
+        border-radius: 14px;
+    }
+
+    .eye-btn {
+        top: 33px;
+    }
 }
 
 .google-auth {
     margin-top: 8px;
 }
 
-.google-auth > div,
+.google-auth>div,
 .google-auth iframe,
 .google-precheck {
     width: min(100%, 300px) !important;
@@ -620,9 +719,12 @@
     pointer-events: none;
 }
 
-.google-login-visual svg { color: #4285f4; font-size: 17px; }
+.google-login-visual svg {
+    color: #4285f4;
+    font-size: 17px;
+}
 
-.google-login-shell > div {
+.google-login-shell>div {
     position: absolute !important;
     inset: 0;
     z-index: 2;
@@ -632,7 +734,11 @@
     cursor: pointer;
 }
 
-.google-login-shell iframe { width: 100% !important; height: 46px !important; cursor: pointer; }
+.google-login-shell iframe {
+    width: 100% !important;
+    height: 46px !important;
+    cursor: pointer;
+}
 
 /* The mobile rule previously forced a short fixed height, which pushed the
    label to the bottom once the button received vertical padding. */
@@ -670,8 +776,16 @@
     z-index: 2;
 }
 
-.auth-switch button { cursor: pointer; pointer-events: auto; margin-left: 6px; }
-.input-icon { top: 0; transform: none; }
+.auth-switch button {
+    cursor: pointer;
+    pointer-events: auto;
+    margin-left: 6px;
+}
+
+.input-icon {
+    top: 0;
+    transform: none;
+}
 
 .auth-text-btn {
     border: 0;
@@ -695,7 +809,10 @@
     text-align: center;
 }
 
-.phone-input-field { width: 100%; }
+.phone-input-field {
+    width: 100%;
+}
+
 .field-error {
     margin: 7px 2px 0;
     color: #dc2626;

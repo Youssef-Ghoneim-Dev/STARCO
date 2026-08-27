@@ -1,32 +1,22 @@
-import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import StyledSelect from "../../common/StyledSelect";
-import PanelsTabs from "./PanelsTabs";
 import WhatsappProjectData from "./WhatsappProjectData";
 import { useProject } from "../../../context/ProjectContext";
 import { resolveCopperConfiguration } from "../../../utils/copperDefaults";
 import { THICKNESS_OPTIONS } from "../../../utils/thicknessOptions";
-import { searchClients } from "../../../services/clientsAPI";
 
 function MarketingProjectEditor() {
   const navigate = useNavigate();
   const {
     project,
     activePanel,
-    updateClient,
     updatePanel,
     deletePanel,
     submitMarketingProject,
     savingProject,
     systemConfig,
   } = useProject();
-  const [clientQuery, setClientQuery] = useState(project.client?.name || "");
-  const [clientResults, setClientResults] = useState([]);
-  const [clientSearchActive, setClientSearchActive] = useState(false);
-  const [searchingClients, setSearchingClients] = useState(false);
-  const [openedPanel, setOpenedPanel] = useState(null);
-  const clientSearchRef = useRef(0);
   const panel = project.panels?.[activePanel] || project.panels?.[0] || {};
   const panelTypes = systemConfig?.panelTypes || [];
   const copperConfiguration = resolveCopperConfiguration(
@@ -39,36 +29,9 @@ function MarketingProjectEditor() {
   const branchGroups = Array.isArray(panel.copperDetails?.branchGroups)
     ? panel.copperDetails.branchGroups
     : [];
-  const panelEditingMode = project.status !== "draft";
   const canEditActivePanel =
     panel.status === "draft" ||
     (panel.status === "editing" && project.marketingEditSession?.active);
-
-  useEffect(() => {
-    setClientQuery(project.client?.name || "");
-  }, [project.client?.name]);
-  useEffect(() => {
-    const term = clientQuery.trim();
-    const requestId = ++clientSearchRef.current;
-    if (!clientSearchActive || !term) {
-      setClientResults([]);
-      setSearchingClients(false);
-      return undefined;
-    }
-    const timer = setTimeout(async () => {
-      setSearchingClients(true);
-      try {
-        const { data } = await searchClients(term);
-        if (requestId === clientSearchRef.current)
-          setClientResults(data.clients || []);
-      } catch {
-        if (requestId === clientSearchRef.current) setClientResults([]);
-      } finally {
-        if (requestId === clientSearchRef.current) setSearchingClients(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [clientQuery, clientSearchActive]);
 
   const patchPanel = (patch) => {
     if (!canEditActivePanel) return;
@@ -150,68 +113,18 @@ function MarketingProjectEditor() {
       navigate(`/projects/${project._id}`);
     } else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
   };
-  const selectClient = (client) => {
-    updateClient({
-      id: client._id,
-      name: client.name,
-      type: client.type,
-      profitPercentage: client.profitPercentage,
-    });
-    setClientQuery(client.name);
-    setClientResults([]);
-    setClientSearchActive(false);
-  };
   return (
     <section className="marketing-project-editor" dir="rtl">
       <div className="marketing-editor-heading">
         <div>
-          <h2>بيانات المشروع</h2>
-          <p>أضف بيانات طلب العميل ومرفقاته. عرض السعر مخصص للمهندس.</p>
+          <h2>بيانات اللوحة</h2>
+          <p>أضف بيانات اللوحة ومرفقاتها. عرض السعر مخصص للمهندس.</p>
         </div>
       </div>
-
-      <section className="project-editor-card marketing-client-card">
-        <div className="marketing-client-search">
-          <label>
-            اسم العميل
-            <input disabled value={clientQuery} placeholder="اسم العميل" />
-          </label>
-          {clientSearchActive &&
-            (searchingClients || clientResults.length > 0) && (
-              <div className="client-suggestions marketing-client-suggestions">
-                {searchingClients && (
-                  <p className="search-loading">جاري البحث...</p>
-                )}
-                {clientResults.map((client) => (
-                  <button
-                    key={client._id}
-                    type="button"
-                    className="suggestion-item"
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      selectClient(client);
-                    }}
-                  >
-                    {client.name} — {client.type === "company" ? "شركة" : "فرد"}
-                  </button>
-                ))}
-              </div>
-            )}
-        </div>
-      </section>
-
-      <PanelsTabs
-        readOnly={panelEditingMode}
-        openedPanel={openedPanel}
-        onOpenPanel={(index) =>
-          setOpenedPanel((current) => (current === index ? null : index))
-        }
-      />
-      {openedPanel !== null && (
-        <div className="panel-detail-shell">
+      <div className="panel-detail-shell">
           <div className="panel-detail-heading">
             <h2>{panel.panelName || `لوحة ${activePanel + 1}`}</h2>
-            <button type="button" onClick={() => setOpenedPanel(null)}>
+            <button type="button" onClick={() => navigate(`/projects/${project._id}`)}>
               العودة إلى اللوحات
             </button>
           </div>
@@ -447,8 +360,7 @@ function MarketingProjectEditor() {
             </section>
           </fieldset>
           <WhatsappProjectData editable={canEditActivePanel} />
-        </div>
-      )}
+      </div>
       {canEditActivePanel && (
         <div className="marketing-save-actions">
           <button
