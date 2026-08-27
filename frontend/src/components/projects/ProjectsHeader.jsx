@@ -26,7 +26,7 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefres
             <option value="completed">Fully completed</option>
           </select>
         </label>
-        {user?.role !== "ProductionManager" && <NavLink to="/new-project" className="new-project-link">
+        {["OwnerManager", "Engineer", "Marketer"].includes(user?.role) && <NavLink to="/new-project" className="new-project-link">
           <button className="new-project-btn"><FiPlus />New Project</button>
         </NavLink>}
       </div>

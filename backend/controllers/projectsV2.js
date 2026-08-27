@@ -47,7 +47,7 @@ const nextProjectCode = async () => {
 const buildSimilarityReview = async (client) => {
     const enteredName = String(client?.name || "").trim();
     if (!enteredName || client?.id) return { enteredName, resolved: Boolean(client?.id), resolution: client?.id ? "existing" : "", candidates: [] };
-    const existing = await clients.selectall({ isDeleted: false });
+    const existing = await clients.select_for_name_review();
     const candidates = existing.map((item) => ({ item, ...compareClientNames(enteredName, item.name) })).filter((entry) => entry.isCandidate).sort((a, b) => b.similarity - a.similarity).slice(0, 5).map(({ item, similarity }) => ({ clientId: item._id, name: item.name, type: item.type, profitPercentage: item.profitPercentage, similarity }));
     return { enteredName, resolved: candidates.length === 0, resolution: candidates.length ? "" : "new", candidates };
 };
@@ -72,7 +72,10 @@ const createProject = async (req, res, next) => { try {
     if (!isMarketer(req.user) && !isOwner(req.user) && !isEngineer(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية إنشاء مشروع." });
     const client = { id: req.body?.client?.id || null, name: String(req.body?.client?.name || "").trim(), type: req.body?.client?.type || "", profitPercentage: req.body?.client?.profitPercentage ?? null };
     if (isMarketer(req.user) && !client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
-    const source = req.body?.source || (isMarketer(req.user) ? "marketing" : "manual");
+    // The source is derived from the authenticated workflow, never from a
+    // client-controlled request field. WhatsApp creates its own projects in
+    // the webhook controller.
+    const source = isMarketer(req.user) ? "marketing" : "manual";
     const project = await projects.create({ projectCode: await nextProjectCode(), marketingId: isMarketer(req.user) ? req.user._id : req.body?.marketingId || null, client, clientNameReview: await buildSimilarityReview(client), source, status: source === "manual" ? "inProgress" : "draft" });
     res.status(201).json({ status: "ok", project: await hydrate(project, false, req.user) });
 } catch (error) { next(error); } };
@@ -80,10 +83,14 @@ const updateProject = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
     if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
     const marketerDraft = isMarketer(req.user) && sameId(project.marketingId, req.user._id) && project.status === "draft";
-    if (!marketerDraft && !isOwner(req.user) && !isEngineer(req.user)) return res.status(403).json({ status: "error", message: "المشروع غير مفتوح للتعديل." });
+    const manualEngineer = isEngineer(req.user) && project.source === "manual";
+    if (!marketerDraft && !isOwner(req.user) && !manualEngineer) return res.status(403).json({ status: "error", message: "المشروع غير مفتوح للتعديل." });
     const update = {};
-    if (req.body.client) update.client = { ...project.client.toObject(), ...req.body.client };
-    if (!marketerDraft && req.body.prices) update.prices = { ...project.prices.toObject(), ...req.body.prices };
+    // The marketer chooses the client once in the creation dialog. Shared
+    // pricing data is completed through setup, while manual projects remain
+    // editable by their engineer.
+    if ((isOwner(req.user) || manualEngineer) && req.body.client) update.client = { ...project.client.toObject(), ...req.body.client };
+    if ((isOwner(req.user) || manualEngineer) && req.body.prices) update.prices = { ...project.prices.toObject(), ...req.body.prices };
     const saved = await projects.update({ _id: project._id }, update);
     res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
@@ -99,8 +106,19 @@ const completeSetup = async (req, res, next) => { try {
     if (!project) return res.status(409).json({ status: "error", message: "المشروع ليس في مرحلة استكمال البيانات." });
     if (!isOwner(req.user) && !sameId(project.setupLock?.userId, req.user._id)) return res.status(409).json({ status: "error", message: "يجب حجز إعداد المشروع أولًا." });
     const client = { ...project.client.toObject(), ...req.body.client }; const prices = { ...project.prices.toObject(), ...req.body.prices };
+    const clientNameReview = { ...(project.clientNameReview || {}), ...(req.body.clientNameReview || {}) };
     if (!client.name || !client.type || !Number(client.profitPercentage) || !Number(prices.sheetPrice) || !Number(prices.paintPrice)) return res.status(400).json({ status: "error", message: "أكمل نوع العميل ونسبة الربح وسعر الصاج والدهان." });
-    const saved = await projects.update({ _id: project._id }, { client, prices, status: "inProgress", setupLock: { userId: null, acquiredAt: null, expiresAt: null } });
+    if (client.id) {
+        const existingClient = await clients.select_one({ _id: client.id });
+        if (!existingClient) return res.status(400).json({ status: "error", message: "سجل العميل المختار غير موجود." });
+        client.name = existingClient.name; client.type = existingClient.type; client.profitPercentage = existingClient.profitPercentage;
+        clientNameReview.resolved = true; clientNameReview.resolution = "existing";
+    } else {
+        if ((clientNameReview.candidates || []).length && (!clientNameReview.resolved || clientNameReview.resolution !== "new")) return res.status(409).json({ status: "error", message: "راجع الأسماء المتشابهة واختر سجلًا موجودًا أو أكد أنه عميل جديد." });
+        const createdClient = await clients.add_one({ name: client.name.trim(), type: client.type, profitPercentage: Number(client.profitPercentage) });
+        client.id = createdClient._id; clientNameReview.resolved = true; clientNameReview.resolution = "new";
+    }
+    const saved = await projects.update({ _id: project._id }, { client, clientNameReview, prices, status: "inProgress", setupLock: { userId: null, acquiredAt: null, expiresAt: null } });
     res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const submitProject = async (req, res, next) => { try {

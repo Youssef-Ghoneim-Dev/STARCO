@@ -32,7 +32,7 @@ const statusDetails = {
   editingByEngineer: { label: "يعدله المهندس", className: "in-progress" },
   editingByOwner: { label: "يعدله المدير", className: "in-progress" },
   editing: { label: "قيد التعديل", className: "editing" },
-  inProgress: { label: "قيد التنفيذ", className: "in-progress" },
+  inProgress: { label: "قيد العمل", className: "in-progress" },
   pending: { label: "قيد الانتظار", className: "pending" },
   quoteCompleted: { label: "عرض سعر مكتمل", className: "completed" },
   executionPdfRequested: { label: "مطلوب PDF تنفيذ", className: "pending" },
@@ -75,7 +75,7 @@ function ProjectCard({ project, setProjects }) {
           {clientPrefix} / {project.client?.name}
         </div>
 
-        {["OwnerManager", "Engineer", "Marketer"].includes(user?.role) && <button className="delete-project-btn" onClick={handleDelete}>
+        {(user?.role === "OwnerManager" || (user?.role === "Marketer" && project.status === "draft")) && <button className="delete-project-btn" onClick={handleDelete}>
           <HiOutlineTrash />
         </button>}
       </div>
