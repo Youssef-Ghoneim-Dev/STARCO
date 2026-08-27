@@ -28,10 +28,7 @@ const roundedRect = (context, x, y, width, height, radius = 28) => {
   context.closePath();
 };
 
-const drawCroppedImage = (context, image, x, y, width, height, transform = {}, radius = 28) => {
-  context.save();
-  roundedRect(context, x, y, width, height, radius);
-  context.clip();
+const drawCroppedImage = (context, image, x, y, width, height, transform = {}, radius = 28, align = "center") => {
   const numberOr = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
   const cropX = Math.max(0, Math.min(75, numberOr(transform.cropX, 50)));
   const zoom = Math.max(1, Math.min(3, numberOr(transform.zoom, 1)));
@@ -45,11 +42,17 @@ const drawCroppedImage = (context, image, x, y, width, height, transform = {}, r
   const availableY = Math.max(0, image.naturalHeight - sourceHeight);
   const sourceX = initialX + availableX * positionX;
   const sourceY = availableY * positionY;
-  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+  const renderedHeight = height;
+  const renderedWidth = renderedHeight * (sourceWidth / sourceHeight);
+  const renderedX = align === "right" ? x + width - renderedWidth : align === "left" ? x : x + (width - renderedWidth) / 2;
+  context.save();
+  roundedRect(context, renderedX, y, renderedWidth, renderedHeight, radius);
+  context.clip();
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, renderedX, y, renderedWidth, renderedHeight);
   context.restore();
 };
 
-const drawLabelValue = (context, label, value, y) => {
+const drawLabelValue = (context, label, value, y, valueX = 315) => {
   context.textBaseline = "middle";
   context.fillStyle = "#202020";
   context.textAlign = "left";
@@ -57,7 +60,7 @@ const drawLabelValue = (context, label, value, y) => {
   context.font = "700 34px Arial";
   context.fillText(label, 62, y);
   context.font = "400 34px Arial";
-  context.fillText(String(value || "—"), 315, y);
+  context.fillText(String(value || "—"), valueX, y);
 };
 
 const wrapLines = (context, value, maxWidth) => {
@@ -88,7 +91,7 @@ const drawPage3Text = (context, text) => {
   const lines = wrapLines(context, text, 620).slice(0, 17);
   const lineHeight = 46;
   const firstY = 540 - ((lines.length - 1) * lineHeight) / 2;
-  lines.forEach((line, index) => context.fillText(line, 380, firstY + index * lineHeight, 620));
+  lines.forEach((line, index) => context.fillText(line, 320, firstY + index * lineHeight, 560));
 };
 
 const toJpegBytes = (canvas) => {
@@ -136,7 +139,7 @@ const createPdfBlob = (pageImages) => {
 const galleryLayouts = {
   1: [[160, 100, 1600, 880]],
   2: [[80, 100, 850, 880], [990, 100, 850, 880]],
-  3: [[70, 80, 860, 920], [990, 80, 860, 430], [990, 570, 860, 430]],
+  3: [[35, 240, 600, 600], [660, 240, 600, 600], [1285, 240, 600, 600]],
   4: [[70, 70, 860, 450], [990, 70, 860, 450], [70, 560, 860, 450], [990, 560, 860, 450]],
   5: [[55, 65, 580, 440], [670, 65, 580, 440], [1285, 65, 580, 440], [210, 555, 720, 455], [990, 555, 720, 455]],
 };
@@ -154,25 +157,25 @@ export async function createExecutionPdf({ panelSize, steelThickness, paint, pag
   pages.push(toJpegBytes(createCanvas(pageOne).canvas));
 
   const second = createCanvas(contentPage);
-  if (assignedImage("page2")) drawCroppedImage(second.context, assignedImage("page2"), 785, 25, 1080, 1030, assignedTransform(assignments.page2));
-  drawLabelValue(second.context, "Panel size :", panelSize || "—", 590);
-  drawLabelValue(second.context, "Steel thickness :", `${steelThickness || "—"} mm`, 655);
-  drawLabelValue(second.context, "Paint :", paint || "Electrostatic paint", 720);
+  if (assignedImage("page2")) drawCroppedImage(second.context, assignedImage("page2"), 785, 216, 1080, 648, assignedTransform(assignments.page2), 28, "right");
+  drawLabelValue(second.context, "Panel size :", panelSize || "—", 590, 250);
+  drawLabelValue(second.context, "Steel thickness :", `${steelThickness || "—"} mm`, 655, 385);
+  drawLabelValue(second.context, "Paint :", paint || "Electrostatic paint", 720, 175);
   pages.push(toJpegBytes(second.canvas));
 
   const third = createCanvas(contentPage);
-  if (assignedImage("page3")) drawCroppedImage(third.context, assignedImage("page3"), 785, 25, 1080, 1030, assignedTransform(assignments.page3));
+  if (assignedImage("page3")) drawCroppedImage(third.context, assignedImage("page3"), 785, 216, 1080, 648, assignedTransform(assignments.page3), 28, "right");
   drawPage3Text(third.context, page3Text);
   pages.push(toJpegBytes(third.canvas));
 
   const fourth = createCanvas(contentPage);
-  if (assignedImage("page4")) drawCroppedImage(fourth.context, assignedImage("page4"), 785, 25, 1080, 1030, assignedTransform(assignments.page4));
+  if (assignedImage("page4")) drawCroppedImage(fourth.context, assignedImage("page4"), 785, 216, 1080, 648, assignedTransform(assignments.page4), 28, "right");
   const specificationLines = (page4Lines || []).filter(Boolean).slice(0, 8);
   fourth.context.fillStyle = "#202020";
   fourth.context.font = "500 36px Arial";
-  fourth.context.textAlign = "center";
+  fourth.context.textAlign = "left";
   fourth.context.direction = "ltr";
-  specificationLines.forEach((line, index) => fourth.context.fillText(line, 385, 520 + index * 72, 650));
+  specificationLines.forEach((line, index) => fourth.context.fillText(line, 30, 500 + index * 72, 700));
   pages.push(toJpegBytes(fourth.canvas));
 
   const fifth = createCanvas(galleryPage);
