@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineArrowLeft, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
+import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
@@ -74,6 +75,42 @@ const manufacturingFileType = (file) => {
   return "FILE";
 };
 
+const defaultExecutionDesign = (panel, workflow) => {
+  const dimensions = panel?.dimensions || panel?.pricing?.dimensions || {};
+  const centimeters = [dimensions.length, dimensions.width, dimensions.depth]
+    .map((value) => Number(value) ? Number(value) / 10 : "")
+    .filter((value) => value !== "")
+    .join(" × ");
+  return {
+    panelSize: workflow?.design?.panelSize || (centimeters ? `${centimeters} cm` : ""),
+    steelThickness: workflow?.design?.steelThickness || workflow?.steelThickness || "",
+    paint: workflow?.design?.paint || "Electrostatic paint",
+    page3Text: workflow?.design?.page3Text || "",
+    page4Lines: workflow?.design?.page4Lines?.length ? workflow.design.page4Lines : ["4 Metal Lock", "Lock unit", "Iron hinges", "Ground bar for collecting cables"],
+    assignments: workflow?.design?.assignments || { page2: "", page3: "", page4: "", gallery: [] },
+    transforms: workflow?.design?.transforms || {},
+  };
+};
+
+function ExecutionSelect({ value, options, placeholder, onChange }) {
+  const [open, setOpen] = useState(false);
+  const controlRef = useRef(null);
+  const selected = options.find((option) => String(option.value) === String(value));
+  useEffect(() => {
+    const close = (event) => { if (!controlRef.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, []);
+  return <div className="copper-select-control execution-select-control" ref={controlRef}>
+    <button type="button" className="copper-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+      <span className={selected ? "" : "copper-select-placeholder"}>{selected?.label || placeholder}</span><IoChevronDown className="copper-select-chevron" />
+    </button>
+    {open && <div className="copper-select-menu" role="listbox">
+      {options.map((option) => <button type="button" role="option" aria-selected={String(option.value) === String(value)} className={String(option.value) === String(value) ? "is-selected" : ""} key={option.value} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
+    </div>}
+  </div>;
+}
+
 function ExecutionPdfWorkspace() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -82,9 +119,11 @@ function ExecutionPdfWorkspace() {
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const executionInputRefs = useRef({});
+  const loadedExecutionDesignKey = useRef("");
   const manufacturingInputRef = useRef(null);
   const panel = project.panels?.[activePanel];
-  const workflow = panel?.executionPdf || { status: "notRequested", files: [] };
+  const executionPdfState = panel?.executionPdf;
+  const workflow = useMemo(() => executionPdfState || { status: "notRequested", files: [] }, [executionPdfState]);
   const files = useMemo(() => workflow.files || [], [workflow.files]);
   const manufacturing = panel?.manufacturing || { status: "notStarted", files: [], notes: "" };
   const manufacturingFiles = useMemo(() => manufacturing.files || [], [manufacturing.files]);
@@ -94,7 +133,9 @@ function ExecutionPdfWorkspace() {
   const [delayDetails, setDelayDetails] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
-  const [executionDesign, setExecutionDesign] = useState({ page3Text: "", metalLockCount: 4, includeGroundBar: true });
+  const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
+  const [executionPreviews, setExecutionPreviews] = useState({});
+  const [cropFileId, setCropFileId] = useState("");
   const canIssueOrder = user?.role === "OwnerManager"
     || user?.role === "MarketingManager"
     || user?.role === "Marketer"
@@ -120,13 +161,12 @@ function ExecutionPdfWorkspace() {
   }, [panel?.panelId, manufacturing.notes, manufacturing.currentStage]);
 
   useEffect(() => {
+    const designKey = `${panel?.panelId || ""}:${workflow.status || ""}:${workflow.requestedAt || ""}`;
+    if (loadedExecutionDesignKey.current === designKey) return;
+    loadedExecutionDesignKey.current = designKey;
     setSelectedSteelThickness(workflow.steelThickness || "");
-    setExecutionDesign({
-      page3Text: workflow.design?.page3Text || "",
-      metalLockCount: workflow.design?.metalLockCount ?? 4,
-      includeGroundBar: workflow.design?.includeGroundBar !== false,
-    });
-  }, [panel?.panelId, workflow.steelThickness, workflow.design?.page3Text, workflow.design?.metalLockCount, workflow.design?.includeGroundBar]);
+    setExecutionDesign(defaultExecutionDesign(panel, workflow));
+  }, [panel, workflow]);
 
   const productionStages = useMemo(() => {
     const currentKey = productionStageDefinitions.some((stage) => stage.key === manufacturing.currentStage)
@@ -203,31 +243,73 @@ function ExecutionPdfWorkspace() {
     groups[purpose] = [...(groups[purpose] || []), file];
     return groups;
   }, {}), [files]);
+  const executionImageFiles = useMemo(() => files.filter((file) => file.purpose !== "generatedPdf" && (String(file.mimeType || "").startsWith("image/") || /\.(?:jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.fileName || ""))), [files]);
+
+  useEffect(() => {
+    let active = true;
+    const urls = [];
+    const loadPreviews = async () => {
+      const entries = await Promise.all(executionImageFiles.map(async (file) => {
+        try {
+          const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
+          const url = URL.createObjectURL(data);
+          urls.push(url);
+          return [String(file._id), url];
+        } catch { return [String(file._id), ""]; }
+      }));
+      if (active) setExecutionPreviews(Object.fromEntries(entries));
+    };
+    loadPreviews();
+    return () => { active = false; urls.forEach((url) => URL.revokeObjectURL(url)); };
+  }, [executionImageFiles, project._id, panel.panelId]);
+
+  const assignmentForFile = (fileId) => {
+    const id = String(fileId);
+    if (String(executionDesign.assignments.page2 || "") === id) return "page2";
+    if (String(executionDesign.assignments.page3 || "") === id) return "page3";
+    if (String(executionDesign.assignments.page4 || "") === id) return "page4";
+    if ((executionDesign.assignments.gallery || []).map(String).includes(id)) return "gallery";
+    return "";
+  };
+
+  const assignImage = (fileId, destination) => {
+    const id = String(fileId);
+    setExecutionDesign((current) => {
+      const next = { page2: current.assignments.page2, page3: current.assignments.page3, page4: current.assignments.page4, gallery: [...(current.assignments.gallery || [])] };
+      ["page2", "page3", "page4"].forEach((slot) => { if (String(next[slot] || "") === id) next[slot] = ""; });
+      next.gallery = next.gallery.filter((assignedId) => String(assignedId) !== id);
+      if (["page2", "page3", "page4"].includes(destination)) next[destination] = id;
+      if (destination === "gallery") {
+        if (next.gallery.length >= 3) { toast.error("صفحة الصور تقبل ثلاث صور فقط."); return current; }
+        next.gallery.push(id);
+      }
+      return {
+        ...current,
+        assignments: next,
+        transforms: current.transforms[id] ? current.transforms : { ...current.transforms, [id]: { cropX: 50, zoom: 1, positionX: 50, positionY: 50 } },
+      };
+    });
+  };
+
+  const updateTransform = (fileId, key, value) => setExecutionDesign((current) => ({
+    ...current,
+    transforms: { ...current.transforms, [fileId]: { cropX: 50, zoom: 1, positionX: 50, positionY: 50, ...(current.transforms[fileId] || {}), [key]: Number(value) } },
+  }));
 
   const generateAndFinish = async () => {
-    const requiredPurposes = ["page2", "page3", "page4"];
-    const missing = requiredPurposes.find((purpose) => !executionFilesByPurpose[purpose]?.length);
-    if (missing) return toast.error("أضف صور الصفحات الثانية والثالثة والرابعة أولًا.");
-    if (!executionFilesByPurpose.gallery?.length) return toast.error("أضف صورة واحدة على الأقل لصفحة الصور.");
+    const { assignments } = executionDesign;
+    if (!assignments.page2 || !assignments.page3 || !assignments.page4) return toast.error("اختر صورة لكل صفحة من الصفحات الثانية والثالثة والرابعة.");
+    if ((assignments.gallery || []).length !== 3) return toast.error("اختر ثلاث صور لصفحة الصور.");
     if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
+    if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
+    if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
     setBusy(true);
-    const objectUrls = [];
     try {
       const { data: designData } = await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
       setProject(withProjectMetadata(designData.project, user?.name || project.lastUpdatedByName));
       const images = {};
-      for (const purpose of ["page2", "page3", "page4", "gallery"]) {
-        images[purpose] = [];
-        for (const file of executionFilesByPurpose[purpose] || []) {
-          const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
-          const url = URL.createObjectURL(data);
-          objectUrls.push(url);
-          images[purpose].push(url);
-        }
-      }
+      executionImageFiles.forEach((file) => { if (executionPreviews[String(file._id)]) images[String(file._id)] = executionPreviews[String(file._id)]; });
       const pdfBlob = await createExecutionPdf({
-        panel,
-        steelThickness: workflow.steelThickness,
         ...executionDesign,
         images,
       });
@@ -241,7 +323,6 @@ function ExecutionPdfWorkspace() {
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
     } finally {
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
       setBusy(false);
     }
   };
@@ -260,6 +341,16 @@ function ExecutionPdfWorkspace() {
     try {
       const { data } = await deleteExecutionPdfFile(project._id, panel.panelId, file._id);
       setProject(withProjectMetadata(data.project));
+      const removedId = String(file._id);
+      setExecutionDesign((current) => ({
+        ...current,
+        assignments: {
+          page2: String(current.assignments.page2 || "") === removedId ? "" : current.assignments.page2,
+          page3: String(current.assignments.page3 || "") === removedId ? "" : current.assignments.page3,
+          page4: String(current.assignments.page4 || "") === removedId ? "" : current.assignments.page4,
+          gallery: (current.assignments.gallery || []).filter((id) => String(id) !== removedId),
+        },
+      }));
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر حذف الملف.");
     } finally { setBusy(false); }
@@ -338,26 +429,15 @@ function ExecutionPdfWorkspace() {
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملفات مجمعة."); }
   };
 
-  const renderExecutionImageSlot = (purpose, title, description, multiple = false) => {
-    const purposeFiles = executionFilesByPurpose[purpose] || [];
-    return <article className="execution-builder-upload-card">
-      <div><span className="execution-builder-page-icon"><HiOutlinePhotograph /></span><h4>{title}</h4><p>{description}</p></div>
-      {purposeFiles.length > 0 && <div className="execution-builder-files">
-        {purposeFiles.map((file) => <span key={file._id || file.storageFileId}>
-          <button type="button" onClick={() => openFile(file)} title={file.fileName}>{file.fileName}</button>
-          <button type="button" onClick={() => removeExecutionFile(file)} disabled={busy} aria-label="حذف الصورة"><HiOutlineX /></button>
-        </span>)}
-      </div>}
-      <button type="button" className="execution-builder-pick" onClick={() => executionInputRefs.current[purpose]?.click()} disabled={busy}>
-        <HiOutlineCloudUpload /> {multiple ? "إضافة صور" : purposeFiles.length ? "تغيير الصورة" : "اختيار صورة"}
-      </button>
-      <input ref={(node) => { executionInputRefs.current[purpose] = node; }} type="file" accept="image/*" multiple={multiple} hidden onChange={(event) => {
-        const selected = Array.from(event.target.files || []);
-        event.target.value = "";
-        uploadFiles(selected, purpose);
-      }} />
-    </article>;
-  };
+  const assignmentOptions = [
+    { value: "", label: "غير مستخدمة" },
+    { value: "page2", label: "صورة صفحة المقاس والسمك" },
+    { value: "page3", label: "صورة صفحة النص" },
+    { value: "page4", label: "صورة صفحة المواصفات" },
+    { value: "gallery", label: "صفحة الصور (3 صور)" },
+  ];
+  const cropFile = executionImageFiles.find((file) => String(file._id) === String(cropFileId));
+  const cropTransform = cropFile ? { cropX: 50, zoom: 1, positionX: 50, positionY: 50, ...(executionDesign.transforms[String(cropFile._id)] || {}) } : null;
 
   const saveProductionStage = async () => {
     if (!activeProductionStage) return;
@@ -476,10 +556,7 @@ function ExecutionPdfWorkspace() {
       <div><h3>لم يصدر أمر PDF تنفيذ لهذه اللوحة بعد</h3><p>اختر سمك الصاج الذي أكده العميل، ثم أصدر أمر التنفيذ.</p></div>
       {canIssueOrder && <div className="execution-order-controls">
         <label>سمك الصاج المؤكد
-          <select value={selectedSteelThickness} onChange={(event) => setSelectedSteelThickness(event.target.value)}>
-            <option value="">اختر السمك</option>
-            {(panel?.thickness || []).map((thickness) => <option key={thickness} value={thickness}>{thickness} mm</option>)}
-          </select>
+          <ExecutionSelect value={selectedSteelThickness} placeholder="اختر السمك" options={(panel?.thickness || []).map((thickness) => ({ value: thickness, label: `${thickness} mm` }))} onChange={setSelectedSteelThickness} />
         </label>
         <button type="button" onClick={issueOrder} disabled={busy || savingProject || !selectedSteelThickness}>{busy ? "جاري الإصدار..." : "إصدار أمر PDF تنفيذ"}</button>
       </div>}
@@ -487,29 +564,46 @@ function ExecutionPdfWorkspace() {
 
     {workflow.status === "requested" && canPreparePdf && <>
       <section className="execution-pdf-builder">
-        <header><span className="execution-phase-label">إنشاء الملف</span><h3>تجهيز صفحات PDF التنفيذ</h3><p>الغلاف والصفحة الأخيرة ثابتان. أضف محتوى الصفحات المتغيرة ثم أنشئ الملف النهائي.</p></header>
-        <div className="execution-builder-summary">
-          <span><b>Panel size</b>{panel?.dimensions?.length || "—"} × {panel?.dimensions?.width || "—"} × {panel?.dimensions?.depth || "—"} mm</span>
-          <span><b>Steel thickness</b>{workflow.steelThickness || "—"} mm</span>
-          <span><b>Paint</b>Electrostatic paint</span>
+        <header><span className="execution-phase-label">إنشاء الملف</span><h3>محرر PDF التنفيذ</h3><p>ارفع الصور مرة واحدة، ثم اختر مكان كل صورة واضبط القص قبل إنشاء الملف.</p></header>
+        <div className="execution-builder-summary editable">
+          <label><b>Panel size</b><input dir="ltr" value={executionDesign.panelSize} onChange={(event) => setExecutionDesign((current) => ({ ...current, panelSize: event.target.value }))} /></label>
+          <label><b>Steel thickness</b><input dir="ltr" value={executionDesign.steelThickness} onChange={(event) => setExecutionDesign((current) => ({ ...current, steelThickness: event.target.value }))} /></label>
+          <label><b>Paint</b><input dir="ltr" value={executionDesign.paint} onChange={(event) => setExecutionDesign((current) => ({ ...current, paint: event.target.value }))} /></label>
         </div>
-        <div className="execution-builder-grid">
-          {renderExecutionImageSlot("page2", "الصفحة الثانية", "صورة اللوحة الأساسية بجانب المقاس والسمك والدهان.")}
+        <section className={`execution-image-library ${dragging ? "dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); uploadFiles(event.dataTransfer.files, "gallery"); }}>
+          <div className="execution-library-heading"><div><h4>صور PDF التنفيذ</h4><p>القص الافتراضي يحذف 25% من اليمين و25% من اليسار.</p></div><button type="button" onClick={() => executionInputRefs.current.gallery?.click()} disabled={busy}><HiOutlineCloudUpload /> رفع الصور</button></div>
+          <input ref={(node) => { executionInputRefs.current.gallery = node; }} type="file" accept="image/*" multiple hidden onChange={(event) => { const selected = Array.from(event.target.files || []); event.target.value = ""; uploadFiles(selected, "gallery"); }} />
+          {executionImageFiles.length === 0 ? <div className="execution-library-empty"><HiOutlinePhotograph /><b>ارفع خمس أو ست صور للبدء</b></div> : <div className="execution-library-grid">
+            {executionImageFiles.map((file) => <article key={file._id} className="execution-library-card">
+              <button type="button" className="execution-library-preview" onClick={() => setCropFileId(String(file._id))}>
+                {executionPreviews[String(file._id)] ? <img src={executionPreviews[String(file._id)]} alt={file.fileName} style={{ objectPosition: `${executionDesign.transforms[String(file._id)]?.positionX ?? 50}% ${executionDesign.transforms[String(file._id)]?.positionY ?? 50}%`, transform: `scale(${(executionDesign.transforms[String(file._id)]?.zoom ?? 1) / (1 - (executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 100)})` }} /> : <HiOutlinePhotograph />}
+                <span>تعديل القص</span>
+              </button>
+              <ExecutionSelect value={assignmentForFile(file._id)} options={assignmentOptions} placeholder="اختر مكان الصورة" onChange={(value) => assignImage(file._id, value)} />
+              <button type="button" className="execution-library-delete" onClick={() => removeExecutionFile(file)} disabled={busy}><HiOutlineX /> حذف</button>
+            </article>)}
+          </div>}
+        </section>
+        <div className="execution-builder-grid inputs-only">
+          <article className="execution-builder-content-card"><label>نص الصفحة الثالثة<textarea value={executionDesign.page3Text} onChange={(event) => setExecutionDesign((current) => ({ ...current, page3Text: event.target.value }))} placeholder="اكتب وصف اللوحة والملاحظات الفنية التي ستظهر في الصفحة..." /></label></article>
           <article className="execution-builder-content-card">
-            {renderExecutionImageSlot("page3", "الصفحة الثالثة", "الصورة الخاصة بشرح المهندس.")}
-            <label>نص الصفحة الثالثة<textarea value={executionDesign.page3Text} onChange={(event) => setExecutionDesign((current) => ({ ...current, page3Text: event.target.value }))} placeholder="اكتب وصف اللوحة والملاحظات الفنية التي ستظهر في الصفحة..." /></label>
+            <div className="execution-page4-heading"><h4>بيانات الصفحة الرابعة</h4><button type="button" onClick={() => setExecutionDesign((current) => ({ ...current, page4Lines: [...current.page4Lines, ""] }))}>+ إضافة سطر</button></div>
+            <div className="execution-page4-lines">{executionDesign.page4Lines.map((line, index) => <div key={index}><input dir="ltr" value={line} onChange={(event) => setExecutionDesign((current) => ({ ...current, page4Lines: current.page4Lines.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} /><button type="button" onClick={() => setExecutionDesign((current) => ({ ...current, page4Lines: current.page4Lines.filter((_, itemIndex) => itemIndex !== index) }))}><HiOutlineX /></button></div>)}</div>
           </article>
-          <article className="execution-builder-content-card">
-            {renderExecutionImageSlot("page4", "الصفحة الرابعة", "الصورة المقابلة لمواصفات الأقفال والمفصلات.")}
-            <div className="execution-builder-specs">
-              <label>عدد Metal Lock<input type="number" min="0" max="999" value={executionDesign.metalLockCount} onChange={(event) => setExecutionDesign((current) => ({ ...current, metalLockCount: Number(event.target.value) }))} /></label>
-              <span>Lock unit</span><span>Iron hinges</span>
-              <label className="execution-ground-bar"><input type="checkbox" checked={executionDesign.includeGroundBar} onChange={(event) => setExecutionDesign((current) => ({ ...current, includeGroundBar: event.target.checked }))} /> Ground bar for collecting cables</label>
-            </div>
-          </article>
-          {renderExecutionImageSlot("gallery", "الصفحة الخامسة", "ارفع من صورة إلى خمس صور وسيتم توزيعها تلقائيًا داخل الصفحة.", true)}
         </div>
       </section>
+      {cropFile && <div className="execution-crop-modal" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setCropFileId(""); }}>
+        <section><header><div><h3>ضبط قص الصورة</h3><p>{cropFile.fileName}</p></div><button type="button" onClick={() => setCropFileId("")}><HiOutlineX /></button></header>
+          <div className="execution-crop-preview">{executionPreviews[String(cropFile._id)] && <img src={executionPreviews[String(cropFile._id)]} alt="معاينة القص" style={{ objectPosition: `${cropTransform.positionX}% ${cropTransform.positionY}%`, transform: `scale(${cropTransform.zoom / (1 - cropTransform.cropX / 100)})` }} />}</div>
+          <div className="execution-crop-controls">
+            <label>القص الأفقي: {cropTransform.cropX}%<input type="range" min="0" max="75" step="1" value={cropTransform.cropX} onChange={(event) => updateTransform(String(cropFile._id), "cropX", event.target.value)} /></label>
+            <label>التكبير: {Number(cropTransform.zoom).toFixed(1)}×<input type="range" min="1" max="3" step="0.1" value={cropTransform.zoom} onChange={(event) => updateTransform(String(cropFile._id), "zoom", event.target.value)} /></label>
+            <label>الموضع أفقيًا<input type="range" min="0" max="100" value={cropTransform.positionX} onChange={(event) => updateTransform(String(cropFile._id), "positionX", event.target.value)} /></label>
+            <label>الموضع رأسيًا<input type="range" min="0" max="100" value={cropTransform.positionY} onChange={(event) => updateTransform(String(cropFile._id), "positionY", event.target.value)} /></label>
+          </div>
+          <button type="button" className="execution-crop-done" onClick={() => setCropFileId("")}>تم</button>
+        </section>
+      </div>}
       <div className="execution-pdf-actions">
         <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy}>تخطي هذه المرحلة</button>
         <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={busy}>{busy ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>

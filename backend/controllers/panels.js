@@ -198,10 +198,19 @@ const saveExecutionPdfDesign = async (req, res, next) => { try {
     if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (!isOwner(req.user) && (!isEngineer(req.user) || !sameId(panel.engineerId, req.user._id))) return res.status(403).json({ status: "error", message: "تعديل PDF التنفيذ متاح للمهندس المسؤول فقط." });
     if (panel.status !== "executionPdfRequested") return res.status(409).json({ status: "error", message: "PDF التنفيذ ليس مفتوحًا للتجهيز الآن." });
+    const assignments = req.body?.assignments && typeof req.body.assignments === "object" ? req.body.assignments : {};
+    const transforms = req.body?.transforms && typeof req.body.transforms === "object" ? req.body.transforms : {};
     const design = {
+        panelSize: String(req.body?.panelSize || "").slice(0, 100),
+        steelThickness: String(req.body?.steelThickness || panel.executionPdf?.steelThickness || "").slice(0, 50),
+        paint: String(req.body?.paint || "Electrostatic paint").slice(0, 150),
         page3Text: String(req.body?.page3Text || "").slice(0, 4000),
-        metalLockCount: Math.max(0, Math.min(999, Number(req.body?.metalLockCount) || 0)),
-        includeGroundBar: req.body?.includeGroundBar !== false
+        page4Lines: (Array.isArray(req.body?.page4Lines) ? req.body.page4Lines : []).slice(0, 12).map((line) => String(line || "").slice(0, 180)).filter(Boolean),
+        assignments: {
+            page2: String(assignments.page2 || ""), page3: String(assignments.page3 || ""), page4: String(assignments.page4 || ""),
+            gallery: (Array.isArray(assignments.gallery) ? assignments.gallery : []).slice(0, 3).map(String)
+        },
+        transforms
     };
     const saved = await panels.update({ _id: panel._id }, { "executionPdf.design": design });
     const project = await loadProject(panel.projectId);

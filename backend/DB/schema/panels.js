@@ -33,7 +33,7 @@ module.exports = new mongoose.Schema({
     attachments: { type: [storedFileSchema], default: [] },
     executionPdf: {
         files: { type: [storedFileSchema], default: [] }, steelThickness: { type: Number, default: null },
-        design: { page3Text: { type: String, default: "" }, metalLockCount: { type: Number, default: 4 }, includeGroundBar: { type: Boolean, default: true } },
+        design: { type: mongoose.Schema.Types.Mixed, default: {} },
         requestedAt: { type: Date, default: null }, requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
         readyAt: { type: Date, default: null }, readyBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
         confirmedAt: { type: Date, default: null }, confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, skipped: { type: Boolean, default: false }
