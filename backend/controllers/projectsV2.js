@@ -3,6 +3,7 @@ const projects = require("../models/projects");
 const panels = require("../models/panels");
 const counters = require("../models/counters");
 const users = require("../models/users");
+const whatsappMessages = require("../models/whatsappMessages");
 const clients = require("../models/clients");
 const systemConfiguration = require("../models/systemConfiguration");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
@@ -134,16 +135,22 @@ const submitProject = async (req, res, next) => { try {
     const engineers = await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
     const notifications = await Promise.allSettled(engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, notificationProject, req.user.name || "غير محدد")));
-    const notified = notifications.filter((item) => item.status === "fulfilled").length;
+    const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);
+    if (acceptedIds.length) await new Promise((resolve) => setTimeout(resolve, 1800));
+    const deliveryRows = await Promise.all(acceptedIds.map((id) => whatsappMessages.findByProviderMessageId(id)));
+    const notificationFailed = deliveryRows.filter((row) => row?.status === "failed").length;
+    const notified = notifications.filter((item) => item.status === "fulfilled").length - notificationFailed;
     const notificationMessage = !engineers.length
         ? "لا يوجد مهندس معتمد لديه رقم WhatsApp مسجل."
+        : notificationFailed > 0
+            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مهندس. راجع أهلية الرقم لاستقبال القوالب.`
         : notified === 0
             ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب للمهندسين."
             : notified < engineers.length
                 ? `وصل القالب إلى ${notified} من أصل ${engineers.length} مهندس.`
                 : `تم إرسال قالب المشروع إلى ${notified} مهندس.`;
     notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
-    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationMessage, project: await hydrate(saved, false, req.user) });
+    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const regeneratePreview = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });

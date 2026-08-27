@@ -993,6 +993,8 @@
 .project-folder-setup {
     max-width: 1050px;
     margin-inline: auto;
+    display: grid;
+    gap: 18px;
 }
 
 .project-folder-setup select {
@@ -1003,4 +1005,39 @@
     border-radius: 12px;
     background: #fff;
     font: inherit;
+}
+
+.project-folder-setup > div:first-child {
+    text-align: right;
+}
+
+.project-folder-setup > div:first-child h1 {
+    margin: 0 0 5px;
+    color: #10283c;
+    font-size: clamp(28px, 3vw, 40px);
+}
+
+.project-folder-setup > div:first-child p {
+    margin: 0;
+    color: #5d6b76;
+    font-size: 18px;
+}
+
+.project-folder-setup > button {
+    justify-self: end;
+    min-width: 260px;
+    min-height: 52px;
+    padding: 10px 24px;
+    border: 0;
+    border-radius: 13px;
+    background: #356b89;
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.project-folder-setup > button:disabled {
+    cursor: wait;
+    opacity: .65;
 }

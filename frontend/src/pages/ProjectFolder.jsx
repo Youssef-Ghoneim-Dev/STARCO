@@ -6,6 +6,8 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import PanelCard from "../components/projects/PanelCard";
 import { acquireProjectSetupLock, completeProject, completeProjectSetup, createPanel, deletePanelRecord, getProject, submitMarketingProject } from "../services/projectsAPI";
 import { useAuth } from "../context/AuthContext";
+import { getSystemConfiguration } from "../services/systemConfigurationAPI";
+import "../styles/ProjectEditor.css";
 const projectStates = { draft: "مسودة", created: "تم الإرسال", inProgress: "قيد العمل", completed: "مكتمل نهائيًا" };
 
 function ProjectSetup({ project, onComplete }) {
@@ -17,9 +19,16 @@ function ProjectSetup({ project, onComplete }) {
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     let active = true;
-    acquireProjectSetupLock(project._id)
-      .then(() => active && setReady(true))
-      .catch((error) => toast.error(error.response?.data?.message || "تعذر حجز إعداد المشروع."));
+    Promise.all([acquireProjectSetupLock(project._id), getSystemConfiguration()])
+      .then(([, configuration]) => {
+        if (!active) return;
+        setPrices((current) => ({
+          sheetPrice: current.sheetPrice === null || current.sheetPrice === "" ? (configuration.data?.sheetPrice ?? "") : current.sheetPrice,
+          paintPrice: current.paintPrice === null || current.paintPrice === "" ? (configuration.data?.paintPrice ?? "") : current.paintPrice,
+        }));
+        setReady(true);
+      })
+      .catch((error) => toast.error(error.response?.data?.message || "تعذر تجهيز بيانات المشروع."));
     return () => { active = false; };
   }, [project._id]);
   const candidates = review.resolved ? [] : (review.candidates || []);
@@ -57,7 +66,7 @@ export default function ProjectFolder() {
   const visiblePanels = (project.panels || []).filter((panel) => !query.trim() || `${panel.panelName} ${panel.panelCode}`.toLowerCase().includes(query.trim().toLowerCase()));
   const add = async () => { setBusy(true); try { const { data } = await createPanel(id, {}); navigate(`/projects/${id}/panels/${data.panel._id}`); } catch (error) { toast.error(error.response?.data?.message || "تعذر إضافة اللوحة."); } finally { setBusy(false); } };
   const remove = async (panel) => { try { await deletePanelRecord(id, panel._id); setProject((current) => ({ ...current, panels: current.panels.filter((item) => item._id !== panel._id) })); } catch (error) { toast.error(error.response?.data?.message || "تعذر حذف اللوحة."); } };
-  const submit = async () => { setBusy(true); try { const { data } = await submitMarketingProject(id); setProject(data.project); if (data.notified === 0) toast.error(data.notificationMessage || "تم إرسال المشروع، لكن لم تصل رسالة WhatsApp لأي مهندس."); } catch (error) { toast.error(error.response?.data?.message || "تعذر إرسال المشروع."); } finally { setBusy(false); } };
+  const submit = async () => { setBusy(true); try { const { data } = await submitMarketingProject(id); setProject(data.project); if (data.notified === 0 || data.notificationFailed > 0) toast.error(data.notificationMessage || "تم إرسال المشروع، لكن لم تصل رسالة WhatsApp لأي مهندس."); } catch (error) { toast.error(error.response?.data?.message || "تعذر إرسال المشروع."); } finally { setBusy(false); } };
   const quoteReadyStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
   const canGeneratePreview = ["Engineer", "OwnerManager"].includes(user?.role) && project.panels?.length > 0 && project.panels.every((panel) => quoteReadyStatuses.includes(panel.status));
   const generatePreview = async () => { setBusy(true); try { const { data } = await completeProject(id); await navigator.clipboard.writeText(data.previewUrl); toast.success("تم إصدار PDF المجمع ونسخ رابط المعاينة."); await load(); } catch (error) { toast.error(error.response?.data?.message || "تعذر إصدار عرض السعر المجمع."); } finally { setBusy(false); } };

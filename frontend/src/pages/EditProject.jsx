@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiArrowRight } from "react-icons/fi";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProjectInfo from "../components/projects/projectEditor/ProjectInfo";
 import ProjectPrices from "../components/projects/projectEditor/ProjectPrices";
@@ -438,7 +437,6 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
 
 function EditProject() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const isMarketer = user?.role === "Marketer";
   const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
@@ -449,7 +447,6 @@ function EditProject() {
     <ProjectProvider projectId={id} readOnly={readOnly}>
       <DashboardLayout notAllowed={false}>
         <div className="project-editor-page">
-          <button type="button" className="project-folder-back" onClick={() => navigate("/projects")}><FiArrowRight /> الرجوع للمشاريع</button>
           <PanelRouteGate readOnly={readOnly} isMarketer={isMarketer} />
         </div>
       </DashboardLayout>
