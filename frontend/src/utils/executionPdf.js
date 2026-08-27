@@ -39,11 +39,8 @@ const drawCroppedImage = (context, image, x, y, width, height, transform = {}, r
   const positionY = Math.max(0, Math.min(100, numberOr(transform.positionY, 50))) / 100;
   const croppedWidth = image.naturalWidth * (1 - cropX / 100);
   const initialX = (image.naturalWidth - croppedWidth) / 2;
-  const targetRatio = width / height;
-  let sourceWidth = croppedWidth / zoom;
-  let sourceHeight = image.naturalHeight / zoom;
-  if (sourceWidth / sourceHeight > targetRatio) sourceWidth = sourceHeight * targetRatio;
-  else sourceHeight = sourceWidth / targetRatio;
+  const sourceWidth = croppedWidth / zoom;
+  const sourceHeight = image.naturalHeight / zoom;
   const availableX = Math.max(0, croppedWidth - sourceWidth);
   const availableY = Math.max(0, image.naturalHeight - sourceHeight);
   const sourceX = initialX + availableX * positionX;

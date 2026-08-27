@@ -263,25 +263,24 @@ function ExecutionPdfWorkspace() {
     return () => { active = false; urls.forEach((url) => URL.revokeObjectURL(url)); };
   }, [executionImageFiles, project._id, panel.panelId]);
 
-  const assignmentForFile = (fileId) => {
+  const isImageAssigned = (fileId, destination) => {
     const id = String(fileId);
-    if (String(executionDesign.assignments.page2 || "") === id) return "page2";
-    if (String(executionDesign.assignments.page3 || "") === id) return "page3";
-    if (String(executionDesign.assignments.page4 || "") === id) return "page4";
-    if ((executionDesign.assignments.gallery || []).map(String).includes(id)) return "gallery";
-    return "";
+    return destination === "gallery"
+      ? (executionDesign.assignments.gallery || []).map(String).includes(id)
+      : String(executionDesign.assignments[destination] || "") === id;
   };
 
-  const assignImage = (fileId, destination) => {
+  const toggleImageAssignment = (fileId, destination) => {
     const id = String(fileId);
     setExecutionDesign((current) => {
       const next = { page2: current.assignments.page2, page3: current.assignments.page3, page4: current.assignments.page4, gallery: [...(current.assignments.gallery || [])] };
-      ["page2", "page3", "page4"].forEach((slot) => { if (String(next[slot] || "") === id) next[slot] = ""; });
-      next.gallery = next.gallery.filter((assignedId) => String(assignedId) !== id);
-      if (["page2", "page3", "page4"].includes(destination)) next[destination] = id;
+      if (["page2", "page3", "page4"].includes(destination)) next[destination] = String(next[destination] || "") === id ? "" : id;
       if (destination === "gallery") {
+        if (next.gallery.map(String).includes(id)) next.gallery = next.gallery.filter((assignedId) => String(assignedId) !== id);
+        else {
         if (next.gallery.length >= 3) { toast.error("صفحة الصور تقبل ثلاث صور فقط."); return current; }
         next.gallery.push(id);
+        }
       }
       return {
         ...current,
@@ -430,11 +429,10 @@ function ExecutionPdfWorkspace() {
   };
 
   const assignmentOptions = [
-    { value: "", label: "غير مستخدمة" },
-    { value: "page2", label: "صورة صفحة المقاس والسمك" },
-    { value: "page3", label: "صورة صفحة النص" },
-    { value: "page4", label: "صورة صفحة المواصفات" },
-    { value: "gallery", label: "صفحة الصور (3 صور)" },
+    { value: "page2", label: "المقاس والسمك" },
+    { value: "page3", label: "صفحة النص" },
+    { value: "page4", label: "المواصفات" },
+    { value: "gallery", label: "صفحة الصور" },
   ];
   const cropFile = executionImageFiles.find((file) => String(file._id) === String(cropFileId));
   const cropTransform = cropFile ? { cropX: 50, zoom: 1, positionX: 50, positionY: 50, ...(executionDesign.transforms[String(cropFile._id)] || {}) } : null;
@@ -576,10 +574,10 @@ function ExecutionPdfWorkspace() {
           {executionImageFiles.length === 0 ? <div className="execution-library-empty"><HiOutlinePhotograph /><b>ارفع خمس أو ست صور للبدء</b></div> : <div className="execution-library-grid">
             {executionImageFiles.map((file) => <article key={file._id} className="execution-library-card">
               <button type="button" className="execution-library-preview" onClick={() => setCropFileId(String(file._id))}>
-                {executionPreviews[String(file._id)] ? <img src={executionPreviews[String(file._id)]} alt={file.fileName} style={{ objectPosition: `${executionDesign.transforms[String(file._id)]?.positionX ?? 50}% ${executionDesign.transforms[String(file._id)]?.positionY ?? 50}%`, transform: `scale(${(executionDesign.transforms[String(file._id)]?.zoom ?? 1) / (1 - (executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 100)})` }} /> : <HiOutlinePhotograph />}
+                {executionPreviews[String(file._id)] ? <img src={executionPreviews[String(file._id)]} alt={file.fileName} style={{ objectPosition: `${executionDesign.transforms[String(file._id)]?.positionX ?? 50}% ${executionDesign.transforms[String(file._id)]?.positionY ?? 50}%`, transform: `scaleX(${(executionDesign.transforms[String(file._id)]?.zoom ?? 1) / (1 - (executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 100)}) scaleY(${executionDesign.transforms[String(file._id)]?.zoom ?? 1})` }} /> : <HiOutlinePhotograph />}
                 <span>تعديل القص</span>
               </button>
-              <ExecutionSelect value={assignmentForFile(file._id)} options={assignmentOptions} placeholder="اختر مكان الصورة" onChange={(value) => assignImage(file._id, value)} />
+              <div className="execution-image-assignments">{assignmentOptions.map((option) => <button type="button" key={option.value} className={isImageAssigned(file._id, option.value) ? "selected" : ""} onClick={() => toggleImageAssignment(file._id, option.value)}>{option.label}</button>)}</div>
               <button type="button" className="execution-library-delete" onClick={() => removeExecutionFile(file)} disabled={busy}><HiOutlineX /> حذف</button>
             </article>)}
           </div>}
@@ -594,7 +592,7 @@ function ExecutionPdfWorkspace() {
       </section>
       {cropFile && <div className="execution-crop-modal" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setCropFileId(""); }}>
         <section><header><div><h3>ضبط قص الصورة</h3><p>{cropFile.fileName}</p></div><button type="button" onClick={() => setCropFileId("")}><HiOutlineX /></button></header>
-          <div className="execution-crop-preview">{executionPreviews[String(cropFile._id)] && <img src={executionPreviews[String(cropFile._id)]} alt="معاينة القص" style={{ objectPosition: `${cropTransform.positionX}% ${cropTransform.positionY}%`, transform: `scale(${cropTransform.zoom / (1 - cropTransform.cropX / 100)})` }} />}</div>
+          <div className="execution-crop-preview">{executionPreviews[String(cropFile._id)] && <img src={executionPreviews[String(cropFile._id)]} alt="معاينة القص" style={{ objectPosition: `${cropTransform.positionX}% ${cropTransform.positionY}%`, transform: `scaleX(${cropTransform.zoom / (1 - cropTransform.cropX / 100)}) scaleY(${cropTransform.zoom})` }} />}</div>
           <div className="execution-crop-controls">
             <label>القص الأفقي: {cropTransform.cropX}%<input type="range" min="0" max="75" step="1" value={cropTransform.cropX} onChange={(event) => updateTransform(String(cropFile._id), "cropX", event.target.value)} /></label>
             <label>التكبير: {Number(cropTransform.zoom).toFixed(1)}×<input type="range" min="1" max="3" step="0.1" value={cropTransform.zoom} onChange={(event) => updateTransform(String(cropFile._id), "zoom", event.target.value)} /></label>
