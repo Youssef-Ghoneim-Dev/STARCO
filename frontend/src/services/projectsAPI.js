@@ -42,7 +42,7 @@ export const startProjectEditing = (id, panelId) => api.post(`/projects/${id}/pa
 
 export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
 
-export const requestExecutionPdf = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/request`);
+export const requestExecutionPdf = (id, panelId, data) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/request`, data);
 
 export const getPanels = (projectId) => api.get(`/projects/${projectId}/panels`);
 export const getAllPanels = () => api.get("/panels");
@@ -56,12 +56,18 @@ export const submitPanelEdits = (projectId) => api.post(`/projects/${projectId}/
 export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
 export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 
-export const uploadExecutionPdfFile = (projectId, panelId, file) => {
+export const uploadExecutionPdfFile = (projectId, panelId, file, purpose = "") => {
     const formData = new FormData();
     formData.append("panelId", panelId);
     formData.append("file", file);
+    if (purpose) formData.append("purpose", purpose);
     return api.post(`/projects/${projectId}/panels/${panelId}/execution-pdf/files`, formData);
 };
+
+export const saveExecutionPdfDesign = (projectId, panelId, data) => api.put(
+    `/projects/${projectId}/panels/${panelId}/execution-pdf/design`,
+    data,
+);
 
 export const finishExecutionPdf = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution-pdf/finish`);
 

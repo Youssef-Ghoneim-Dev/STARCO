@@ -15,6 +15,7 @@ router.post("/:panelId/claim", controller.claimPanel);
 router.post("/:panelId/complete-quote", controller.completeQuote);
 router.post("/:panelId/open-editing", controller.openEditing);
 router.post("/:panelId/execution-pdf/request", controller.requestExecutionPdf);
+router.put("/:panelId/execution-pdf/design", controller.saveExecutionPdfDesign);
 router.post("/:panelId/execution-pdf/files", upload.single("file"), controller.uploadExecutionPdf);
 router.get("/:panelId/execution-pdf/files/:fileId", controller.downloadExecutionPdf);
 router.delete("/:panelId/execution-pdf/files/:fileId", controller.deleteExecutionPdf);

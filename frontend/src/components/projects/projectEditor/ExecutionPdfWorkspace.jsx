@@ -15,11 +15,13 @@ import {
   getManufacturingFile,
   requestExecutionPdf,
   requestExecutionPdfChanges,
+  saveExecutionPdfDesign,
   skipExecutionPdf,
   uploadExecutionPdfFile,
   uploadManufacturingFile,
   updateManufacturingStage,
 } from "../../../services/projectsAPI";
+import { createExecutionPdf } from "../../../utils/executionPdf";
 
 const quoteFinishedStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"];
 
@@ -75,11 +77,11 @@ const manufacturingFileType = (file) => {
 function ExecutionPdfWorkspace() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { project, setProject, activePanel, setActivePanel, savingProject } = useProject();
+  const { project, setProject, activePanel, savingProject } = useProject();
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const inputRef = useRef(null);
+  const executionInputRefs = useRef({});
   const manufacturingInputRef = useRef(null);
   const panel = project.panels?.[activePanel];
   const workflow = panel?.executionPdf || { status: "notRequested", files: [] };
@@ -91,6 +93,8 @@ function ExecutionPdfWorkspace() {
   const [delayReason, setDelayReason] = useState("");
   const [delayDetails, setDelayDetails] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
+  const [executionDesign, setExecutionDesign] = useState({ page3Text: "", metalLockCount: 4, includeGroundBar: true });
   const canIssueOrder = user?.role === "OwnerManager"
     || user?.role === "MarketingManager"
     || user?.role === "Marketer"
@@ -114,6 +118,15 @@ function ExecutionPdfWorkspace() {
     setDelayReason("");
     setDelayDetails("");
   }, [panel?.panelId, manufacturing.notes, manufacturing.currentStage]);
+
+  useEffect(() => {
+    setSelectedSteelThickness(workflow.steelThickness || "");
+    setExecutionDesign({
+      page3Text: workflow.design?.page3Text || "",
+      metalLockCount: workflow.design?.metalLockCount ?? 4,
+      includeGroundBar: workflow.design?.includeGroundBar !== false,
+    });
+  }, [panel?.panelId, workflow.steelThickness, workflow.design?.page3Text, workflow.design?.metalLockCount, workflow.design?.includeGroundBar]);
 
   const productionStages = useMemo(() => {
     const currentKey = productionStageDefinitions.some((stage) => stage.key === manufacturing.currentStage)
@@ -152,7 +165,8 @@ function ExecutionPdfWorkspace() {
   const issueOrder = async () => {
     setBusy(true);
     try {
-      const { data } = await requestExecutionPdf(project._id, panel.panelId);
+      if (!selectedSteelThickness) return toast.error("اختر سمك الصاج الذي أكده العميل أولًا.");
+      const { data } = await requestExecutionPdf(project._id, panel.panelId, { steelThickness: Number(selectedSteelThickness) });
       setProject({
         ...data.project,
         marketingRepresentative: project.marketingRepresentative || data.project.marketingRepresentative,
@@ -165,23 +179,71 @@ function ExecutionPdfWorkspace() {
     } finally { setBusy(false); }
   };
 
-  const uploadFiles = async (selectedFiles) => {
+  const uploadFiles = async (selectedFiles, purpose) => {
     // Some Android pickers omit the MIME type or expose the selected file as
     // application/octet-stream. Keep the picker restriction here and let the
     // backend verify the actual file contents before storing it.
     const filesToUpload = Array.from(selectedFiles || []).filter((file) => file?.size > 0);
-    if (!filesToUpload.length) return toast.error("اختر ملف PDF أو صورة.");
+    if (!filesToUpload.length) return toast.error("اختر صورة أولًا.");
     setBusy(true);
     try {
       let latestProject = project;
       for (const file of filesToUpload) {
-        const { data } = await uploadExecutionPdfFile(project._id, panel.panelId, file);
+        const { data } = await uploadExecutionPdfFile(project._id, panel.panelId, file, purpose);
         latestProject = data.project;
       }
       setProject(latestProject);
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر رفع الملف.");
     } finally { setBusy(false); }
+  };
+
+  const executionFilesByPurpose = useMemo(() => files.reduce((groups, file) => {
+    const purpose = file.purpose || "legacy";
+    groups[purpose] = [...(groups[purpose] || []), file];
+    return groups;
+  }, {}), [files]);
+
+  const generateAndFinish = async () => {
+    const requiredPurposes = ["page2", "page3", "page4"];
+    const missing = requiredPurposes.find((purpose) => !executionFilesByPurpose[purpose]?.length);
+    if (missing) return toast.error("أضف صور الصفحات الثانية والثالثة والرابعة أولًا.");
+    if (!executionFilesByPurpose.gallery?.length) return toast.error("أضف صورة واحدة على الأقل لصفحة الصور.");
+    if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
+    setBusy(true);
+    const objectUrls = [];
+    try {
+      const { data: designData } = await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+      setProject(withProjectMetadata(designData.project, user?.name || project.lastUpdatedByName));
+      const images = {};
+      for (const purpose of ["page2", "page3", "page4", "gallery"]) {
+        images[purpose] = [];
+        for (const file of executionFilesByPurpose[purpose] || []) {
+          const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
+          const url = URL.createObjectURL(data);
+          objectUrls.push(url);
+          images[purpose].push(url);
+        }
+      }
+      const pdfBlob = await createExecutionPdf({
+        panel,
+        steelThickness: workflow.steelThickness,
+        ...executionDesign,
+        images,
+      });
+      const generatedFile = new File([pdfBlob], `${panel.panelName || panel.panelCode || "panel"}-execution.pdf`, { type: "application/pdf" });
+      const { data: uploadData } = await uploadExecutionPdfFile(project._id, panel.panelId, generatedFile, "generatedPdf");
+      setProject(withProjectMetadata(uploadData.project, user?.name || project.lastUpdatedByName));
+      const { data: finishData } = await finishExecutionPdf(project._id, panel.panelId);
+      setProject(withProjectMetadata(finishData.project, user?.name || project.lastUpdatedByName));
+      toast.success("تم إنشاء PDF التنفيذ وإرساله للمراجعة بنجاح.");
+      if (finishData.notification?.includes("تعذر")) toast.error(finishData.notification);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
+    } finally {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      setBusy(false);
+    }
   };
 
   const openFile = async (file) => {
@@ -201,16 +263,6 @@ function ExecutionPdfWorkspace() {
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر حذف الملف.");
     } finally { setBusy(false); }
-  };
-
-  const finish = async () => {
-    setBusy(true);
-    try {
-      const { data } = await finishExecutionPdf(project._id, panel.panelId);
-      setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
-      if (data.notification?.includes("تعذر")) toast.error(data.notification);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر إتمام PDF التنفيذ."); }
-    finally { setBusy(false); }
   };
 
   const skip = async () => {
@@ -286,6 +338,27 @@ function ExecutionPdfWorkspace() {
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملفات مجمعة."); }
   };
 
+  const renderExecutionImageSlot = (purpose, title, description, multiple = false) => {
+    const purposeFiles = executionFilesByPurpose[purpose] || [];
+    return <article className="execution-builder-upload-card">
+      <div><span className="execution-builder-page-icon"><HiOutlinePhotograph /></span><h4>{title}</h4><p>{description}</p></div>
+      {purposeFiles.length > 0 && <div className="execution-builder-files">
+        {purposeFiles.map((file) => <span key={file._id || file.storageFileId}>
+          <button type="button" onClick={() => openFile(file)} title={file.fileName}>{file.fileName}</button>
+          <button type="button" onClick={() => removeExecutionFile(file)} disabled={busy} aria-label="حذف الصورة"><HiOutlineX /></button>
+        </span>)}
+      </div>}
+      <button type="button" className="execution-builder-pick" onClick={() => executionInputRefs.current[purpose]?.click()} disabled={busy}>
+        <HiOutlineCloudUpload /> {multiple ? "إضافة صور" : purposeFiles.length ? "تغيير الصورة" : "اختيار صورة"}
+      </button>
+      <input ref={(node) => { executionInputRefs.current[purpose] = node; }} type="file" accept="image/*" multiple={multiple} hidden onChange={(event) => {
+        const selected = Array.from(event.target.files || []);
+        event.target.value = "";
+        uploadFiles(selected, purpose);
+      }} />
+    </article>;
+  };
+
   const saveProductionStage = async () => {
     if (!activeProductionStage) return;
     if (!stageDecision) return toast.error("اختر تمت أو لم تتم أولًا.");
@@ -313,7 +386,9 @@ function ExecutionPdfWorkspace() {
     finally { setBusy(false); }
   };
 
-  if (!quoteFinishedStatuses.includes(project.status)) return null;
+  // The execution workflow belongs to the panel, while the project folder
+  // intentionally remains `inProgress` until every panel is fully completed.
+  if (!quoteFinishedStatuses.includes(panel?.status)) return null;
 
   if (["filesReady", "downloadedToLaser"].includes(manufacturing.status)) return <section className="production-tracking-page" dir="rtl">
     <header className="production-tracking-titlebar">
@@ -397,62 +472,54 @@ function ExecutionPdfWorkspace() {
       </button>
     </header>
 
-    {project.panels.length > 1 && <div className="execution-panel-switcher" aria-label="اختيار اللوحة">
-      {project.panels.map((item, index) => <button
-        type="button"
-        key={item.panelId || index}
-        className={index === activePanel ? "active" : ""}
-        onClick={() => setActivePanel(index)}
-      ><bdi dir={getPanelNameDirection(item.panelName)}>{item.panelName || `لوحة ${index + 1}`}</bdi></button>)}
-    </div>}
-
     {workflow.status === "notRequested" && <div className="execution-order-card">
-      <div><h3>لم يصدر أمر PDF تنفيذ لهذه اللوحة بعد</h3><p>يمكن إصدار الأمر من الموقع، أو عبر WhatsApp باستخدام رقم المشروع ورقم اللوحة.</p></div>
-      {canIssueOrder && <button type="button" onClick={issueOrder} disabled={busy || savingProject}>{busy ? "جاري الإصدار..." : "إصدار أمر PDF تنفيذ"}</button>}
+      <div><h3>لم يصدر أمر PDF تنفيذ لهذه اللوحة بعد</h3><p>اختر سمك الصاج الذي أكده العميل، ثم أصدر أمر التنفيذ.</p></div>
+      {canIssueOrder && <div className="execution-order-controls">
+        <label>سمك الصاج المؤكد
+          <select value={selectedSteelThickness} onChange={(event) => setSelectedSteelThickness(event.target.value)}>
+            <option value="">اختر السمك</option>
+            {(panel?.thickness || []).map((thickness) => <option key={thickness} value={thickness}>{thickness} mm</option>)}
+          </select>
+        </label>
+        <button type="button" onClick={issueOrder} disabled={busy || savingProject || !selectedSteelThickness}>{busy ? "جاري الإصدار..." : "إصدار أمر PDF تنفيذ"}</button>
+      </div>}
     </div>}
 
     {workflow.status === "requested" && canPreparePdf && <>
-      <div
-        className={`execution-dropzone ${dragging ? "dragging" : ""}`}
-        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => { event.preventDefault(); setDragging(false); uploadFiles(event.dataTransfer.files); }}
-        onClick={() => inputRef.current?.click()}
-      >
-        <HiOutlineCloudUpload />
-        <h3>اسحب ملفات PDF أو الصور هنا</h3>
-        <p>أو اضغط لاختيار الملفات من الجهاز — يمكن رفع أكثر من ملف.</p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,application/pdf,image/*"
-          multiple
-          hidden
-          onChange={(event) => {
-            const selectedFiles = Array.from(event.target.files || []);
-            event.target.value = "";
-            uploadFiles(selectedFiles);
-          }}
-        />
-      </div>
-      {files.length > 0 && <div className="execution-files-grid">
-        {files.map((file) => <article key={file._id || file.storageFileId} className="execution-file-card">
-          <button type="button" className="execution-file-open" onClick={() => openFile(file)}>
-            {file.mimeType === "application/pdf" ? <HiOutlineDocumentText /> : <HiOutlinePhotograph />}
-            <span><b>{file.fileName}</b><small>{formatFileSize(file.fileSize)}</small></span>
-          </button>
-          <button type="button" className="execution-file-delete" onClick={() => removeExecutionFile(file)} disabled={busy} aria-label="حذف الملف"><HiOutlineX /></button>
-        </article>)}
-      </div>}
+      <section className="execution-pdf-builder">
+        <header><span className="execution-phase-label">إنشاء الملف</span><h3>تجهيز صفحات PDF التنفيذ</h3><p>الغلاف والصفحة الأخيرة ثابتان. أضف محتوى الصفحات المتغيرة ثم أنشئ الملف النهائي.</p></header>
+        <div className="execution-builder-summary">
+          <span><b>Panel size</b>{panel?.dimensions?.length || "—"} × {panel?.dimensions?.width || "—"} × {panel?.dimensions?.depth || "—"} mm</span>
+          <span><b>Steel thickness</b>{workflow.steelThickness || "—"} mm</span>
+          <span><b>Paint</b>Electrostatic paint</span>
+        </div>
+        <div className="execution-builder-grid">
+          {renderExecutionImageSlot("page2", "الصفحة الثانية", "صورة اللوحة الأساسية بجانب المقاس والسمك والدهان.")}
+          <article className="execution-builder-content-card">
+            {renderExecutionImageSlot("page3", "الصفحة الثالثة", "الصورة الخاصة بشرح المهندس.")}
+            <label>نص الصفحة الثالثة<textarea value={executionDesign.page3Text} onChange={(event) => setExecutionDesign((current) => ({ ...current, page3Text: event.target.value }))} placeholder="اكتب وصف اللوحة والملاحظات الفنية التي ستظهر في الصفحة..." /></label>
+          </article>
+          <article className="execution-builder-content-card">
+            {renderExecutionImageSlot("page4", "الصفحة الرابعة", "الصورة المقابلة لمواصفات الأقفال والمفصلات.")}
+            <div className="execution-builder-specs">
+              <label>عدد Metal Lock<input type="number" min="0" max="999" value={executionDesign.metalLockCount} onChange={(event) => setExecutionDesign((current) => ({ ...current, metalLockCount: Number(event.target.value) }))} /></label>
+              <span>Lock unit</span><span>Iron hinges</span>
+              <label className="execution-ground-bar"><input type="checkbox" checked={executionDesign.includeGroundBar} onChange={(event) => setExecutionDesign((current) => ({ ...current, includeGroundBar: event.target.checked }))} /> Ground bar for collecting cables</label>
+            </div>
+          </article>
+          {renderExecutionImageSlot("gallery", "الصفحة الخامسة", "ارفع من صورة إلى خمس صور وسيتم توزيعها تلقائيًا داخل الصفحة.", true)}
+        </div>
+      </section>
       <div className="execution-pdf-actions">
         <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy}>تخطي هذه المرحلة</button>
-        <button type="button" className="finish-execution-pdf-btn" onClick={finish} disabled={busy || files.length === 0}>{busy ? "جاري الحفظ..." : "حفظ البيانات وإتمام PDF التنفيذ"}</button>
+        <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={busy}>{busy ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>
       </div>
     </>}
 
     {workflow.status === "requested" && !canPreparePdf && <div className="execution-status-notice waiting">تم إصدار أمر PDF التنفيذ، وهو الآن بانتظار تجهيز المهندس.</div>}
     {workflow.status === "ready" && <>
       <div className="execution-status-notice ready">تم تجهيز PDF التنفيذ لهذه اللوحة، وهو الآن بانتظار قرار التنفيذ.</div>
+      {executionFilesByPurpose.generatedPdf?.[0] && <button type="button" className="execution-generated-pdf" onClick={() => openFile(executionFilesByPurpose.generatedPdf[0])}><HiOutlineDocumentText /> فتح PDF التنفيذ</button>}
       {canReviewPdf && <div className="execution-review-actions">
         <button type="button" className="request-changes-btn" onClick={requestChanges} disabled={busy}>إرسال بعض التعديلات</button>
         <button type="button" className="confirm-execution-btn" onClick={confirmExecution} disabled={busy}>تأكيد التنفيذ</button>

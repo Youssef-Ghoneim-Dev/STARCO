@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const storedFileSchema = new mongoose.Schema({
     storageFileId: { type: String, required: true }, fileName: { type: String, required: true },
     mimeType: { type: String, required: true }, fileSize: { type: Number, default: 0 },
+    purpose: { type: String, default: "" },
     uploadedAt: { type: Date, default: Date.now }, uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
 });
 const stageSchema = new mongoose.Schema({
@@ -30,7 +31,13 @@ module.exports = new mongoose.Schema({
     marketerData: { panelType: { type: String, default: "" }, panelTypeKey: { type: String, default: "" }, thickness: [{ type: Number }], hasCopper: { type: Boolean, default: null }, controlInstallation: { type: String, default: "" }, additionalDetails: { type: String, default: "" }, copperDetails: { type: mongoose.Schema.Types.Mixed, default: {} } },
     pricing: { dimensions: { type: mongoose.Schema.Types.Mixed, default: {} }, parts: { type: [mongoose.Schema.Types.Mixed], default: [] }, prices: { type: mongoose.Schema.Types.Mixed, default: {} }, copper: { type: mongoose.Schema.Types.Mixed, default: {} }, thickness: [{ type: Number }] },
     attachments: { type: [storedFileSchema], default: [] },
-    executionPdf: { files: { type: [storedFileSchema], default: [] }, requestedAt: { type: Date, default: null }, requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, readyAt: { type: Date, default: null }, readyBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, confirmedAt: { type: Date, default: null }, confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, skipped: { type: Boolean, default: false } },
+    executionPdf: {
+        files: { type: [storedFileSchema], default: [] }, steelThickness: { type: Number, default: null },
+        design: { page3Text: { type: String, default: "" }, metalLockCount: { type: Number, default: 4 }, includeGroundBar: { type: Boolean, default: true } },
+        requestedAt: { type: Date, default: null }, requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        readyAt: { type: Date, default: null }, readyBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        confirmedAt: { type: Date, default: null }, confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, skipped: { type: Boolean, default: false }
+    },
     manufacturing: { files: { type: [storedFileSchema], default: [] }, notes: { type: String, default: "" }, stages: { type: [stageSchema], default: [] }, lastReminderAt: { type: Date, default: null } },
     statusHistory: { type: [historySchema], default: [] }, quoteCompletedAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false, index: true }, deletedAt: { type: Date, default: null }, deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }

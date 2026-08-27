@@ -51,6 +51,13 @@ function ProjectCard({ project, setProjects }) {
   const firstPanelName = project.panels?.[0]?.panelName?.trim();
   const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
   const projectStatus = statusDetails[project.status] || statusDetails.pending;
+  const attentionLabel = ["Marketer", "MarketingManager"].includes(user?.role)
+    ? project.panels?.some((panel) => panel.status === "executionPdfReady")
+      ? "PDF التنفيذ جاهز للمراجعة"
+      : project.panels?.some((panel) => panel.status === "quoteCompleted")
+        ? "عرض سعر جاهز للمراجعة"
+        : ""
+    : "";
   const handleOpen = () => {
     navigate(`/projects/${project._id}`);
   };
@@ -91,6 +98,13 @@ function ProjectCard({ project, setProjects }) {
             {projectStatus.label}
           </span>
         </div>
+
+        {attentionLabel && (
+          <div className="project-attention-badge" role="status">
+            <span aria-hidden="true" />
+            {attentionLabel}
+          </div>
+        )}
 
         <div className="project-date">
           <HiOutlineCalendar />
