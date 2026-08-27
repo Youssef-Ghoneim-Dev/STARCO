@@ -303,11 +303,24 @@ function ExecutionPdfWorkspace() {
     if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
     if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
     setBusy(true);
+    const generationUrls = [];
     try {
-      const { data: designData } = await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
-      setProject(withProjectMetadata(designData.project, user?.name || project.lastUpdatedByName));
+      await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
       const images = {};
-      executionImageFiles.forEach((file) => { if (executionPreviews[String(file._id)]) images[String(file._id)] = executionPreviews[String(file._id)]; });
+      const assignedIds = [...new Set([
+        assignments.page2,
+        assignments.page3,
+        assignments.page4,
+        ...(assignments.gallery || []),
+      ].filter(Boolean).map(String))];
+      for (const fileId of assignedIds) {
+        const file = executionImageFiles.find((item) => String(item._id) === fileId);
+        if (!file) throw new Error("تعذر العثور على إحدى الصور المختارة. أعد اختيار الصور وحاول مرة أخرى.");
+        const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
+        const url = URL.createObjectURL(data);
+        generationUrls.push(url);
+        images[fileId] = url;
+      }
       const pdfBlob = await createExecutionPdf({
         ...executionDesign,
         images,
@@ -322,6 +335,7 @@ function ExecutionPdfWorkspace() {
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
     } finally {
+      generationUrls.forEach((url) => URL.revokeObjectURL(url));
       setBusy(false);
     }
   };
