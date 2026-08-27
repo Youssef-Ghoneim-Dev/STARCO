@@ -7,7 +7,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, updatePanelRecord, updateProject } from "../services/projectsAPI";
+import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, updatePanelRecord } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
@@ -33,73 +33,6 @@ const panelPriceFields = [
   "fuse",
   "additionalPrice",
 ];
-
-const toNumber = (value, fallback = 0) => {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : fallback;
-};
-
-const normalizeCopperForSaving = (copper = {}) => ({
-  enabled: Boolean(copper.enabled),
-  pricePerKg: hasValue(copper.pricePerKg) ? toNumber(copper.pricePerKg) : null,
-  earthPrice: hasValue(copper.earthPrice) ? toNumber(copper.earthPrice) : null,
-  groundPrice: hasValue(copper.groundPrice) ? toNumber(copper.groundPrice) : null,
-  main: {
-    optionKey: copper.main?.optionKey || "",
-    length: hasValue(copper.main?.length) ? toNumber(copper.main.length) : null,
-    barCount: toNumber(copper.main?.barCount, 1),
-  },
-  branches: (copper.branches || []).map((branch) => ({
-    branchId: branch.branchId || `branch-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    branchGroupId: branch.branchGroupId || "",
-    optionKey: branch.optionKey || "",
-    direction: branch.direction === "two" ? "two" : "one",
-    length: hasValue(branch.length) ? toNumber(branch.length) : null,
-    barCount: toNumber(branch.barCount, 1),
-    quantity: Math.max(1, toNumber(branch.quantity, 1)),
-  })),
-});
-
-// الحفظ التلقائي يسمح بخانات فارغة أثناء الشغل، بينما الحفظ النهائي
-// يحول القيم الرقمية ويحتفظ بالأجزاء المكتملة فقط.
-const prepareProjectForSaving = ({ client, clientNameReview, status, panels }, prices) => ({
-  client: {
-    ...client,
-    profitPercentage: toNumber(client?.profitPercentage),
-  },
-  clientNameReview,
-  status,
-  prices: {
-    sheetPrice: toNumber(prices.sheetPrice),
-    paintPrice: toNumber(prices.paintPrice),
-  },
-  panels: panels.map((panel) => ({
-    ...panel,
-    thickness: (panel.thickness || []).map((thickness) => toNumber(thickness)),
-    parts: (panel.parts || [])
-      .filter(
-        (part) =>
-          part.width !== "" &&
-          part.width != null &&
-          part.height !== "" &&
-          part.height != null,
-      )
-      .map((part) => ({
-        ...part,
-        width: toNumber(part.width),
-        height: toNumber(part.height),
-        quantity: toNumber(part.quantity, 1),
-      })),
-    prices: panelPriceFields.reduce(
-      (normalizedPrices, field) => ({
-        ...normalizedPrices,
-        [field]: toNumber(panel.prices?.[field]),
-      }),
-      {},
-    ),
-    copper: normalizeCopperForSaving(panel.copper),
-  })),
-});
 
 const getSaveErrorMessage = (error) => {
   const message = error?.response?.data?.message;
@@ -271,37 +204,6 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
   });
 };
 
-const prepareProjectForAutoSaving = ({ client, clientNameReview, status, panels }, prices) => ({
-  client: {
-    ...client,
-    profitPercentage: toNumber(client?.profitPercentage),
-  },
-  clientNameReview,
-  status,
-  prices: {
-    sheetPrice: toNumber(prices.sheetPrice),
-    paintPrice: toNumber(prices.paintPrice),
-  },
-  panels: panels.map((panel) => ({
-    ...panel,
-    thickness: (panel.thickness || []).map((thickness) => toNumber(thickness)),
-    parts: (panel.parts || []).map((part) => {
-      const nextPart = { ...part };
-      if (hasValue(part.width)) nextPart.width = toNumber(part.width);
-      else delete nextPart.width;
-      if (hasValue(part.height)) nextPart.height = toNumber(part.height);
-      else delete nextPart.height;
-      nextPart.quantity = toNumber(part.quantity, 1);
-      return nextPart;
-    }),
-    prices: panelPriceFields.reduce((result, field) => {
-      if (!hasValue(panel.prices?.[field])) return result;
-      return { ...result, [field]: toNumber(panel.prices[field]) };
-    }, {}),
-    copper: normalizeCopperForSaving(panel.copper),
-  })),
-});
-
 const panelPayload = (panel) => ({
   panelName: panel.panelName,
   panelType: panel.panelType,
@@ -394,10 +296,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     const timeout = setTimeout(async () => {
       try {
         const active = project.panels?.[activePanel];
-        await Promise.all([
-          updateProject(projectId, prepareProjectForAutoSaving(project, prices)),
-          active?._id ? updatePanelRecord(projectId, active._id, panelPayload(active)) : Promise.resolve(),
-        ]);
+        if (active?._id) {
+          await updatePanelRecord(projectId, active._id, panelPayload(active));
+        }
         setSaveProjectError(null);
       } catch (error) {
         const message = getSaveErrorMessage(error);
@@ -763,9 +664,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     setSaveProjectError(null);
 
     try {
-      const projectToSave = prepareProjectForSaving(project, prices);
       const active = project.panels?.[activePanel];
-      await updateProject(projectId, projectToSave);
       if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
       let completionData = null;
       if (complete) {
@@ -784,19 +683,27 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } finally {
       setSavingProject(false);
     }
-  }, [activePanel, prices, project, projectId, readOnly]);
+  }, [activePanel, project, projectId, readOnly]);
   const saveDraftNow = useCallback(async () => {
     if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
     try {
       const active = project.panels?.[activePanel];
-      const [{ data }, panelResponse] = await Promise.all([updateProject(projectId, prepareProjectForAutoSaving(project, prices)), active?._id ? updatePanelRecord(projectId, active._id, panelPayload(active)) : Promise.resolve(null)]);
-      const savedProject = data?.project || data;
-      if (panelResponse?.data?.panel) setProject((current) => ({ ...current, ...savedProject, panels: current.panels.map((item, index) => index === activePanel ? hydratePanel(panelResponse.data.panel, index, systemConfig, savedProject.status || current.status) : item) }));
-      return { success: true, project: savedProject };
+      const panelResponse = active?._id
+        ? await updatePanelRecord(projectId, active._id, panelPayload(active))
+        : null;
+      if (panelResponse?.data?.panel) {
+        setProject((current) => ({
+          ...current,
+          panels: current.panels.map((item, index) => index === activePanel
+            ? hydratePanel(panelResponse.data.panel, index, systemConfig, current.status)
+            : item),
+        }));
+      }
+      return { success: true, project };
     } catch (error) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
-  }, [activePanel, prices, project, projectId, readOnly, systemConfig]);
+  }, [activePanel, project, projectId, readOnly, systemConfig]);
   const beginEditing = useCallback(async (panelId) => {
     try {
       const { data } = await startProjectEditing(projectId, panelId);
@@ -821,7 +728,6 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     setSaveProjectError(null);
     try {
       const active = project.panels?.[activePanel];
-      await updateProject(projectId, prepareProjectForSaving(project, prices));
       if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
       return { success: true, message: "تم حفظ بيانات اللوحة." };
     } catch (error) {
@@ -831,7 +737,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } finally {
       setSavingProject(false);
     }
-  }, [activePanel, prices, project, projectId, readOnly]);
+  }, [activePanel, project, projectId, readOnly]);
   const canDeletePart = (part, parts) => {
     const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
     const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);

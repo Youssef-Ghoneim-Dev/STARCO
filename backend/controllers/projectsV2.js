@@ -7,7 +7,7 @@ const whatsappMessages = require("../models/whatsappMessages");
 const clients = require("../models/clients");
 const systemConfiguration = require("../models/systemConfiguration");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
-const { sendNewProjectAssigned } = require("../services/projectWhatsappNotifications");
+const { sendNewProjectAssigned, sendProjectCompletedPreview } = require("../services/projectWhatsappNotifications");
 const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
 
 const sameId = (a, b) => String(a || "") === String(b || "");
@@ -160,7 +160,18 @@ const regeneratePreview = async (req, res, next) => { try {
     if (!list.length || list.some((panel) => !allowed.includes(panel.status))) return res.status(409).json({ status: "error", message: "يجب إتمام تسعير جميع اللوحات المطلوبة أولًا." });
     const token = crypto.randomBytes(32).toString("hex");
     const saved = await projects.update({ _id: project._id }, { clientPreviewToken: token, previewVersion: Number(project.previewVersion || 0) + 1, previewGeneratedAt: new Date(), status: "inProgress" });
-    res.json({ status: "ok", previewUrl: `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`, project: await hydrate(saved, false, req.user) });
+    const previewUrl = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`;
+    let notificationMessage = "";
+    let notified = false;
+    if (["marketing", "whatsapp"].includes(project.source) && project.marketingId) {
+        const marketer = await users.select_one({ _id: project.marketingId, approved: true, isDeleted: false });
+        if (!marketer?.phoneNumber) notificationMessage = "تم حفظ المشروع وإصدار العرض المجمع، لكن المندوب لا يملك رقم WhatsApp مسجلًا.";
+        else {
+            try { await sendProjectCompletedPreview(marketer.phoneNumber, { ...(saved.toObject?.() || saved), panels: list }, previewUrl); notified = true; }
+            catch (error) { notificationMessage = `تم حفظ المشروع وإصدار العرض المجمع، لكن تعذر إرسال WhatsApp: ${error.message}`; }
+        }
+    }
+    res.json({ status: "ok", previewUrl, notified, notificationMessage, project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const getPreview = async (req, res, next) => { try {
     const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false }).select("+clientPreviewToken");
