@@ -14,6 +14,13 @@ const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
 const isEngineer = (user) => user?.role === "Engineer";
 const isMarketer = (user) => user?.role === "Marketer";
+const whatsappFailureReason = (row) => {
+    const error = row?.rawPayload?.errors?.[0];
+    if (!error) return "لم ترسل Meta سببًا تفصيليًا.";
+    const code = error.code ? `#${error.code}` : "";
+    const details = error.error_data?.details || error.message || error.title || "فشل التسليم";
+    return `${code} ${details}`.trim();
+};
 const canSeeProject = (user, project) => isOwner(user) || (isMarketer(user) ? sameId(project.marketingId, user._id) : project.status !== "draft");
 const hydrate = async (project, includeDeleted = false, viewer = null) => {
     const object = project.toObject ? project.toObject() : project;
@@ -142,19 +149,20 @@ const submitProject = async (req, res, next) => { try {
     const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);
     if (acceptedIds.length) await new Promise((resolve) => setTimeout(resolve, 1800));
     const deliveryRows = await Promise.all(acceptedIds.map((id) => whatsappMessages.findByProviderMessageId(id)));
-    const notificationFailed = deliveryRows.filter((row) => row?.status === "failed").length;
+    const failedDeliveryRows = deliveryRows.filter((row) => row?.status === "failed");
+    const notificationFailed = failedDeliveryRows.length;
     const notified = notifications.filter((item) => item.status === "fulfilled").length - notificationFailed;
     const notificationMessage = !engineers.length
         ? "لا يوجد مهندس معتمد لديه رقم WhatsApp مسجل."
         : notificationFailed > 0
-            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مهندس. راجع أهلية الرقم لاستقبال القوالب.`
+            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مهندس. سبب Meta: ${whatsappFailureReason(failedDeliveryRows[0])}`
         : notified === 0
             ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب للمهندسين."
             : notified < engineers.length
                 ? `وصل القالب إلى ${notified} من أصل ${engineers.length} مهندس.`
                 : `تم إرسال قالب المشروع إلى ${notified} مهندس.`;
     notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
-    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, project: await hydrate(saved, false, req.user) });
+    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, notificationErrors: failedDeliveryRows.map(whatsappFailureReason), project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const regeneratePreview = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
