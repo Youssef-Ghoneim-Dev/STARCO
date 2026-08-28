@@ -31,7 +31,10 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const productionStages = (value.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
         const marketerThickness = value.marketerData?.thickness || [];
         const pricingThickness = value.pricing?.thickness || [];
-        const withEngineer = { ...value, ...(value.marketerData || {}), ...(value.pricing || {}), thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages } };
+        const pricingCopper = value.pricing?.copper || {};
+        const marketerCopper = value.marketerData?.copperDetails || {};
+        const copper = Object.keys(pricingCopper).length ? pricingCopper : { enabled: Boolean(value.marketerData?.hasCopper), main: { optionKey: marketerCopper.mainKey || "" }, branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) })) };
+        const withEngineer = { ...value, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages } };
         if (viewer?.role !== "ProductionManager") return withEngineer;
         const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
@@ -40,7 +43,8 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         ...object,
         marketingRepresentative: marketer ? { _id: marketer._id, name: marketer.name } : null,
         panels: visiblePanels,
-        panelIds: projectPanels.map((panel) => panel._id), panelCount: projectPanels.length
+        panelIds: projectPanels.map((panel) => panel._id), panelCount: projectPanels.length,
+        quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : ""
     };
 };
 const nextProjectCode = async () => {

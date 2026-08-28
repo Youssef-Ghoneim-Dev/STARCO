@@ -46,7 +46,14 @@ const publicPanel = (panel) => {
     const manufacturingStatus = object.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(object.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(object.status) ? "downloadedToLaser" : "notStarted";
     const stageRows = (object.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
     const activeStage = stageRows.find((stage) => stage.status === "active");
-    return { ...object, ...object.marketerData, ...object.pricing, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows } };
+    const pricingCopper = object.pricing?.copper || {};
+    const marketerCopper = object.marketerData?.copperDetails || {};
+    const copper = Object.keys(pricingCopper).length ? pricingCopper : {
+        enabled: Boolean(object.marketerData?.hasCopper),
+        main: { optionKey: marketerCopper.mainKey || "" },
+        branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) }))
+    };
+    return { ...object, ...object.marketerData, ...object.pricing, copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows } };
 };
 const refreshProjectCompletion = async (projectId) => {
     const list = await panels.find({ projectId, isDeleted: false });
@@ -76,8 +83,9 @@ const notifyProjectMarketer = async (project, roles, sender) => {
     return Promise.allSettled(unique.map(sender));
 };
 const projectResponse = async (project) => {
-    const freshProject = await loadProject(project._id);
-    return { ...(freshProject?.toObject?.() || freshProject || project), panels: (await panels.find({ projectId: project._id, isDeleted: false })).map(publicPanel) };
+    const freshProject = await projects.findOne({ _id: project._id, isDeleted: false }).select("+clientPreviewToken");
+    const object = freshProject?.toObject?.() || freshProject || project;
+    return { ...object, quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : "", panels: (await panels.find({ projectId: project._id, isDeleted: false })).map(publicPanel) };
 };
 
 const listAllPanels = async (req, res, next) => { try {

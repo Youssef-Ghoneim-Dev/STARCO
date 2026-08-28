@@ -148,8 +148,24 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
     || String(type.name || "").toLowerCase().replace(/[.\-\s_]/g, "") === normalizedType
     || (normalizedType === "ont" && type.key === "ont")
   );
-  const hydratedBranches = Array.isArray(incomingPanel.copper?.branches)
-    ? incomingPanel.copper.branches.reduce((groups, branch) => {
+  const marketerCopper = incomingPanel.copperDetails || incomingPanel.marketerData?.copperDetails || {};
+  const marketerBranchGroups = Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : [];
+  const incomingCopper = incomingPanel.copper && Object.keys(incomingPanel.copper).length
+    ? incomingPanel.copper
+    : {
+        enabled: Boolean(incomingPanel.hasCopper ?? incomingPanel.marketerData?.hasCopper),
+        main: { optionKey: marketerCopper.mainKey || "" },
+        branches: marketerBranchGroups.map((group, groupIndex) => ({
+          branchId: group.id || `marketer-branch-${groupIndex}`,
+          branchGroupId: group.id || `marketer-branch-${groupIndex}`,
+          optionKey: group.optionKey || "",
+          direction: "one",
+          barCount: 1,
+          quantity: Math.max(1, Number(group.count || group.quantity) || 1),
+        })),
+      };
+  const hydratedBranches = Array.isArray(incomingCopper?.branches)
+    ? incomingCopper.branches.reduce((groups, branch) => {
       const groupId = branch.branchGroupId || branch.branchId;
       const existing = groups.find((item) => groupId && item.branchGroupId === groupId);
       if (existing) {
@@ -184,11 +200,11 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
     thickness: effectiveThickness,
     copper: {
       ...(basePanel.copper || {}),
-      ...(incomingPanel.copper || {}),
-      pricePerKg: hasValue(incomingPanel.copper?.pricePerKg)
-        ? incomingPanel.copper.pricePerKg
+      ...(incomingCopper || {}),
+      pricePerKg: hasValue(incomingCopper?.pricePerKg)
+        ? incomingCopper.pricePerKg
         : (systemConfig?.copperConfiguration?.pricePerKg ?? basePanel.copper?.pricePerKg ?? ""),
-      main: { ...(basePanel.copper?.main || {}), ...(incomingPanel.copper?.main || {}) },
+      main: { ...(basePanel.copper?.main || {}), ...(incomingCopper?.main || {}) },
       branches: hydratedBranches,
     },
     parts: hydratedParts,

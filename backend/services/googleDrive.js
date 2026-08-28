@@ -5,6 +5,14 @@ let cachedAccessToken = null;
 let cachedAccessTokenExpiresAt = 0;
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
+const driveAuthenticationError = (message = "") => {
+    const error = new Error("انتهى أو أُلغي تصريح Google Drive. أعد ربط Google Drive من صفحة الإعدادات ثم أعد المحاولة.");
+    error.statusCode = 503;
+    error.code = "GOOGLE_DRIVE_AUTH_EXPIRED";
+    error.cause = message;
+    return error;
+};
+
 const getOAuthConfig = () => {
     const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
@@ -72,6 +80,11 @@ const refreshAccessToken = async (refreshToken) => {
     });
     const payload = await response.json();
     if (!response.ok || !payload.access_token) {
+        cachedAccessToken = null;
+        cachedAccessTokenExpiresAt = 0;
+        if (payload?.error === "invalid_grant" || /expired|revoked/i.test(payload?.error_description || "")) {
+            throw driveAuthenticationError(payload?.error_description || payload?.error);
+        }
         throw new Error(payload?.error_description || payload?.error || "Google Drive authentication failed");
     }
     return payload;
@@ -137,7 +150,14 @@ const uploadFile = async ({ fileName, mimeType, buffer }) => {
         body
     });
     const payload = await response.json();
-    if (!response.ok || !payload.id) throw new Error(payload?.error?.message || "Google Drive upload failed");
+    if (!response.ok || !payload.id) {
+        if (response.status === 401 || /expired|revoked/i.test(payload?.error?.message || "")) {
+            cachedAccessToken = null;
+            cachedAccessTokenExpiresAt = 0;
+            throw driveAuthenticationError(payload?.error?.message);
+        }
+        throw new Error(payload?.error?.message || "Google Drive upload failed");
+    }
     return payload;
 };
 
@@ -188,7 +208,17 @@ const downloadStoredFile = async (fileId) => {
     const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
         headers: { Authorization: `Bearer ${accessToken}` }
     });
-    if (!response.ok) throw new Error("Could not download the stored Google Drive file.");
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401 || /expired|revoked/i.test(payload?.error?.message || "")) {
+            cachedAccessToken = null;
+            cachedAccessTokenExpiresAt = 0;
+            throw driveAuthenticationError(payload?.error?.message);
+        }
+        const error = new Error(payload?.error?.message || "تعذر تنزيل الملف المحفوظ من Google Drive.");
+        error.statusCode = response.status === 404 ? 404 : 502;
+        throw error;
+    }
     return {
         buffer: Buffer.from(await response.arrayBuffer()),
         mimeType: response.headers.get("content-type") || "application/octet-stream"
@@ -206,9 +236,20 @@ const deleteStoredFile = async (fileId) => {
 
 const getConnectionStatus = async () => {
     const config = await systemConfiguration.getGoogleDriveConnection();
+    const configured = Boolean(config?.googleDrive?.oauthRefreshToken && config?.googleDrive?.folderId);
+    if (!configured) return { connected: false, connectedAt: null, needsReconnect: false };
+    try {
+        await getAccessToken();
+    } catch (error) {
+        if (error?.code === "GOOGLE_DRIVE_AUTH_EXPIRED") {
+            return { connected: false, connectedAt: config?.googleDrive?.connectedAt || null, needsReconnect: true };
+        }
+        throw error;
+    }
     return {
-        connected: Boolean(config?.googleDrive?.oauthRefreshToken && config?.googleDrive?.folderId),
-        connectedAt: config?.googleDrive?.connectedAt || null
+        connected: true,
+        connectedAt: config?.googleDrive?.connectedAt || null,
+        needsReconnect: false
     };
 };
 

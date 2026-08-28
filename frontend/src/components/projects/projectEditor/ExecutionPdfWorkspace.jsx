@@ -244,6 +244,7 @@ function ExecutionPdfWorkspace() {
     return groups;
   }, {}), [files]);
   const executionImageFiles = useMemo(() => files.filter((file) => file.purpose !== "generatedPdf" && (String(file.mimeType || "").startsWith("image/") || /\.(?:jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.fileName || ""))), [files]);
+  const generatedPdfFile = executionFilesByPurpose.generatedPdf?.[0];
 
   useEffect(() => {
     let active = true;
@@ -623,9 +624,13 @@ function ExecutionPdfWorkspace() {
     </>}
 
     {workflow.status === "requested" && !canPreparePdf && <div className="execution-status-notice waiting">تم إصدار أمر PDF التنفيذ، وهو الآن بانتظار تجهيز المهندس.</div>}
+    {generatedPdfFile && <div className="execution-document-switcher">
+      <button type="button" disabled={!project.quotePreviewUrl} onClick={() => project.quotePreviewUrl && window.open(project.quotePreviewUrl, "_blank", "noopener,noreferrer")}><HiOutlineDocumentText /> رؤية عرض السعر</button>
+      <button type="button" className="primary" onClick={() => openFile(generatedPdfFile)}><HiOutlineDocumentText /> رؤية PDF التنفيذ</button>
+    </div>}
+
     {workflow.status === "ready" && <>
       <div className="execution-status-notice ready">تم تجهيز PDF التنفيذ لهذه اللوحة، وهو الآن بانتظار قرار التنفيذ.</div>
-      {executionFilesByPurpose.generatedPdf?.[0] && <button type="button" className="execution-generated-pdf" onClick={() => openFile(executionFilesByPurpose.generatedPdf[0])}><HiOutlineDocumentText /> فتح PDF التنفيذ</button>}
       {canReviewPdf && <div className="execution-review-actions">
         <button type="button" className="request-changes-btn" onClick={requestChanges} disabled={busy}>إرسال بعض التعديلات</button>
         <button type="button" className="confirm-execution-btn" onClick={confirmExecution} disabled={busy}>تأكيد التنفيذ</button>

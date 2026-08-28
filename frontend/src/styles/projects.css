@@ -1097,6 +1097,14 @@
 .execution-generated-pdf { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:52px; margin:14px 0; border:1px solid #3b6b86; border-radius:13px; color:#fff; background:#3b6b86; font:inherit; font-weight:900; cursor:pointer; }
 .execution-select-control { width:100%; direction:rtl; }
 .execution-select-control .copper-select-trigger { min-height:46px; background:#fff; }
+.execution-order-card .execution-select-control .copper-select-trigger { color:#26384a; background:#fff; border:1px solid #cad8e5; }
+.execution-order-card .execution-select-control .copper-select-menu button { color:#26384a; background:transparent; }
+.execution-order-card .execution-select-control .copper-select-menu button:hover { color:#174c61; background:#e8f3f6; }
+.execution-order-card .execution-select-control .copper-select-menu button.is-selected { color:#fff; background:#376d88; }
+.execution-document-switcher { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:14px 0; }
+.execution-document-switcher button { display:flex; align-items:center; justify-content:center; gap:9px; min-height:54px; padding:10px 16px; border:1px solid #b9cfdb; border-radius:13px; color:#2f627c; background:#f5fafc; font:inherit; font-weight:900; cursor:pointer; }
+.execution-document-switcher button.primary { color:#fff; border-color:#376d88; background:#376d88; }
+.execution-document-switcher button:disabled { cursor:not-allowed; opacity:.5; }
 .execution-image-library { margin-top:20px; padding:18px; border:1px solid #d7e2eb; border-radius:18px; background:#f8fbfd; }
 .execution-image-library.dragging { border-color:#376d88; background:#eaf5fa; box-shadow:inset 0 0 0 2px rgba(55,109,136,.16); }
 .execution-library-heading { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:16px; }
@@ -1145,5 +1153,6 @@
   .execution-library-heading { align-items:stretch; flex-direction:column; }
   .execution-library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .execution-crop-controls { grid-template-columns:1fr; }
+  .execution-document-switcher { grid-template-columns:1fr; }
 }
 @media (max-width: 480px) { .execution-library-grid { grid-template-columns:1fr; } }

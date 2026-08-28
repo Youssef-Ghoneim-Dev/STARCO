@@ -1458,7 +1458,7 @@
 .execution-order-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid #dbe7ef; border-radius: 15px; background: #f8fbfd; }
 .execution-order-card h3, .execution-order-card p { margin: 0; }
 .execution-order-card p { margin-top: 6px; color: var(--text-light); }
-.execution-order-card button, .finish-execution-pdf-btn { min-height: 48px; padding: 0 20px; border: 0; border-radius: 11px; background: var(--primary); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.execution-order-controls > button, .finish-execution-pdf-btn { min-height: 48px; padding: 0 20px; border: 0; border-radius: 11px; background: var(--primary); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .execution-dropzone { padding: 36px 20px; border: 2px dashed #8fb3c8; border-radius: 17px; background: #f8fbfd; text-align: center; cursor: pointer; transition: .2s; }
 .execution-dropzone.dragging, .execution-dropzone:hover { border-color: var(--primary); background: #eef7fc; }
 .execution-dropzone > svg { font-size: 46px; color: var(--primary); }
