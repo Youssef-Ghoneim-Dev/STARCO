@@ -467,9 +467,11 @@
 .notification-popover {
     position: absolute;
     z-index: 1200;
-    inset-block-start: calc(100% + 13px);
-    inset-inline-end: 0;
+    top: calc(100% + 13px);
+    right: 0;
+    left: auto;
     width: min(390px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
     overflow: hidden;
     border: 1px solid #dbe5ec;
     border-radius: 18px;
@@ -571,7 +573,10 @@
 @media (max-width: 600px) {
     .notification-popover {
         position: fixed;
-        inset: 76px 12px auto;
+        top: 76px;
+        right: 12px;
+        left: 12px;
+        bottom: auto;
         width: auto;
         max-height: calc(100dvh - 96px);
     }
