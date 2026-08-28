@@ -9,6 +9,7 @@ const systemConfiguration = require("../models/systemConfiguration");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendNewProjectAssigned, sendProjectCompletedPreview } = require("../services/projectWhatsappNotifications");
 const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
+const { createInternalNotifications } = require("../services/internalNotifications");
 
 const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
@@ -143,6 +144,15 @@ const submitProject = async (req, res, next) => { try {
     if (list.some((panel) => !panel.marketerSaved)) return res.status(400).json({ status: "error", message: "افتح كل لوحة واضغط حفظ اللوحة قبل إرسال المشروع للمهندسين." });
     await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
     const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
+    await createInternalNotifications({
+        roles: ["Engineer", "OwnerManager"],
+        excludeUserId: req.user._id,
+        project: saved,
+        type: "projectPendingPricing",
+        title: "مشروع جديد في انتظار التسعير",
+        body: `${saved.projectCode} — ${saved.client?.name || "عميل غير محدد"}`,
+        actor: req.user,
+    });
     const engineers = await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
     const notifications = await Promise.allSettled(engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, notificationProject, req.user.name || "غير محدد")));
@@ -172,6 +182,16 @@ const regeneratePreview = async (req, res, next) => { try {
     if (!list.length || list.some((panel) => !allowed.includes(panel.status))) return res.status(409).json({ status: "error", message: "يجب إتمام تسعير جميع اللوحات المطلوبة أولًا." });
     const token = crypto.randomBytes(32).toString("hex");
     const saved = await projects.update({ _id: project._id }, { clientPreviewToken: token, previewVersion: Number(project.previewVersion || 0) + 1, previewGeneratedAt: new Date(), status: "inProgress" });
+    await createInternalNotifications({
+        userIds: [project.marketingId],
+        roles: ["MarketingManager", "OwnerManager"],
+        excludeUserId: req.user._id,
+        project: saved,
+        type: "projectQuoteReady",
+        title: "عرض سعر المشروع جاهز",
+        body: `${saved.projectCode} — تم تسعير جميع اللوحات وإصدار رابط المعاينة`,
+        actor: req.user,
+    });
     const previewUrl = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`;
     let notificationMessage = "";
     let notified = false;

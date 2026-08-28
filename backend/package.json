@@ -27,6 +27,7 @@
     "mongodb": "^7.1.0",
     "mongoose": "^9.8.1",
     "morgan": "^1.11.0",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "web-push": "^3.6.7"
   }
 }

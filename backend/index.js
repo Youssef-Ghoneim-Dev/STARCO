@@ -20,6 +20,7 @@ const panelsRouter = require("./routers/panelsRoot");
 const whatsapprouter = require("./routers/whatsapp");
 const dashboardRouter = require("./routers/dashboard");
 const productionWorkflowRouter = require("./routers/productionWorkflow");
+const notificationsRouter = require("./routers/notifications");
 const { captureAfterSuccessfulMutation, trackDashboardRequest } = require("./services/dashboardStatistics");
 const ensureUserIndexes = require("./DB/ensureUserIndexes");
 const erwhandling = require("./midelwers/Handeling error");
@@ -54,6 +55,7 @@ app.use(`${baseUrl}panels`, panelsRouter);
 app.use(`${baseUrl}whatsapp`, whatsapprouter);
 app.use(`${baseUrl}dashboard`, dashboardRouter);
 app.use(`${baseUrl}production-workflow`, productionWorkflowRouter);
+app.use(`${baseUrl}notifications`, notificationsRouter);
 app.use(erwhandling);
 const mongoose = require("mongoose")
 async function startServer() {

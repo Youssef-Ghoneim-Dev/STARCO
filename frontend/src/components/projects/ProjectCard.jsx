@@ -6,6 +6,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { getPanelNameDirection } from "../../utils/panelNameDirection";
 
 import { deleteProject } from "../../services/projectsAPI";
@@ -48,16 +49,14 @@ const statusDetails = {
 function ProjectCard({ project, setProjects }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notifications } = useNotifications();
   const firstPanelName = project.panels?.[0]?.panelName?.trim();
   const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
   const projectStatus = statusDetails[project.status] || statusDetails.pending;
-  const attentionLabel = ["Marketer", "MarketingManager"].includes(user?.role)
-    ? project.panels?.some((panel) => panel.status === "executionPdfReady")
-      ? "PDF التنفيذ جاهز للمراجعة"
-      : project.panels?.some((panel) => panel.status === "quoteCompleted")
-        ? "عرض سعر جاهز للمراجعة"
-        : ""
-    : "";
+  const projectNotification = notifications.find((notification) =>
+    !notification.readAt && String(notification.projectId) === String(project._id)
+  );
+  const attentionLabel = projectNotification?.title || "";
   const handleOpen = () => {
     navigate(`/projects/${project._id}`);
   };

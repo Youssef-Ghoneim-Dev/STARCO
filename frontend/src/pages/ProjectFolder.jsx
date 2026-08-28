@@ -7,6 +7,7 @@ import PanelCard from "../components/projects/PanelCard";
 import { acquireProjectSetupLock, completeProject, completeProjectSetup, createPanel, deletePanelRecord, getProject, submitMarketingProject } from "../services/projectsAPI";
 import { useAuth } from "../context/AuthContext";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
+import { useNotifications } from "../context/NotificationContext";
 import "../styles/ProjectEditor.css";
 const projectStates = { draft: "مسودة", created: "تم الإرسال", inProgress: "قيد العمل", completed: "مكتمل نهائيًا" };
 
@@ -58,9 +59,11 @@ function ProjectSetup({ project, onComplete }) {
 }
 export default function ProjectFolder() {
   const { id } = useParams(); const navigate = useNavigate(); const { user } = useAuth();
+  const { readProject } = useNotifications();
   const [project, setProject] = useState(null); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [busy, setBusy] = useState(false);
   const load = useCallback(async () => { setLoading(true); try { const { data } = await getProject(id); setProject(data); } catch (error) { toast.error(error.response?.data?.message || "تعذر فتح المشروع."); } finally { setLoading(false); } }, [id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { readProject(id); }, [id, readProject]);
   if (loading || !project) return <DashboardLayout notAllowed={false}><div className="route-loading">جاري تحميل المشروع...</div></DashboardLayout>;
   const isOwner = user?.role === "OwnerManager"; const marketerDraft = user?.role === "Marketer" && project.status === "draft"; const marketerEditing = user?.role === "Marketer" && project.marketingEditSession?.active; const manualEngineer = user?.role === "Engineer" && project.source === "manual"; const canAdd = isOwner || marketerDraft || marketerEditing || manualEngineer;
   const visiblePanels = (project.panels || []).filter((panel) => !query.trim() || `${panel.panelName} ${panel.panelCode}`.toLowerCase().includes(query.trim().toLowerCase()));

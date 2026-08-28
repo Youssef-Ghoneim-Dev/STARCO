@@ -1,0 +1,14 @@
+{
+  "name": "STARCO Panels",
+  "short_name": "STARCO",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#376b86",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    { "src": "/logo.jpg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any" },
+    { "src": "/logo.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" }
+  ]
+}

@@ -12,6 +12,7 @@ import ExecutionPdfWorkspace from "../components/projects/projectEditor/Executio
 import { useAuth } from "../context/AuthContext";
 import { claimPanel } from "../services/projectsAPI";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
+import { useNotifications } from "../context/NotificationContext";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -437,6 +438,8 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
 function EditProject() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { readProject } = useNotifications();
+  useEffect(() => { readProject(id); }, [id, readProject]);
   const isMarketer = user?.role === "Marketer";
   const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
     user?.role,

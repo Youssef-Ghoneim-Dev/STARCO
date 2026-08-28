@@ -16,6 +16,7 @@ import {
   HiOutlineTrendingUp,
 } from "react-icons/hi";
 import StyledSelect from "../common/StyledSelect";
+import { useNotifications } from "../../context/NotificationContext";
 
 const toDateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const fromDateValue = (value) => { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); };
@@ -50,6 +51,7 @@ function MarketerStatus({ counts, total }) {
 }
 
 function MarketerDashboard({ name, projects, loading, onRefresh }) {
+  const { notifications, readOne } = useNotifications();
   const today = useMemo(() => new Date(), []);
   const yesterday = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1), [today]);
   const minimumDate = useMemo(() => { const date = new Date(today); date.setDate(date.getDate() - 29); return date; }, [today]);
@@ -82,7 +84,7 @@ function MarketerDashboard({ name, projects, loading, onRefresh }) {
       <section className="marketer-panel marketer-production"><h2>حالة مشاريعي في مراحل الإنتاج</h2>{productionStages.map(([stage, count, color]) => { const percentage = Math.min(100, 16 + count * 9); return <div key={stage}><span>{stage}<small>{count} مشاريع</small></span><i><b style={{ width: `${percentage}%`, background: color }} /></i><strong>{percentage}%</strong></div>; })}<Link to="/projects" className="marketer-link">عرض جميع مشاريع الإنتاج <HiOutlineExternalLink /></Link></section>
       <section className="marketer-panel marketer-delayed"><h2>المشاريع المتأخرة عن الموعد</h2>{delayed.slice(0, 4).map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}><HiOutlineDocumentText /><span><strong>{projectName(project)}</strong><small>{projectCode(project)} · {statuses.find((status) => status.key === projectStatus(project))?.label}</small></span><b>متأخر {index + 1} يوم</b></Link>)}{!delayed.length && <p className="marketer-empty">لا توجد مشاريع متأخرة</p>}<Link to="/projects" className="marketer-link danger">عرض جميع المشاريع المتأخرة <HiOutlineExclamation /></Link></section>
 
-      <section className="marketer-panel marketer-notifications"><h2>الإشعارات والتنبيهات</h2>{sorted.slice(0, 5).map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}><i className={index % 3 === 0 ? "warning" : index % 3 === 1 ? "info" : "success"}>{index % 3 === 0 ? <HiOutlineExclamation /> : index % 3 === 1 ? <HiOutlineClock /> : <HiOutlineCheckCircle />}</i><span><strong>{index === 0 ? "المشروع يحتاج متابعة" : index === 1 ? "آخر تحديث للمشروع" : "تم تحديث حالة المشروع"}</strong><small>{projectName(project)}</small></span><time>{updatedAt(project).toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}</time></Link>)}{!sorted.length && <p className="marketer-empty">لا توجد إشعارات جديدة</p>}<button type="button" className="marketer-link"><HiOutlineBell />عرض جميع الإشعارات</button></section>
+      <section className="marketer-panel marketer-notifications"><h2>الإشعارات والتنبيهات</h2>{notifications.slice(0, 5).map((notification, index) => <Link to={notification.link || "/dashboard"} key={notification._id || index} onClick={() => !notification.readAt && readOne(notification._id).catch(() => {})}><i className={notification.readAt ? "info" : "warning"}>{notification.readAt ? <HiOutlineCheckCircle /> : <HiOutlineExclamation />}</i><span><strong>{notification.title}</strong><small>{notification.body || "تحديث جديد"}</small></span><time>{updatedAt(notification).toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}</time></Link>)}{!notifications.length && <p className="marketer-empty">لا توجد إشعارات جديدة</p>}<button type="button" className="marketer-link"><HiOutlineBell />الإشعارات محفوظة في الجرس بالأعلى</button></section>
       <section className="marketer-panel marketer-projects"><h2>كل المشاريع</h2><div className="marketer-table-scroll"><table><thead><tr><th>المشروع</th><th>العميل</th><th>المرحلة الحالية</th><th>آخر تحديث</th><th>الحالة</th></tr></thead><tbody>{sorted.slice(0, 6).map((project, index) => <tr key={project._id || index}><td>{projectCode(project)}</td><td>{project.client?.name || projectName(project)}</td><td>{statuses.find((status) => status.key === projectStatus(project))?.label}</td><td>{updatedAt(project).toLocaleDateString("ar-EG")}</td><td><span className={`marketer-state ${projectStatus(project)}`}>{statuses.find((status) => status.key === projectStatus(project))?.label}</span></td></tr>)}</tbody></table></div><Link to="/projects" className="marketer-link">عرض جميع المشاريع <HiOutlineExternalLink /></Link></section>
     </section>
 
