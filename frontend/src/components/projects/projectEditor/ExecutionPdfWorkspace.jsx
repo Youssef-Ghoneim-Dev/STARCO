@@ -238,13 +238,7 @@ function ExecutionPdfWorkspace() {
     } finally { setBusy(false); }
   };
 
-  const executionFilesByPurpose = useMemo(() => files.reduce((groups, file) => {
-    const purpose = file.purpose || "legacy";
-    groups[purpose] = [...(groups[purpose] || []), file];
-    return groups;
-  }, {}), [files]);
   const executionImageFiles = useMemo(() => files.filter((file) => file.purpose !== "generatedPdf" && (String(file.mimeType || "").startsWith("image/") || /\.(?:jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.fileName || ""))), [files]);
-  const generatedPdfFile = executionFilesByPurpose.generatedPdf?.[0];
 
   useEffect(() => {
     let active = true;
@@ -296,24 +290,16 @@ function ExecutionPdfWorkspace() {
     transforms: { ...current.transforms, [fileId]: { cropX: 50, zoom: 1, positionX: 50, positionY: 50, ...(current.transforms[fileId] || {}), [key]: Number(value) } },
   }));
 
-  const generateAndFinish = async () => {
-    const { assignments } = executionDesign;
-    if (!assignments.page2 || !assignments.page3 || !assignments.page4) return toast.error("اختر صورة لكل صفحة من الصفحات الثانية والثالثة والرابعة.");
-    if ((assignments.gallery || []).length !== 3) return toast.error("اختر ثلاث صور لصفحة الصور.");
-    if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
-    if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
-    if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
-    setBusy(true);
+  const buildExecutionPdf = async (design = executionDesign) => {
     const generationUrls = [];
     try {
-      await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
-      const images = {};
       const assignedIds = [...new Set([
-        assignments.page2,
-        assignments.page3,
-        assignments.page4,
-        ...(assignments.gallery || []),
+        design.assignments.page2,
+        design.assignments.page3,
+        design.assignments.page4,
+        ...(design.assignments.gallery || []),
       ].filter(Boolean).map(String))];
+      const images = {};
       for (const fileId of assignedIds) {
         const file = executionImageFiles.find((item) => String(item._id) === fileId);
         if (!file) throw new Error("تعذر العثور على إحدى الصور المختارة. أعد اختيار الصور وحاول مرة أخرى.");
@@ -322,13 +308,25 @@ function ExecutionPdfWorkspace() {
         generationUrls.push(url);
         images[fileId] = url;
       }
-      const pdfBlob = await createExecutionPdf({
-        ...executionDesign,
-        images,
-      });
-      const generatedFile = new File([pdfBlob], `${panel.panelName || panel.panelCode || "panel"}-execution.pdf`, { type: "application/pdf" });
-      const { data: uploadData } = await uploadExecutionPdfFile(project._id, panel.panelId, generatedFile, "generatedPdf");
-      setProject(withProjectMetadata(uploadData.project, user?.name || project.lastUpdatedByName));
+      return await createExecutionPdf({ ...design, images });
+    } finally {
+      generationUrls.forEach((url) => URL.revokeObjectURL(url));
+    }
+  };
+
+  const generateAndFinish = async () => {
+    const { assignments } = executionDesign;
+    if (!assignments.page2 || !assignments.page3 || !assignments.page4) return toast.error("اختر صورة لكل صفحة من الصفحات الثانية والثالثة والرابعة.");
+    if ((assignments.gallery || []).length !== 3) return toast.error("اختر ثلاث صور لصفحة الصور.");
+    if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
+    if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
+    if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
+    setBusy(true);
+    try {
+      await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+      // Generate once locally to verify the persisted design. The resulting
+      // PDF is intentionally not uploaded; it is rebuilt on demand.
+      await buildExecutionPdf(executionDesign);
       const { data: finishData } = await finishExecutionPdf(project._id, panel.panelId);
       setProject(withProjectMetadata(finishData.project, user?.name || project.lastUpdatedByName));
       toast.success("تم إنشاء PDF التنفيذ وإرساله للمراجعة بنجاح.");
@@ -336,18 +334,19 @@ function ExecutionPdfWorkspace() {
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
     } finally {
-      generationUrls.forEach((url) => URL.revokeObjectURL(url));
       setBusy(false);
     }
   };
 
-  const openFile = async (file) => {
+  const openGeneratedExecutionPdf = async () => {
+    setBusy(true);
     try {
-      const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
-      const url = URL.createObjectURL(data);
+      const url = URL.createObjectURL(await buildExecutionPdf(defaultExecutionDesign(panel, workflow)));
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر فتح الملف."); }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
+    } finally { setBusy(false); }
   };
 
   const removeExecutionFile = async (file) => {
@@ -624,9 +623,9 @@ function ExecutionPdfWorkspace() {
     </>}
 
     {workflow.status === "requested" && !canPreparePdf && <div className="execution-status-notice waiting">تم إصدار أمر PDF التنفيذ، وهو الآن بانتظار تجهيز المهندس.</div>}
-    {generatedPdfFile && <div className="execution-document-switcher">
+    {workflow.status !== "notRequested" && workflow.status !== "requested" && !workflow.skipped && <div className="execution-document-switcher">
       <button type="button" disabled={!project.quotePreviewUrl} onClick={() => project.quotePreviewUrl && window.open(project.quotePreviewUrl, "_blank", "noopener,noreferrer")}><HiOutlineDocumentText /> رؤية عرض السعر</button>
-      <button type="button" className="primary" onClick={() => openFile(generatedPdfFile)}><HiOutlineDocumentText /> رؤية PDF التنفيذ</button>
+      <button type="button" className="primary" onClick={openGeneratedExecutionPdf} disabled={busy}><HiOutlineDocumentText /> رؤية PDF التنفيذ</button>
     </div>}
 
     {workflow.status === "ready" && <>

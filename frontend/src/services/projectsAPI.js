@@ -16,6 +16,11 @@ export const getClientProjectPreviewByKey = (key) => {
     return api.get(`/projects/client-preview/${encodeURIComponent(key)}`);
 };
 
+export const getClientExecutionPdfFile = (key, panelId, fileId) => api.get(
+    `/projects/client-preview/${encodeURIComponent(key)}/panels/${panelId}/execution-pdf/files/${fileId}`,
+    { responseType: "blob" },
+);
+
 export const deleteProject = (id) => {
     return api.delete(`/projects/${id}`);
 };

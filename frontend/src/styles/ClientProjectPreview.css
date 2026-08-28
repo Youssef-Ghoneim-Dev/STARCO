@@ -22,6 +22,36 @@
 .client-preview-header p { margin: 0; color: #c9d8e8; font-size: 13px; }
 .client-preview-header p { border: 1px solid rgb(201 216 232 / 65%); border-radius: 999px; padding: 5px 12px; }
 
+.client-preview-document-controls {
+  width: min(1180px, 92%);
+  margin: 22px auto 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.client-preview-document-controls button,
+.client-preview-document-controls label {
+  min-height: 76px;
+  padding: 13px 18px;
+  border: 1px solid #cad9e5;
+  border-radius: 15px;
+  background: #fff;
+  color: #173c56;
+  font: inherit;
+  text-align: right;
+}
+
+.client-preview-document-controls button { cursor: pointer; display: grid; gap: 4px; }
+.client-preview-document-controls button strong { font-size: 17px; }
+.client-preview-document-controls button span { color: #6d7f8e; font-size: 13px; }
+.client-preview-document-controls button.active { color: #fff; background: #356b86; border-color: #356b86; box-shadow: 0 8px 22px rgb(53 107 134 / 22%); }
+.client-preview-document-controls button.active span { color: #eaf4f8; }
+.client-preview-document-controls button:disabled { opacity: .65; cursor: wait; }
+.client-preview-document-controls label { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; min-height: 58px; font-weight: 800; }
+.client-preview-document-controls select { flex: 1; min-height: 40px; border: 1px solid #c8d7e2; border-radius: 10px; padding-inline: 12px; color: #173c56; background: #f8fbfd; font: inherit; }
+.client-preview-inline-error { width: min(1180px, 92%); margin: 12px auto 0; padding: 11px 15px; border: 1px solid #f2b8b5; border-radius: 12px; color: #b42318; background: #fff4f3; text-align: center; }
+
 .client-preview-pdf {
   width: min(1180px, 92%);
   margin: 0 auto;
@@ -65,6 +95,8 @@
 
 @media (max-width: 600px) {
   .client-preview-header { padding-inline: 16px; }
+  .client-preview-document-controls { width: 89%; grid-template-columns: 1fr; margin-top: 14px; }
+  .client-preview-document-controls label { grid-column: auto; }
   .client-preview-pdf { width: 89%; padding: 14px 0; gap: 12px; }
   .client-preview-pdf canvas { border-radius: 6px; }
 }

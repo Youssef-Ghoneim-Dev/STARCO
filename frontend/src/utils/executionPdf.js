@@ -139,7 +139,7 @@ const createPdfBlob = (pageImages) => {
 const galleryLayouts = {
   1: [[160, 100, 1600, 880]],
   2: [[80, 100, 850, 880], [990, 100, 850, 880]],
-  3: [[35, 240, 600, 600], [660, 240, 600, 600], [1285, 240, 600, 600]],
+  3: [[40, 190, 600, 760], [1110, 80, 760, 430], [650, 560, 730, 470]],
   4: [[70, 70, 860, 450], [990, 70, 860, 450], [70, 560, 860, 450], [990, 560, 860, 450]],
   5: [[55, 65, 580, 440], [670, 65, 580, 440], [1285, 65, 580, 440], [210, 555, 720, 455], [990, 555, 720, 455]],
 };
@@ -157,19 +157,19 @@ export async function createExecutionPdf({ panelSize, steelThickness, paint, pag
   pages.push(toJpegBytes(createCanvas(pageOne).canvas));
 
   const second = createCanvas(contentPage);
-  if (assignedImage("page2")) drawCroppedImage(second.context, assignedImage("page2"), 785, 216, 1080, 648, assignedTransform(assignments.page2), 28, "right");
+  if (assignedImage("page2")) drawCroppedImage(second.context, assignedImage("page2"), 625, 135, 1200, 810, assignedTransform(assignments.page2), 28, "right");
   drawLabelValue(second.context, "Panel size :", panelSize || "—", 590, 250);
   drawLabelValue(second.context, "Steel thickness :", `${steelThickness || "—"} mm`, 655, 385);
   drawLabelValue(second.context, "Paint :", paint || "Electrostatic paint", 720, 175);
   pages.push(toJpegBytes(second.canvas));
 
   const third = createCanvas(contentPage);
-  if (assignedImage("page3")) drawCroppedImage(third.context, assignedImage("page3"), 785, 216, 1080, 648, assignedTransform(assignments.page3), 28, "right");
+  if (assignedImage("page3")) drawCroppedImage(third.context, assignedImage("page3"), 625, 135, 1200, 810, assignedTransform(assignments.page3), 28, "right");
   drawPage3Text(third.context, page3Text);
   pages.push(toJpegBytes(third.canvas));
 
   const fourth = createCanvas(contentPage);
-  if (assignedImage("page4")) drawCroppedImage(fourth.context, assignedImage("page4"), 785, 216, 1080, 648, assignedTransform(assignments.page4), 28, "right");
+  if (assignedImage("page4")) drawCroppedImage(fourth.context, assignedImage("page4"), 625, 135, 1200, 810, assignedTransform(assignments.page4), 28, "right");
   const specificationLines = (page4Lines || []).filter(Boolean).slice(0, 8);
   fourth.context.fillStyle = "#202020";
   fourth.context.font = "500 36px Arial";

@@ -11,7 +11,7 @@ const isEngineer = (user) => user?.role === "Engineer";
 const isMarketer = (user) => user?.role === "Marketer";
 const executionStatuses = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
 const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
-const executionPdfPurposes = ["page2", "page3", "page4", "gallery", "generatedPdf"];
+const executionPdfPurposes = ["page2", "page3", "page4", "gallery"];
 const history = (req, from, to, action, note = "") => ({ from, to, action, note, actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role, createdAt: new Date() });
 const loadProject = (projectId) => projects.findOne({ _id: projectId, isDeleted: false });
 const loadPanel = (projectId, panelId) => panels.findOne({ _id: panelId, projectId, isDeleted: false });
@@ -247,7 +247,39 @@ const deleteFile = (bucket) => async (req, res, next) => { try {
     if (!isOwner(req.user) && (!isEngineer(req.user) || !sameId(panel.engineerId, req.user._id))) return res.status(403).json({ status: "error", message: "حذف الملف متاح للمهندس المسؤول فقط." });
     await deleteStoredFile(file.storageFileId); const saved = await panels.update({ _id: panel._id }, { $pull: { [`${bucket}.files`]: { _id: file._id } } }); const project = await loadProject(panel.projectId); res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
-const finishExecutionPdf = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!panel.executionPdf?.skipped && !(panel.executionPdf?.files || []).some((file) => file.purpose === "generatedPdf")) return res.status(400).json({ status: "error", message: "أنشئ ملف PDF التنفيذ النهائي أولًا، أو اختر تخطي المرحلة." }); return transition(req, res, next, { from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id }, notify: (project, savedPanel) => notifyProjectMarketer(project, ["MarketingManager"], (recipient) => sendExecutionPdfCompleted(recipient.phoneNumber, project, savedPanel.panelName, `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/projects/${project._id}/panels/${savedPanel._id}`)) }); } catch (error) { next(error); } };
+const finishExecutionPdf = async (req, res, next) => { try {
+    const panel = await loadPanel(req.params.projectId, req.params.panelId);
+    if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    const design = panel.executionPdf?.design || {};
+    const assignments = design.assignments || {};
+    const sourceFileIds = new Set((panel.executionPdf?.files || []).filter((file) => file.purpose !== "generatedPdf").map((file) => String(file._id)));
+    const assignedIds = [assignments.page2, assignments.page3, assignments.page4, ...(assignments.gallery || [])].filter(Boolean).map(String);
+    const completeDesign = design.panelSize && design.steelThickness && design.paint && design.page3Text
+        && Array.isArray(design.page4Lines) && design.page4Lines.length
+        && assignments.page2 && assignments.page3 && assignments.page4
+        && Array.isArray(assignments.gallery) && assignments.gallery.length === 3
+        && assignedIds.every((id) => sourceFileIds.has(id));
+    if (!panel.executionPdf?.skipped && !completeDesign) {
+        return res.status(400).json({ status: "error", message: "أكمل بيانات وصور PDF التنفيذ أولًا، أو اختر تخطي المرحلة." });
+    }
+    const legacyGeneratedFiles = (panel.executionPdf?.files || []).filter((file) => file.purpose === "generatedPdf");
+    if (legacyGeneratedFiles.length) {
+        await Promise.allSettled(legacyGeneratedFiles.map((file) => deleteStoredFile(file.storageFileId)));
+        await panels.update({ _id: panel._id }, { $pull: { "executionPdf.files": { purpose: "generatedPdf" } } });
+    }
+    return transition(req, res, next, {
+        from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true,
+        extra: { "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id },
+        notify: async (project, savedPanel) => {
+            const previewProject = await projects.findOne({ _id: project._id, isDeleted: false }).select("+clientPreviewToken");
+            const baseUrl = String(process.env.FRONTEND_URL || "").replace(/\/$/, "");
+            const previewUrl = previewProject?.clientPreviewToken
+                ? `${baseUrl}/p/${previewProject.clientPreviewToken}`
+                : `${baseUrl}/projects/${project._id}/panels/${savedPanel._id}`;
+            return notifyProjectMarketer(project, ["MarketingManager"], (recipient) => sendExecutionPdfCompleted(recipient.phoneNumber, project, savedPanel.panelName, previewUrl));
+        }
+    });
+} catch (error) { next(error); } };
 const skipExecutionPdf = (req, res, next) => transition(req, res, next, { from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "executionPdf.skipped": true, "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id } });
 const requestExecutionPdfChanges = async (req, res, next) => { try { const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!["Marketer", "MarketingManager", "OwnerManager"].includes(req.user.role) || panel.status !== "executionPdfReady") return res.status(409).json({ status: "error", message: "لا يمكن طلب تعديل هذه اللوحة الآن." }); if (isMarketer(req.user) && !marketerOwns(req, project, panel)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية طلب تعديل هذه اللوحة." }); const saved = await panels.update({ _id: panel._id }, { status: "editing", $push: { statusHistory: history(req, panel.status, "editing", "executionChangesRequested") } }); await projects.update({ _id: project._id }, { status: "inProgress", marketingEditSession: { active: true, openedBy: req.user._id, openedAt: new Date() }, previewGeneratedAt: null }); res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) }); } catch (error) { next(error); } };
 const confirmExecution = (req, res, next) => transition(req, res, next, { from: ["executionPdfReady", "executionPdfRequested"], to: "manufacturingFilesPending", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": req.user._id }, notify: (project, panel) => notifyPanelPeople(panel, [], (recipient) => sendExecutionConfirmed(recipient.phoneNumber, project, panel.panelName)) });

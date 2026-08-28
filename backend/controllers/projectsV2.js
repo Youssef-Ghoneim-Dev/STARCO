@@ -183,9 +183,37 @@ const getPreview = async (req, res, next) => { try {
     const hydrated = await hydrate(project);
     const configuration = await systemConfiguration.get();
     res.json({
-        project: { ...hydrated, panels: hydrated.panels.map((panel) => ({ ...panel, ...(panel.marketerData || {}), ...(panel.pricing || {}), panelId: panel._id })) },
+        project: { ...hydrated, panels: hydrated.panels.map((panel) => {
+            const executionIsVisible = ["ready", "confirmed"].includes(panel.executionPdf?.status) && !panel.executionPdf?.skipped;
+            return {
+                ...panel,
+                ...(panel.marketerData || {}),
+                ...(panel.pricing || {}),
+                panelId: panel._id,
+                executionPdf: executionIsVisible ? {
+                    ...(panel.executionPdf || {}),
+                    files: (panel.executionPdf?.files || []).filter((file) => file.purpose !== "generatedPdf").map((file) => ({
+                        _id: file._id, fileName: file.fileName, mimeType: file.mimeType, fileSize: file.fileSize, purpose: file.purpose
+                    }))
+                } : { status: panel.executionPdf?.status || "notRequested", skipped: Boolean(panel.executionPdf?.skipped) }
+            };
+        }) },
         copperConfiguration: configuration?.copperConfiguration || {}
     });
+} catch (error) { next(error); } };
+const getPreviewExecutionPdfFile = async (req, res, next) => { try {
+    const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false });
+    if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
+    const panel = await panels.findOne({ _id: req.params.panelId, projectId: project._id, isDeleted: false });
+    const executionIsVisible = panel && ["executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(panel.status) && !panel.executionPdf?.skipped;
+    const file = executionIsVisible ? panel.executionPdf?.files?.id(req.params.fileId) : null;
+    if (!file || file.purpose === "generatedPdf" || !String(file.mimeType || "").startsWith("image/")) {
+        return res.status(404).json({ status: "error", message: "صورة PDF التنفيذ غير موجودة." });
+    }
+    const stored = await downloadStoredFile(file.storageFileId);
+    res.setHeader("Content-Type", file.mimeType || stored.mimeType || "application/octet-stream");
+    res.setHeader("Cache-Control", "private, max-age=300");
+    res.send(stored.buffer);
 } catch (error) { next(error); } };
 const removeProject = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
@@ -267,4 +295,4 @@ const getProjectMediaWhatsappLink = async (req, res, next) => { try {
     const text = `STARCO MEDIA #${project.projectCode} PANEL ${panel.sequence}`; res.json({ status: "ok", text, url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}` });
 } catch (error) { next(error); } };
 
-module.exports = { getProjects, getProject, createProject, updateProject, acquireSetupLock, completeSetup, submitProject, regeneratePreview, getPreview, removeProject, getDeletedProjects, restoreProject, permanentlyDeleteProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink };
+module.exports = { getProjects, getProject, createProject, updateProject, acquireSetupLock, completeSetup, submitProject, regeneratePreview, getPreview, getPreviewExecutionPdfFile, removeProject, getDeletedProjects, restoreProject, permanentlyDeleteProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink };

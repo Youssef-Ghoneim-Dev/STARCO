@@ -7,6 +7,7 @@ const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 router.get("/client-preview/:key", controller.getPreview);
+router.get("/client-preview/:key/panels/:panelId/execution-pdf/files/:fileId", controller.getPreviewExecutionPdfFile);
 router.use("/:projectId/panels", panelsRouter);
 router.get("/", auth, check, controller.getProjects);
 router.get("/deleted", auth, check, controller.getDeletedProjects);
