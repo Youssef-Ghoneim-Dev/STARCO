@@ -5,6 +5,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { getClientExecutionPdfFile, getClientProjectPreview, getClientProjectPreviewByKey } from "../services/projectsAPI";
 import { createExecutionPdf } from "../utils/executionPdf";
 import { createProjectPdf } from "../utils/projectPdf";
+import StyledSelect from "../components/common/StyledSelect";
 import "../styles/ClientProjectPreview.css";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -173,7 +174,7 @@ function ClientProjectPreview() {
     <section className="client-preview-document-controls" aria-label="اختيار المستند">
       <button type="button" className={activeDocument === "quote" ? "active" : ""} onClick={() => { setActiveDocument("quote"); setExecutionNotice(""); }}><strong>رؤية عرض السعر</strong><span>المستند الأساسي للمشروع</span></button>
       <button type="button" className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`} onClick={openExecutionDocument} aria-disabled={!selectedExecutionDocument}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : executionWasRequested ? "قيد التجهيز" : "لم يتم طلبه بعد"}</span></button>
-      {executionPanels.length > 1 && <label>اللوحة<select value={selectedPanelId} onChange={(event) => { setSelectedPanelId(event.target.value); setActiveDocument("quote"); }}>{executionPanels.map((panel) => <option key={panelKey(panel)} value={panelKey(panel)}>{panel.panelName || panel.panelCode}</option>)}</select></label>}
+      {executionPanels.length > 1 && <label>اللوحة<StyledSelect value={selectedPanelId} onChange={(value) => { setSelectedPanelId(value); setActiveDocument("quote"); }} options={executionPanels.map((panel) => ({ value: panelKey(panel), label: panel.panelName || panel.panelCode }))} /></label>}
     </section>
     {executionNotice && <p className="client-preview-document-notice" role="status">{executionNotice}</p>}
     {state.error && <p className="client-preview-inline-error">{state.error}</p>}

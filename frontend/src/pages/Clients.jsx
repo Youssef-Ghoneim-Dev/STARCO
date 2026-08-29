@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HiOutlinePencilAlt, HiOutlinePlus, HiOutlineSearch, HiOutlineTrash, HiOutlineX } from "react-icons/hi";
 import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import StyledSelect from "../components/common/StyledSelect";
 import { createClient, deleteClient, findSimilarClients, getAllClients, updateClient } from "../services/clientsAPI";
 import { matchesSearchText } from "../utils/textSearch";
 import "../styles/management.css";
@@ -153,7 +154,7 @@ function Clients() {
                 <button type="button" className="management-icon-btn" onClick={closeForm} aria-label="إغلاق"><HiOutlineX /></button>
               </div>
               <label>الاسم<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
-              <label>النوع<select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}><option value="person">فرد</option><option value="company">شركة</option></select></label>
+              <label>النوع<StyledSelect value={form.type} onChange={(value) => setForm((current) => ({ ...current, type: value }))} options={[{ value: "person", label: "فرد" }, { value: "company", label: "شركة" }]} /></label>
               <label>نسبة الربح<input type="number" min="10" max="70" value={form.profitPercentage} onChange={(event) => setForm((current) => ({ ...current, profitPercentage: event.target.value }))} required /></label>
               <button className="management-primary-btn" type="submit" disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ"}</button>
             </form>

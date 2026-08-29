@@ -567,7 +567,7 @@ function ExecutionPdfWorkspace() {
           </div>
           {stage.status === "active" && stageDecision === "delayed" && stage.key === "awaitingLaserDownload" && <div className="production-fixed-warning">برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}
           {stage.status === "active" && stageDecision === "delayed" && stage.key !== "awaitingLaserDownload" && <div className="production-delay-fields">
-            <label>سبب التأخير<select value={delayReason} onChange={(event) => { setDelayReason(event.target.value); if (event.target.value !== "أخرى") setDelayDetails(""); }}><option value="">اختر سبب التأخير</option>{(productionDelayReasons[stage.key] || []).map((reason) => <option key={reason} value={reason}>{reason}</option>)}</select></label>
+            <label>سبب التأخير<ExecutionSelect value={delayReason} placeholder="اختر سبب التأخير" onChange={(value) => { setDelayReason(value); if (value !== "أخرى") setDelayDetails(""); }} options={(productionDelayReasons[stage.key] || []).map((reason) => ({ value: reason, label: reason }))} /></label>
             {delayReason === "أخرى" && <label>سبب التأخير<textarea value={delayDetails} onChange={(event) => setDelayDetails(event.target.value)} placeholder="اكتب سبب التأخير..." /></label>}
           </div>}
         </article>)}

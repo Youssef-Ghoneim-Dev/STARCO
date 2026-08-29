@@ -237,6 +237,10 @@
     font: inherit;
 }
 
+.management-modal .app-select { width: 100%; }
+.management-modal .app-select-trigger { min-height: 46px; border-radius: 10px; }
+.management-modal .app-select-menu { z-index: 120; }
+
 .client-name-review {
     width: min(100%, 620px);
 }

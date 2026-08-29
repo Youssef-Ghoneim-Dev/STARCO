@@ -819,3 +819,8 @@
     font-size: 12px;
     font-weight: 600;
 }
+
+.auth-body .select-wrapper .app-select { width: 100%; }
+.auth-body .select-wrapper .app-select-trigger { min-height: 50px; border-radius: 12px; text-align: left; direction: ltr; }
+.auth-body .select-wrapper .app-select-menu { text-align: left; direction: ltr; z-index: 120; }
+.auth-body .select-wrapper .app-select-menu button { text-align: left; }

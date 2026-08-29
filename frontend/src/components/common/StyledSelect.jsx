@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IoChevronDown } from "react-icons/io5";
 
-function StyledSelect({ value, options, placeholder = "اختر", onChange }) {
+function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = options.find((option) => String(option.value) === String(value));
@@ -14,8 +14,8 @@ function StyledSelect({ value, options, placeholder = "اختر", onChange }) {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  return <div className="app-select" ref={ref}>
-    <button type="button" className="app-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+  return <div className={`app-select${disabled ? " is-disabled" : ""}`} ref={ref}>
+    <button type="button" className="app-select-trigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
       <span className={selected ? "" : "app-select-placeholder"}>{selected?.label || placeholder}</span><IoChevronDown className="app-select-chevron" aria-hidden="true" />
     </button>
     {open && <div className="app-select-menu" role="listbox">

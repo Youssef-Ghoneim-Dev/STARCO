@@ -2,9 +2,9 @@ const models = require("../models/clients")
 const { compareClientNames } = require("../utils/clientNameSimilarity");
 
 const canManageClients = (req) =>
-    req.user?.role === "OwnerManager" || req.user?.role === "Engineer";
+    ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(req.user?.role);
 const canSearchClients = (req) =>
-    canManageClients(req) || req.user?.role === "Marketer";
+    canManageClients(req);
 
 const rejectUnauthorized = (res) => res.status(403).json({
     status: "error",

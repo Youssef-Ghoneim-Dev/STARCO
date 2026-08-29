@@ -53,6 +53,8 @@
 .client-preview-document-notice { width: min(100% - 28px, 1180px); box-sizing: border-box; margin: -6px auto 18px; padding: 13px 16px; border: 1px solid #ecd495; border-radius: 12px; color: #805b08; background: #fff9e9; font-weight: 700; text-align: center; }
 .client-preview-document-controls label { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; min-height: 58px; font-weight: 800; }
 .client-preview-document-controls select { flex: 1; min-height: 40px; border: 1px solid #c8d7e2; border-radius: 10px; padding-inline: 12px; color: #173c56; background: #f8fbfd; font: inherit; }
+.client-preview-document-controls label .app-select { flex: 1; }
+.client-preview-document-controls label .app-select-trigger { min-height: 40px; background: #f8fbfd; }
 .client-preview-inline-error { width: min(1180px, 92%); margin: 12px auto 0; padding: 11px 15px; border: 1px solid #f2b8b5; border-radius: 12px; color: #b42318; background: #fff4f3; text-align: center; }
 
 .client-preview-pdf {

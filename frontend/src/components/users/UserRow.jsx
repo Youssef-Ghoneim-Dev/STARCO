@@ -4,6 +4,7 @@ import { HiOutlineCheck, HiOutlineTrash, HiOutlinePencil, HiOutlineRefresh, HiOu
 import { approveUser, deletePendingUser, deleteUser, restoreUser, updateUser } from "../../services/usersAPI";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
+import StyledSelect from "../common/StyledSelect";
 
 const roles = ["OwnerManager", "Engineer", "Marketer", "MarketingManager", "ProductionManager"];
 
@@ -56,7 +57,7 @@ function UserRow({ user, reload, mode }) {
 
       <span>{user.email}</span>
       <span className="phone-value">{user.phoneNumber || "—"}</span>
-      <div className="role-editor"><select value={role} onChange={(event) => changeRole(event.target.value)} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"}>{availableRoles.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
+      <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
 
       <div className="users-actions">
         {!user.isDeleted && !isCurrentUser && <button type="button" className="edit-user-btn" onClick={() => setEditing(true)} aria-label="Edit user"><HiOutlinePencil /></button>}

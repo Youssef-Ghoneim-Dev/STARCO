@@ -4,7 +4,9 @@ import { useAuth } from "../../context/AuthContext";
 import {
   HiOutlineHome,
   HiOutlineFolder,
-  HiOutlineUsers,
+  HiOutlineUserGroup,
+  HiOutlineUserAdd,
+  HiOutlineIdentification,
   HiOutlineTrash,
   HiOutlineCog,
   HiOutlineLogout,
@@ -24,6 +26,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const role = user?.role;
   const canUseRecycleBin = Boolean(role);
   const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
+  const canManageClients = ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(role);
   const canViewProjects = true;
 
   const logout = () => {
@@ -60,13 +63,6 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
 
           {canViewProjects && (
             <>
-              {canManageUsers && (
-                <>
-                  <NavLink to="/users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUsers />Users</NavLink>
-                  <NavLink to="/pending-users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUsers />Pending Users</NavLink>
-                </>
-              )}
-
               <NavLink to="/projects" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
                 <HiOutlineFolder />
                 Projects
@@ -76,11 +72,17 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
                 Panels
               </NavLink>
 
-              {(role === "Engineer" || role === "OwnerManager") && (
+              {canManageClients && (
                 <NavLink to="/clients" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                  <HiOutlineUsers />
+                  <HiOutlineIdentification />
                   Clients
                 </NavLink>
+              )}
+              {canManageUsers && (
+                <>
+                  <NavLink to="/users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUserGroup />Users</NavLink>
+                  <NavLink to="/pending-users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUserAdd />Pending Users</NavLink>
+                </>
               )}
               {canUseRecycleBin && (
                 <NavLink to="/deleted-projects" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
@@ -126,11 +128,11 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
           </NavLink>
         )}
         {canViewProjects && <NavLink to="/panels" onClick={onClose}><HiOutlineViewGrid /><span>Panels</span></NavLink>}
-        {(role === "Engineer" || role === "OwnerManager") && (
-          <NavLink className="mobile-client-link" to="/clients" onClick={onClose}><HiOutlineUsers /><span>Clients</span></NavLink>
+        {canManageClients && (
+          <NavLink className="mobile-client-link" to="/clients" onClick={onClose}><HiOutlineIdentification /><span>Clients</span></NavLink>
         )}
         {canManageUsers && (
-          <NavLink to="/pending-users" onClick={onClose}><HiOutlineUsers /><span>Pending</span></NavLink>
+          <NavLink to="/pending-users" onClick={onClose}><HiOutlineUserAdd /><span>Pending</span></NavLink>
         )}
         {(role === "Engineer" || role === "OwnerManager") && (
           <NavLink to="/configuration" onClick={onClose}>

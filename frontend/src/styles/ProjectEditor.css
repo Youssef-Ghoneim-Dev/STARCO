@@ -785,6 +785,7 @@
 .app-select { position: relative; width: 100%; }
 .app-select-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 52px; border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; color: var(--text); background: #fff; font: inherit; text-align: right; cursor: pointer; }
 .app-select-trigger:hover, .app-select-trigger:focus { border-color: var(--primary); outline: none; }
+.app-select.is-disabled .app-select-trigger { cursor: not-allowed; opacity: .65; background: #f4f7f9; }
 .app-select-placeholder { color: #94a3b8; }.app-select-chevron { flex: 0 0 auto; width: 18px; height: 18px; color: var(--primary); }
 .app-select-menu { position: absolute; z-index: 50; top: calc(100% + 6px); right: 0; left: 0; max-height: 190px; overflow-y: auto; border: 1px solid #cbdde3; border-radius: 10px; padding: 5px; box-shadow: 0 12px 25px rgba(20, 54, 72, .16); background: #fff; }
 .app-select-menu button { display: block; width: 100%; border: 0; border-radius: 7px; padding: 10px; color: var(--text); background: transparent; font: inherit; text-align: right; cursor: pointer; }.app-select-menu button:hover { color: #174c61; background: #e8f3f6; }.app-select-menu button.is-selected { color: #fff; background: var(--primary); }
@@ -1557,6 +1558,7 @@
 .production-delay-fields label { display: grid; gap: 5px; color: #475467; font-size: .78rem; font-weight: 800; }
 .production-delay-fields select, .production-delay-fields textarea { width: 100%; min-width: 0; border: 1px solid #ccd9e2; border-radius: 9px; background: #fff; color: var(--text); font: inherit; font-size: .78rem; }
 .production-delay-fields select { height: 40px; padding: 0 9px; }
+.production-delay-fields .execution-select-control .copper-select-trigger { min-height: 40px; height: 40px; padding-inline: 9px; font-size: .78rem; }
 .production-delay-fields textarea { min-height: 72px; padding: 9px; resize: vertical; }
 .production-update-panel { display: grid; gap: 16px; }
 .production-update-panel > label { display: grid; gap: 8px; color: var(--text); font-weight: 900; }
