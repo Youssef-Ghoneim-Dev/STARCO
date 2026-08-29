@@ -4,6 +4,7 @@ import {
   HiOutlineClock,
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
@@ -46,7 +47,7 @@ const statusDetails = {
   completed: { label: "مكتمل نهائيًا", className: "completed" },
 };
 
-function ProjectCard({ project, setProjects }) {
+function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProjectId }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { notifications } = useNotifications();
@@ -57,24 +58,29 @@ function ProjectCard({ project, setProjects }) {
     !notification.readAt && String(notification.projectId) === String(project._id)
   );
   const attentionLabel = projectNotification?.title || "";
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleting = deletingProjectId === project._id;
+  const deletionBusy = Boolean(deletingProjectId);
   const handleOpen = () => {
     navigate(`/projects/${project._id}`);
   };
 
-  const handleDelete = async (e) => {
-    e.stopPropagation();
-
+  const handleDelete = async () => {
+    if (deletionBusy) return;
+    setConfirmDelete(false);
+    setDeletingProjectId(project._id);
     try {
       await deleteProject(project._id);
-
-      toast.success("Project deleted successfully");
+      toast.success("تم نقل المشروع إلى سلة المحذوفات.");
       setProjects((prev) => prev.filter((item) => item._id !== project._id));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "تعذر حذف المشروع.");
+    } finally {
+      setDeletingProjectId("");
     }
   };
   return (
-    <div className="project-card" onClick={handleOpen}>
+    <div className={`project-card${deleting ? " is-deleting" : ""}`} onClick={deletionBusy ? undefined : handleOpen}>
       <div className="project-image">
         <img src={projectImage} alt="Project" />
 
@@ -82,7 +88,7 @@ function ProjectCard({ project, setProjects }) {
           {clientPrefix} / {project.client?.name}
         </div>
 
-        {(user?.role === "OwnerManager" || (user?.role === "Marketer" && project.status === "draft")) && <button className="delete-project-btn" onClick={handleDelete}>
+        {(user?.role === "OwnerManager" || (user?.role === "Marketer" && project.status === "draft")) && <button type="button" className="delete-project-btn" aria-label="حذف المشروع" disabled={deletionBusy} onClick={(event) => { event.stopPropagation(); setConfirmDelete(true); }}>
           <HiOutlineTrash />
         </button>}
       </div>
@@ -121,6 +127,14 @@ function ProjectCard({ project, setProjects }) {
           </span>
         </div>
       </div>
+      {deleting && <div className="project-card-delete-progress" role="status">جاري نقل المشروع إلى سلة المحذوفات...</div>}
+      {confirmDelete && <div className="project-delete-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby={`delete-project-${project._id}`} onClick={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) setConfirmDelete(false); }}>
+        <div className="project-delete-dialog" onClick={(event) => event.stopPropagation()}>
+          <h2 id={`delete-project-${project._id}`}>حذف المشروع؟</h2>
+          <p>سيُنقل مشروع <strong>{project.client?.name || "هذا العميل"}</strong> إلى سلة المحذوفات، ويمكن استعادته لاحقًا.</p>
+          <div><button type="button" onClick={() => setConfirmDelete(false)}>إلغاء</button><button type="button" className="danger" onClick={handleDelete}>نقل إلى السلة</button></div>
+        </div>
+      </div>}
     </div>
   );
 }

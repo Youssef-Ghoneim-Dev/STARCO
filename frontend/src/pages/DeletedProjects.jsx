@@ -40,10 +40,12 @@ function DeletedProjects() {
     if (!confirmationProject) return;
     const projectId = confirmationProject._id;
     setDeletingId(projectId);
+    // Close the confirmation immediately. The affected row keeps showing its
+    // own progress state, so the user is never trapped behind a blocking modal.
+    setConfirmationProject(null);
     try {
       await permanentlyDeleteProject(projectId);
       setProjects((current) => current.filter((item) => item._id !== projectId));
-      setConfirmationProject(null);
       toast.success("تم حذف المشروع نهائيًا.");
     } catch (error) {
       toast.error(error?.response?.data?.message || "تعذر حذف المشروع نهائيًا.");

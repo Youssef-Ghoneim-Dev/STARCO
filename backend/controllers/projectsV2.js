@@ -57,7 +57,20 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
 };
 const nextProjectCode = async () => {
     const year = new Date().getFullYear();
-    return `PRJ-${year}-${String(await counters.next(`project-${year}`)).padStart(6, "0")}`;
+    const sequence = await counters.next(`project-${year}`);
+    if (!Number.isSafeInteger(sequence) || sequence < 1) throw new Error("تعذر إنشاء رقم مشروع متسلسل آمن.");
+    // padStart sets a minimum width only; after 999999 the code grows to seven
+    // digits automatically and never truncates or overwrites an older code.
+    return `PRJ-${year}-${String(sequence).padStart(6, "0")}`;
+};
+const marketerPanelIsComplete = (panel) => {
+    const data = panel.marketerData || {};
+    if (!Array.isArray(data.thickness) || !data.thickness.length || !data.panelTypeKey || typeof data.hasCopper !== "boolean") return false;
+    if (data.panelTypeKey === "control" && !data.controlInstallation) return false;
+    if (data.hasCopper !== true) return true;
+    const copper = data.copperDetails || {};
+    const groups = Array.isArray(copper.branchGroups) ? copper.branchGroups : [];
+    return Boolean(copper.switches && copper.mainKey && groups.length && groups.every((group) => group.optionKey && Number.isInteger(Number(group.count)) && Number(group.count) > 0));
 };
 const buildSimilarityReview = async (client) => {
     const enteredName = String(client?.name || "").trim();
@@ -142,6 +155,7 @@ const submitProject = async (req, res, next) => { try {
     const list = await panels.find({ projectId: project._id, isDeleted: false });
     if (!list.length) return res.status(400).json({ status: "error", message: "أضف لوحة واحفظها قبل إرسال المشروع." });
     if (list.some((panel) => !panel.marketerSaved)) return res.status(400).json({ status: "error", message: "افتح كل لوحة واضغط حفظ اللوحة قبل إرسال المشروع للمهندسين." });
+    if (list.some((panel) => !marketerPanelIsComplete(panel))) return res.status(400).json({ status: "error", message: "توجد لوحة محفوظة ببيانات ناقصة. افتح كل لوحة وأكمل الحقول الإلزامية قبل الإرسال." });
     await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
     const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
     await createInternalNotifications({

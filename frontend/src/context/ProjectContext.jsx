@@ -749,7 +749,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } catch (error) {
       const message = getSaveErrorMessage(error);
       setSaveProjectError(message);
-      return { success: false, message };
+      return { success: false, message, fields: error.response?.data?.fields || null };
     } finally {
       setSavingProject(false);
     }

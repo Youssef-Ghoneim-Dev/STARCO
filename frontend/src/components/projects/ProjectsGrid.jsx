@@ -1,6 +1,6 @@
 import ProjectCard from "./ProjectCard";
 
-function ProjectsGrid({ projects, setProjects, loading }) {
+function ProjectsGrid({ projects, setProjects, loading, deletingProjectId, setDeletingProjectId }) {
   if (loading) {
     return <div className="empty-projects">Loading...</div>;
   }
@@ -16,6 +16,8 @@ function ProjectsGrid({ projects, setProjects, loading }) {
           key={project._id}
           project={project}
           setProjects={setProjects}
+          deletingProjectId={deletingProjectId}
+          setDeletingProjectId={setDeletingProjectId}
         />
       ))}
     </div>

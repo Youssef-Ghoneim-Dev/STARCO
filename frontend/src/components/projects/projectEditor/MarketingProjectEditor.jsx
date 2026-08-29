@@ -1,4 +1,5 @@
 import toast from "react-hot-toast";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StyledSelect from "../../common/StyledSelect";
 import WhatsappProjectData from "./WhatsappProjectData";
@@ -9,6 +10,7 @@ import { getPanelNameDirection } from "../../../utils/panelNameDirection";
 
 function MarketingProjectEditor() {
   const navigate = useNavigate();
+  const [validationErrors, setValidationErrors] = useState({});
   const {
     project,
     activePanel,
@@ -38,7 +40,16 @@ function MarketingProjectEditor() {
     if (!canEditActivePanel) return;
     updatePanel(activePanel, (current) => ({ ...current, ...patch }));
   };
+  const clearErrors = (...keys) => {
+    setValidationErrors((current) => {
+      if (!keys.some((key) => current[key])) return current;
+      const next = { ...current };
+      keys.forEach((key) => delete next[key]);
+      return next;
+    });
+  };
   const toggleThickness = (thickness) => {
+    clearErrors("thickness");
     const selected = (panel.thickness || []).map(String);
     patchPanel({
       thickness: selected.includes(thickness)
@@ -49,13 +60,17 @@ function MarketingProjectEditor() {
   const chooseType = (key) => {
     const type = panelTypes.find((item) => item.key === key);
     if (!type) return;
-    patchPanel({ panelTypeKey: type.key, panelType: type.name });
+    clearErrors("panelType", "controlInstallation");
+    patchPanel({ panelTypeKey: type.key, panelType: type.name, ...(type.key !== "control" ? { controlInstallation: "" } : {}) });
   };
-  const setCopperDetail = (field, value) =>
+  const setCopperDetail = (field, value) => {
+    clearErrors(field === "switches" ? "copperSwitches" : "copper");
     patchPanel({
       copperDetails: { ...(panel.copperDetails || {}), [field]: value },
     });
+  };
   const setBranchGroups = (nextGroups) => {
+    clearErrors("copperBranches");
     const validGroups = nextGroups.map((group) => ({
       id:
         group.id ||
@@ -90,6 +105,7 @@ function MarketingProjectEditor() {
     });
   };
   const setCopperMain = (optionKey) => {
+    clearErrors("copperMain");
     const option = copperConfiguration.catalog?.find(
       (item) => item.key === optionKey,
     );
@@ -106,12 +122,37 @@ function MarketingProjectEditor() {
       },
     });
   };
+  const validate = () => {
+    const errors = {};
+    if (!(panel.thickness || []).length) errors.thickness = "اختر سمكًا مطلوبًا واحدًا على الأقل.";
+    if (!panel.panelTypeKey) errors.panelType = "اختر نوع اللوحة.";
+    if (panel.hasCopper !== true && panel.hasCopper !== false) errors.hasCopper = "حدد هل يوجد نحاس أم لا.";
+    if (panel.panelTypeKey === "control" && !panel.controlInstallation) errors.controlInstallation = "اختر تركيب لوحة الكنترول.";
+    if (panel.hasCopper === true) {
+      if (!panel.copperDetails?.switches) errors.copperSwitches = "اختر نوع المفاتيح.";
+      if (!(panel.copperDetails?.mainKey || panel.copper?.main?.optionKey)) errors.copperMain = "اختر أمبير المفتاح الرئيسي.";
+      if (!branchGroups.length || branchGroups.some((group) => !group.optionKey || !Number.isInteger(Number(group.count)) || Number(group.count) < 1)) {
+        errors.copperBranches = branchGroups.length ? "أكمل الأمبير والعدد الصحيح لكل مفتاح فرعي." : "أضف مفتاحًا فرعيًا واحدًا على الأقل وأكمل بياناته.";
+      }
+    }
+    return errors;
+  };
   const save = async () => {
+    const errors = validate();
+    if (Object.keys(errors).length) {
+      setValidationErrors(errors);
+      window.requestAnimationFrame(() => document.querySelector(".marketing-project-editor .form-field-error")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      return;
+    }
+    setValidationErrors({});
     const result = await submitMarketingProject();
     if (result.success) {
       if (result.notification?.includes("تعذر"))
         toast.error(result.notification, { duration: 7000 });
       navigate(`/projects/${project._id}`);
+    } else if (result.fields) {
+      setValidationErrors(result.fields);
+      window.requestAnimationFrame(() => document.querySelector(".marketing-project-editor .form-field-error")?.scrollIntoView({ behavior: "smooth", block: "center" }));
     } else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
   };
   return (
@@ -171,6 +212,7 @@ function MarketingProjectEditor() {
                       </label>
                     ))}
                   </div>
+                  {validationErrors.thickness && <small className="form-field-error">{validationErrors.thickness}</small>}
                 </div>
                 <label>
                   نوع اللوحة
@@ -183,6 +225,7 @@ function MarketingProjectEditor() {
                       label: type.name,
                     }))}
                   />
+                  {validationErrors.panelType && <small className="form-field-error">{validationErrors.panelType}</small>}
                 </label>
                 <label>
                   هل يوجد نحاس
@@ -195,14 +238,13 @@ function MarketingProjectEditor() {
                           : ""
                     }
                     placeholder="اختر الإجابة"
-                    onChange={(value) =>
-                      patchPanel({ hasCopper: value === "yes" })
-                    }
+                    onChange={(value) => { clearErrors("hasCopper", "copperSwitches", "copperMain", "copperBranches"); patchPanel({ hasCopper: value === "yes" }); }}
                     options={[
                       { value: "yes", label: "نعم" },
                       { value: "no", label: "لا" },
                     ]}
                   />
+                  {validationErrors.hasCopper && <small className="form-field-error">{validationErrors.hasCopper}</small>}
                 </label>
               </div>
               {panel.panelTypeKey === "control" && (
@@ -211,14 +253,13 @@ function MarketingProjectEditor() {
                   <StyledSelect
                     value={panel.controlInstallation || ""}
                     placeholder="اختر التركيب"
-                    onChange={(value) =>
-                      patchPanel({ controlInstallation: value })
-                    }
+                    onChange={(value) => { clearErrors("controlInstallation"); patchPanel({ controlInstallation: value }); }}
                     options={[
                       { value: "دفن", label: "دفن" },
                       { value: "عادية", label: "عادية" },
                     ]}
                   />
+                  {validationErrors.controlInstallation && <small className="form-field-error">{validationErrors.controlInstallation}</small>}
                 </label>
               )}
               <label className="marketing-full-field">
@@ -246,6 +287,7 @@ function MarketingProjectEditor() {
                           { value: "Molded", label: "Molded" },
                         ]}
                       />
+                      {validationErrors.copperSwitches && <small className="form-field-error">{validationErrors.copperSwitches}</small>}
                     </label>
                     <label>
                       الرئيسي
@@ -259,6 +301,7 @@ function MarketingProjectEditor() {
                         onChange={setCopperMain}
                         options={amperageOptions}
                       />
+                      {validationErrors.copperMain && <small className="form-field-error">{validationErrors.copperMain}</small>}
                     </label>
                   </div>
                   <div className="marketing-branches">
@@ -347,6 +390,7 @@ function MarketingProjectEditor() {
                         </button>
                       </div>
                     ))}
+                    {validationErrors.copperBranches && <small className="form-field-error marketing-branches-error">{validationErrors.copperBranches}</small>}
                   </div>
                   <label className="marketing-full-field">
                     تفاصيل إضافية للنحاس

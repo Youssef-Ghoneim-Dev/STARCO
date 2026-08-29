@@ -39,6 +39,21 @@ const normalizePanelPayload = (body = {}) => ({
         thickness: body.pricing?.thickness ?? body.thickness
     }
 });
+const validateMarketerData = (data = {}) => {
+    const errors = {};
+    if (!Array.isArray(data.thickness) || data.thickness.length === 0) errors.thickness = "اختر سمكًا مطلوبًا واحدًا على الأقل.";
+    if (!String(data.panelTypeKey || "").trim()) errors.panelType = "اختر نوع اللوحة.";
+    if (typeof data.hasCopper !== "boolean") errors.hasCopper = "حدد هل يوجد نحاس أم لا.";
+    if (data.panelTypeKey === "control" && !String(data.controlInstallation || "").trim()) errors.controlInstallation = "اختر تركيب لوحة الكنترول.";
+    if (data.hasCopper === true) {
+        const copper = data.copperDetails || {};
+        if (!String(copper.switches || "").trim()) errors.copperSwitches = "اختر نوع المفاتيح.";
+        if (!String(copper.mainKey || "").trim()) errors.copperMain = "اختر أمبير المفتاح الرئيسي.";
+        const groups = Array.isArray(copper.branchGroups) ? copper.branchGroups : [];
+        if (!groups.length || groups.some((group) => !String(group.optionKey || "").trim() || !Number.isInteger(Number(group.count)) || Number(group.count) < 1)) errors.copperBranches = "أكمل الأمبير والعدد الصحيح لكل مفتاح فرعي.";
+    }
+    return errors;
+};
 const publicPanel = (panel) => {
     const object = panel.toObject ? panel.toObject() : panel;
     const marketerThickness = object.marketerData?.thickness || [];
@@ -141,7 +156,14 @@ const updatePanel = async (req, res, next) => { try {
     const engineerCanEdit = (isOwner(req.user) || (isEngineer(req.user) && sameId(panel.engineerId, req.user._id))) && ["pricing", "editing"].includes(panel.status);
     if (!marketerCanEdit && !engineerCanEdit) return res.status(409).json({ status: "error", message: "هذه اللوحة ليست مفتوحة لك للتعديل الآن." });
     if (payload.panelName != null) update.panelName = String(payload.panelName).trim();
-    if (marketerCanEdit) { update.marketerData = { ...panel.marketerData.toObject(), ...payload.marketerData }; if (req.body?.marketerSaved === true) update.marketerSaved = true; }
+    if (marketerCanEdit) {
+        update.marketerData = { ...panel.marketerData.toObject(), ...payload.marketerData };
+        if (req.body?.marketerSaved === true) {
+            const fields = validateMarketerData(update.marketerData);
+            if (Object.keys(fields).length) return res.status(400).json({ status: "error", code: "PANEL_VALIDATION_ERROR", message: "أكمل بيانات اللوحة الإلزامية قبل الحفظ.", fields });
+            update.marketerSaved = true;
+        }
+    }
     if (engineerCanEdit) update.pricing = { ...panel.pricing.toObject(), ...payload.pricing };
     const saved = await panels.update({ _id: panel._id }, update); res.json({ status: "ok", panel: publicPanel(saved) });
 } catch (error) { next(error); } };

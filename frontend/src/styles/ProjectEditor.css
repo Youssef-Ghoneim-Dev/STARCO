@@ -1422,6 +1422,8 @@
 .media-delete-actions button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: #eef2f6; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .media-delete-actions .media-delete-confirm { background: #dc2626; color: #fff; }
 .marketing-save-actions { display: flex; justify-content: flex-start; padding-top: 4px; }
+.marketing-project-editor .form-field-error { display: block; margin-top: 2px; color: #c52632; font-size: 13px; font-weight: 800; line-height: 1.55; }
+.marketing-project-editor .marketing-branches-error { flex: 1 0 100%; width: 100%; }
 .project-media-item { position: relative; }
 .project-media-delete { position: absolute; top: 8px; left: 8px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #fff; background: #dc2626; cursor: pointer; box-shadow: 0 3px 10px rgb(127 29 29 / 28%); }
 .project-media-delete:hover { background: #b91c1c; }

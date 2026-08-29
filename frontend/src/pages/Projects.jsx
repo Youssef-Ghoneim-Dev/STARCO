@@ -16,6 +16,7 @@ function Projects() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [deletingProjectId, setDeletingProjectId] = useState("");
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -85,6 +86,8 @@ function Projects() {
         projects={filteredProjects}
         setProjects={setProjects}
         loading={loading}
+        deletingProjectId={deletingProjectId}
+        setDeletingProjectId={setDeletingProjectId}
       />
     </DashboardLayout>
   );
