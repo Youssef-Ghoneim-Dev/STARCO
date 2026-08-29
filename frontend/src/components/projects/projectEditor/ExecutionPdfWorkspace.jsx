@@ -207,6 +207,7 @@ function ExecutionPdfWorkspace() {
     }));
   }, [manufacturing.currentStage, manufacturing.productionStages]);
   const activeProductionStage = productionStages.find((stage) => stage.status === "active");
+  const manufacturingNotesChanged = manufacturingNotes !== String(manufacturing.notes || "");
   const stageIcon = (key) => ({
     awaitingLaserDownload: <HiOutlineCloudDownload />,
     laser: <HiOutlineLightningBolt />,
@@ -478,8 +479,8 @@ function ExecutionPdfWorkspace() {
   const cropTransform = cropFile ? { cropX: 50, zoom: 1, positionX: 50, positionY: 50, ...(executionDesign.transforms[String(cropFile._id)] || {}) } : null;
 
   const saveProductionStage = async () => {
-    if (!activeProductionStage) return;
-    if (!stageDecision) return toast.error("اختر تمت أو لم تتم أولًا.");
+    if (!stageDecision && !manufacturingNotesChanged) return toast.error("اختر حالة المرحلة أو عدّل الملاحظات أولًا.");
+    if (stageDecision && !activeProductionStage) return toast.error("لا توجد مرحلة إنتاج نشطة حاليًا.");
     if (stageDecision === "delayed" && activeProductionStage.key !== "awaitingLaserDownload" && !delayReason) {
       return toast.error("اختر سبب التأخير أولًا.");
     }
@@ -490,8 +491,8 @@ function ExecutionPdfWorkspace() {
     try {
       const { data } = await updateManufacturingStage(project._id, {
         panelId: panel.panelId,
-        stageKey: activeProductionStage.key,
-        action: stageDecision,
+        stageKey: activeProductionStage?.key || manufacturing.currentStage,
+        action: stageDecision || "notes",
         reason: delayReason,
         details: delayDetails,
         notes: manufacturingNotes,
@@ -535,7 +536,7 @@ function ExecutionPdfWorkspace() {
     </section>
 
     <details className="production-files-accordion" open>
-      <summary><span><HiOutlineFolder /><b>ملفات التصنيع</b><small>جميع الملفات المرفوعة من قبل المهندس</small></span><span className="production-files-chevron">⌄</span></summary>
+      <summary><span><HiOutlineFolder /><b>ملفات التصنيع</b><small>جميع الملفات المرفوعة من قبل المهندس</small></span><IoChevronDown className="production-files-chevron" /></summary>
       <div className="production-files-content">
         <div className="manufacturing-download-grid">
           {manufacturingFiles.map((file) => <article className="manufacturing-file-card" key={file._id || file.storageFileId}>
@@ -575,7 +576,7 @@ function ExecutionPdfWorkspace() {
 
     {canManageProductionStages && <section className="production-footer-controls">
       <label><span>ملاحظات عامة (اختياري)</span><textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
-      <div><button type="button" className="production-history-toggle" onClick={() => setHistoryOpen((value) => !value)}><HiOutlineClock /> عرض سجل التحديثات</button><button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !activeProductionStage || !stageDecision}>{busy ? "جاري الحفظ..." : "حفظ التحديثات"}</button></div>
+      <div><button type="button" className="production-history-toggle" onClick={() => setHistoryOpen((value) => !value)}><HiOutlineClock /> عرض سجل التحديثات</button><button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || (!stageDecision && !manufacturingNotesChanged)}>{busy ? "جاري الحفظ..." : "حفظ التحديثات"}</button></div>
       {historyOpen && <div className="production-history-list">{(manufacturing.productionHistory || []).length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...manufacturing.productionHistory].reverse().map((item, index) => <div key={`${item.createdAt}-${index}`}><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><span>{item.reason === "أخرى" ? item.details : item.reason || item.details || ""}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>)}</div>}
     </section>}
   </section>;

@@ -1573,24 +1573,24 @@
 /* Production tracking page mirrors the dedicated production layout. */
 .production-tracking-page { display: grid; gap: 14px; padding: 18px; border-radius: 18px; background: #f7f9fc; color: #172b3e; direction: rtl; }
 .production-tracking-titlebar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 18px; min-height: 48px; }
-.production-tracking-titlebar h1 { margin: 0; font-size: 1.55rem; text-align: right; }
+.production-tracking-titlebar h1 { margin: 0; font-size: 1.8rem; text-align: right; }
 .production-breadcrumbs { display: flex; align-items: center; gap: 9px; color: #83909d; font-size: .78rem; }
 .production-breadcrumbs strong { color: #526273; }
-.production-tracking-titlebar > button { justify-self: end; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border: 1px solid #d5e0e7; border-radius: 8px; background: #fff; color: #3d6680; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; }
+.production-tracking-titlebar > button { justify-self: end; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 16px; border: 1px solid #d5e0e7; border-radius: 9px; background: #fff; color: #3d6680; font: inherit; font-size: .92rem; font-weight: 800; cursor: pointer; }
 .production-project-overview { display: grid; grid-template-columns: minmax(360px, 1.2fr) minmax(540px, 1fr); align-items: stretch; border: 1px solid #dce4ea; border-radius: 13px; background: #fff; overflow: hidden; }
 .production-project-identity { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 17px 20px; }
 .production-panel-illustration { display: grid; place-items: center; flex: 0 0 auto; width: 66px; height: 66px; border: 1px solid #d4dfe6; border-radius: 10px; background: linear-gradient(145deg, #f8fbfd, #e9f0f5); color: #446d86; font-size: 38px; }
 .production-project-identity > div { min-width: 0; }
-.production-project-identity h2 { margin: 0 0 8px; font-size: 1.12rem; overflow-wrap: anywhere; }
-.production-code-copy { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border: 0; border-radius: 5px; background: #edf5ff; color: #2e68ad; font: inherit; font-size: .73rem; cursor: pointer; }
-.production-project-identity p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 9px 0 0; color: #667483; font-size: .72rem; }
+.production-project-identity h2 { margin: 0 0 9px; font-size: 1.3rem; overflow-wrap: anywhere; }
+.production-code-copy { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border: 0; border-radius: 6px; background: #edf5ff; color: #2e68ad; font: inherit; font-size: .84rem; cursor: pointer; }
+.production-project-identity p { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 10px 0 0; color: #5d6d7c; font-size: .86rem; }
 .production-project-identity p i { width: 4px; height: 4px; border-radius: 50%; background: #a8b3bc; }
 .production-project-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-right: 1px solid #e3e9ed; }
 .production-project-facts.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .production-project-facts > div { display: grid; align-content: center; justify-items: center; gap: 8px; min-width: 0; padding: 13px 10px; text-align: center; }
 .production-project-facts > div + div { border-right: 1px solid #e4eaee; }
-.production-project-facts span { display: inline-flex; align-items: center; gap: 6px; color: #778492; font-size: .7rem; }
-.production-project-facts b { max-width: 100%; color: #2c3f51; font-size: .76rem; overflow-wrap: anywhere; }
+.production-project-facts span { display: inline-flex; align-items: center; gap: 6px; color: #6a7987; font-size: .82rem; }
+.production-project-facts b { max-width: 100%; color: #2c3f51; font-size: .9rem; overflow-wrap: anywhere; }
 .production-phase-badge, .production-state-badge { padding: 6px 9px; border-radius: 6px; }
 .production-phase-badge { background: #f2edff; color: #7253bd !important; }
 .production-state-badge { background: #e8f1ff; color: #3869aa !important; }
@@ -1599,8 +1599,8 @@
 .production-files-accordion > summary::-webkit-details-marker { display: none; }
 .production-files-accordion > summary > span:first-child { display: grid; grid-template-columns: auto auto; align-items: center; justify-content: start; gap: 2px 8px; }
 .production-files-accordion > summary svg { grid-row: 1 / span 2; color: #396d8b; font-size: 22px; }
-.production-files-accordion > summary b { font-size: 1rem; }
-.production-files-accordion > summary small { color: #7d8994; font-size: .68rem; }
+.production-files-accordion > summary b { font-size: 1.2rem; }
+.production-files-accordion > summary small { color: #6f7c88; font-size: .82rem; }
 .production-files-chevron { color: #45677c; font-size: 22px; transition: transform .2s ease; }
 .production-files-accordion[open] .production-files-chevron { transform: rotate(180deg); }
 .production-files-content { padding: 0 18px 17px; }
@@ -1638,10 +1638,11 @@
 .production-stages-board .production-delay-fields { margin-top: 2px; }
 .production-stages-board .production-fixed-warning { font-size: .8rem; }
 .production-footer-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; padding: 18px; border: 1px solid #dce4ea; border-radius: 13px; background: #fff; }
-.production-footer-controls > label { display: grid; align-items: start; gap: 8px; color: #506171; font-size: .82rem; font-weight: 800; }
-.production-footer-controls textarea { width: 100%; min-height: 76px; box-sizing: border-box; padding: 11px 12px; border: 1px solid #d5dfe6; border-radius: 7px; font: inherit; resize: vertical; }
+.production-footer-controls > label { display: grid; align-items: start; gap: 9px; color: #405467; font-size: .98rem; font-weight: 900; }
+.production-footer-controls textarea { width: 100%; min-height: 105px; box-sizing: border-box; padding: 14px 15px; border: 1px solid #cbd9e2; border-radius: 10px; background: #fbfdfe; color: var(--text); font: inherit; font-size: .95rem; line-height: 1.7; resize: vertical; }
+.production-footer-controls textarea:focus { border-color: #4c91b5; outline: 3px solid rgba(76, 145, 181, .12); }
 .production-footer-controls > div:not(.production-history-list) { display: flex; align-items: center; gap: 10px; }
-.production-footer-controls button { min-height: 40px; padding: 0 18px; border-radius: 7px; font: inherit; font-size: .78rem; font-weight: 900; cursor: pointer; }
+.production-footer-controls button { min-height: 44px; padding: 0 20px; border-radius: 8px; font: inherit; font-size: .9rem; font-weight: 900; cursor: pointer; }
 .production-footer-controls .production-save-button { min-width: 150px; background: #176fc1; }
 .production-footer-controls .production-history-list { grid-column: 1 / -1; }
 

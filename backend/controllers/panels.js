@@ -294,13 +294,19 @@ const finishManufacturing = async (req, res, next) => { try { const panel = awai
 const updateStage = async (req, res, next) => { try {
     if (!["ProductionManager", "OwnerManager"].includes(req.user.role)) return res.status(403).json({ status: "error", message: "متابعة الإنتاج متاحة لمدير التنفيذ." });
     const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    const notes = String(req.body?.notes || "").slice(0, 2000);
+    if (req.body.action === "notes") {
+        const saved = await panels.update({ _id: panel._id }, { "manufacturing.notes": notes, $push: { statusHistory: history(req, panel.status, panel.status, "productionNotesUpdated") } });
+        const project = await loadProject(panel.projectId);
+        return res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
+    }
     const requestedStageKey = req.body?.stageKey === "awaitingLaserDownload" ? "pendingLaserDownload" : req.body?.stageKey;
     const current = (panel.manufacturing?.stages || []).find((stage) => stage.status === "active"); if (!current || current.key !== requestedStageKey) return res.status(409).json({ status: "error", message: "يمكن تحديث المرحلة الحالية فقط." });
     if (req.body.action === "delayed") { current.delayReason = current.key === "pendingLaserDownload" ? "برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة" : String(req.body.reason || ""); current.delayDetails = String(req.body.details || ""); current.delayedAt = new Date(); current.delayedBy = req.user._id; }
     else if (req.body.action === "completed") { const index = stages.indexOf(current.key); current.status = "completed"; current.completedAt = new Date(); current.completedBy = req.user._id; const nextStage = panel.manufacturing.stages[index + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); } }
     else return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم." });
     const active = panel.manufacturing.stages.find((stage) => stage.status === "active"); const nextStatus = active?.key || "completed";
-    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: history(req, panel.status, nextStatus, `stage:${req.body.action}`, req.body.reason || "") } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
+    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.notes": notes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: history(req, panel.status, nextStatus, `stage:${req.body.action}`, req.body.reason || "") } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
     await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
     res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
