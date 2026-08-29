@@ -455,6 +455,19 @@
 
 }
 
+.projects-filter { min-width: 205px; }
+.projects-filter .app-select { position: relative; width: 100%; }
+.projects-filter .app-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; border: 0; padding: 0; color: var(--text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.projects-filter .app-select-trigger:focus { outline: 0; }
+.projects-filter .app-select-chevron { flex: 0 0 auto; width: 17px; height: 17px; color: var(--primary); }
+.projects-filter .app-select-menu { position: absolute; z-index: 80; top: calc(100% + 8px); right: -14px; left: -14px; max-height: 260px; overflow-y: auto; border: 1px solid #cbdde3; border-radius: 12px; padding: 6px; background: #fff; box-shadow: 0 16px 34px rgba(20, 54, 72, .18); }
+.projects-filter .app-select-menu button { display: block; width: 100%; border: 0; border-radius: 8px; padding: 10px 11px; color: var(--text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.projects-filter .app-select-menu button:hover { background: #edf5f8; }
+.projects-filter .app-select-menu button.is-selected { color: #fff; background: var(--primary); }
+
+.panel-index-card { cursor: pointer; }
+.panel-index-card-code { display: block; margin: -7px 0 15px; color: #46708a; direction: ltr; font-weight: 800; }
+
 @media (max-width: 600px) {
 
     .projects-header {
@@ -501,31 +514,11 @@
 
     .projects-filter {
 
-        position: relative;
+        flex: 1 1 170px;
 
-        flex: 0 0 48px;
+        width: auto;
 
-        width: 48px;
-
-        padding: 0;
-
-        justify-content: center;
-
-    }
-
-    .projects-filter select {
-
-        position: absolute;
-
-        inset: 0;
-
-        width: 100%;
-
-        min-width: 0;
-
-        opacity: 0;
-
-        cursor: pointer;
+        min-width: 150px;
 
     }
 
@@ -662,7 +655,7 @@
 }
 
 .project-folder-page {
-    padding: 18px 30px 30px;
+    padding: 0;
     max-width: 1500px;
     margin: auto
 }
@@ -702,23 +695,20 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-}
-
-.project-code-copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    border: 0;
+    border-radius: 999px;
     min-height: 34px;
-    padding: 5px 9px;
-    border: 1px solid #cbdde7;
-    border-radius: 9px;
-    background: #fff;
+    padding: 0 13px;
+    background: #eef6fa;
     color: #315d75;
     font: inherit;
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 16px;
     cursor: pointer;
 }
+
+.project-folder-code-wrap:hover { background: #e2f0f6; }
+.project-folder-code-wrap .project-folder-code { background: transparent; padding: 0; }
+.project-folder-code-wrap > svg { flex: 0 0 auto; margin-inline-end: 1px; }
 
 .project-folder-actions {
     display: flex;
@@ -727,13 +717,26 @@
 }
 
 .project-submit-action {
+    position: relative;
     display: grid;
-    gap: 5px;
 }
 
 .project-submit-action .form-field-error {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5;
+    width: max-content;
     max-width: 260px;
+    margin: 0;
+    border: 1px solid #f2b6bb;
+    border-radius: 9px;
+    padding: 6px 9px;
+    background: #fff7f7;
+    box-shadow: 0 8px 20px rgba(122, 26, 34, .12);
 }
+
+.project-folder-actions .submit.is-disabled { opacity: .55; cursor: not-allowed; }
 
 .project-folder-actions button,
 .empty-panel-folder button {
@@ -968,7 +971,7 @@
 
 @media(max-width:700px) {
     .project-folder-page {
-        padding: 16px
+        padding: 0
     }
 
     .project-folder-header {
@@ -1860,10 +1863,11 @@ textarea[aria-invalid="true"] {
     background: #fff;
     box-shadow: 0 24px 70px rgba(15, 31, 45, .24);
     text-align: right;
+    direction: rtl;
 }
 
 .project-delete-dialog h2 { margin: 0 0 10px; color: #162f43; }
 .project-delete-dialog p { margin: 0 0 22px; color: #687786; line-height: 1.8; }
-.project-delete-dialog > div { display: flex; gap: 10px; }
+.project-delete-dialog > div { display: flex; flex-direction: row; gap: 10px; direction: rtl; }
 .project-delete-dialog button { flex: 1; min-height: 46px; border: 1px solid #d8e2e8; border-radius: 11px; background: #fff; color: #324f62; font: inherit; font-weight: 900; cursor: pointer; }
 .project-delete-dialog button.danger { border-color: #c92d3b; background: #c92d3b; color: #fff; }

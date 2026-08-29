@@ -1,5 +1,14 @@
 const models = require("../../models/users")
 
+const managedRole = (manager) => manager.role === "MarketingManager"
+    ? "Marketer"
+    : manager.role === "ProductionManager"
+        ? "Engineer"
+        : null;
+
+const canManageTarget = (manager, targetUser) => manager.role === "OwnerManager"
+    || Boolean(targetUser && managedRole(manager) === targetUser.role);
+
 const getUsers = async (req, res, next) => {
     try {
         const user = req.user;
@@ -8,10 +17,10 @@ const getUsers = async (req, res, next) => {
                 isDeleted: false
             })
             return res.status(200).json(users)
-        } else if (user.role === "MarketingManager") {
+        } else if (managedRole(user)) {
             const users = await models.selectall({
                 isDeleted: false,
-                role: "Marketer"
+                role: managedRole(user)
             })
             return res.status(200).json(users)
         } else {
@@ -34,10 +43,11 @@ const getDeletedUsers = async (req, res, next) => {
                 isDeleted: true
             })
             return res.status(200).json(users)
-        } else if (user.role === "MarketingManager") {
+        } else if (managedRole(user)) {
             const users = await models.selectall({
-                role: "Marketer",
-                isDeleted: true
+                role: managedRole(user),
+                isDeleted: true,
+                deletedBy: user._id
             })
             return res.status(200).json(users)
         } else {
@@ -58,6 +68,7 @@ const updateUser = async (req, res, next) => {
         const userId = req.params.id;
         const user = { id: userId, ...req.body };
         const targetUser = await models.select_one({ _id: userId })
+        if (!targetUser) return res.status(404).json({ status: "error", message: "User not found." });
         if (
             user.name === targetUser.name &&
             user.email === targetUser.email &&
@@ -91,7 +102,7 @@ const updateUser = async (req, res, next) => {
                 status: "ok",
                 message: "user update",
             })
-        } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
+        } else if (canManageTarget(manager, targetUser)) {
             const queryResult = await models.update(user);
             if (queryResult === null) {
                 return res.status(404).json({
@@ -119,6 +130,7 @@ const deleteUser = async (req, res, next) => {
         const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
+        if (!targetUser) return res.status(404).json({ status: "error", message: "User not found." });
         if (targetUser.isDeleted) {
             return res.status(409).json({
                 status: "error",
@@ -126,7 +138,7 @@ const deleteUser = async (req, res, next) => {
             });
         }
         if (manager.role === "OwnerManager") {
-            const result = await models.deleteOne(userId);
+            const result = await models.deleteOne(userId, manager._id);
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
@@ -137,8 +149,8 @@ const deleteUser = async (req, res, next) => {
                 status: "ok",
                 message: "user is deleted",
             })
-        } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
-            const result = await models.deleteOne(userId);
+        } else if (canManageTarget(manager, targetUser)) {
+            const result = await models.deleteOne(userId, manager._id);
             if (result === null) {
                 return res.status(409).json({
                     status: "error",
@@ -165,6 +177,7 @@ const restoreUser = async (req, res, next) => {
         const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
+        if (!targetUser) return res.status(404).json({ status: "error", message: "User not found." });
         if (!targetUser.isDeleted) {
             return res.status(409).json({
                 status: "error",
@@ -183,7 +196,7 @@ const restoreUser = async (req, res, next) => {
                 status: "ok",
                 message: "user restored",
             })
-        } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
+        } else if (canManageTarget(manager, targetUser) && String(targetUser.deletedBy || "") === String(manager._id)) {
             const result = await models.restore(userId);
             if (result === null) {
                 return res.status(409).json({
@@ -210,9 +223,9 @@ const deleteUserForever = async (req, res, next) => {
     try {
         const manager = req.user;
         const userId = req.params.id;
-        if (manager.role !== "OwnerManager") {
-            return res.status(403).json({ status: "error", message: "you are not admin" });
-        }
+        const targetUser = await models.select_one({ _id: userId, isDeleted: true });
+        const ownsDeletion = targetUser && canManageTarget(manager, targetUser) && String(targetUser.deletedBy || "") === String(manager._id);
+        if (manager.role !== "OwnerManager" && !ownsDeletion) return res.status(403).json({ status: "error", message: "you are not admin" });
         if (String(manager._id) === String(userId)) {
             return res.status(400).json({ status: "error", message: "You cannot permanently delete your own account." });
         }

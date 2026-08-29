@@ -80,17 +80,17 @@ const update = async (user, { allowRole = false } = {}) => {
     return queryResult;
 }
 
-const deleteOne = async (userId) => {
+const deleteOne = async (userId, deletedBy = null) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     const user = await openconnection.findByIdAndUpdate(userId,
-        { isDeleted: true }
+        { isDeleted: true, deletedAt: new Date(), deletedBy }
     );
     return user;
 }
 const restore = async (userId) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     const user = await openconnection.findByIdAndUpdate(userId,
-        { isDeleted: false }
+        { isDeleted: false, deletedAt: null, deletedBy: null }
     );
     return user;
 }

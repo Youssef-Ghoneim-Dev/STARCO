@@ -5,6 +5,7 @@ import {
 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
@@ -128,13 +129,13 @@ function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProje
         </div>
       </div>
       {deleting && <div className="project-card-delete-progress" role="status">جاري نقل المشروع إلى سلة المحذوفات...</div>}
-      {confirmDelete && <div className="project-delete-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby={`delete-project-${project._id}`} onClick={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) setConfirmDelete(false); }}>
-        <div className="project-delete-dialog" onClick={(event) => event.stopPropagation()}>
+      {confirmDelete && createPortal(<div className="project-delete-modal-backdrop" dir="rtl" role="dialog" aria-modal="true" aria-labelledby={`delete-project-${project._id}`} onClick={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) setConfirmDelete(false); }}>
+        <div className="project-delete-dialog" dir="rtl" onClick={(event) => event.stopPropagation()}>
           <h2 id={`delete-project-${project._id}`}>حذف المشروع؟</h2>
           <p>سيُنقل مشروع <strong>{project.client?.name || "هذا العميل"}</strong> إلى سلة المحذوفات، ويمكن استعادته لاحقًا.</p>
           <div><button type="button" onClick={() => setConfirmDelete(false)}>إلغاء</button><button type="button" className="danger" onClick={handleDelete}>نقل إلى السلة</button></div>
         </div>
-      </div>}
+      </div>, document.body)}
     </div>
   );
 }

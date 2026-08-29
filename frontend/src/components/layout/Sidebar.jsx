@@ -22,7 +22,8 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const { user } = useAuth();
 
   const role = user?.role;
-  const canUseRecycleBin = ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(role);
+  const canUseRecycleBin = Boolean(role);
+  const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
   const canViewProjects = true;
 
   const logout = () => {
@@ -59,7 +60,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
 
           {canViewProjects && (
             <>
-              {role === "OwnerManager" && (
+              {canManageUsers && (
                 <>
                   <NavLink to="/users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUsers />Users</NavLink>
                   <NavLink to="/pending-users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUsers />Pending Users</NavLink>
@@ -128,7 +129,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
         {(role === "Engineer" || role === "OwnerManager") && (
           <NavLink className="mobile-client-link" to="/clients" onClick={onClose}><HiOutlineUsers /><span>Clients</span></NavLink>
         )}
-        {role === "OwnerManager" && (
+        {canManageUsers && (
           <NavLink to="/pending-users" onClick={onClose}><HiOutlineUsers /><span>Pending</span></NavLink>
         )}
         {(role === "Engineer" || role === "OwnerManager") && (

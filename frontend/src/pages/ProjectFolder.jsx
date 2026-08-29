@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiArrowRight, FiCheck, FiCopy, FiPlus, FiRefreshCw, FiSearch, FiSend } from "react-icons/fi";
@@ -62,13 +62,16 @@ export default function ProjectFolder() {
   const { readProject } = useNotifications();
   const [project, setProject] = useState(null); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [busy, setBusy] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showSubmitError, setShowSubmitError] = useState(false);
+  const submitErrorTimer = useRef(null);
   const load = useCallback(async () => { setLoading(true); try { const { data } = await getProject(id); setProject(data); } catch (error) { toast.error(error.response?.data?.message || "تعذر فتح المشروع."); } finally { setLoading(false); } }, [id]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { readProject(id); }, [id, readProject]);
+  useEffect(() => () => window.clearTimeout(submitErrorTimer.current), []);
   if (loading || !project) return <DashboardLayout notAllowed={false}><div className="route-loading">جاري تحميل المشروع...</div></DashboardLayout>;
   const isOwner = user?.role === "OwnerManager"; const marketerDraft = user?.role === "Marketer" && project.status === "draft"; const marketerEditing = user?.role === "Marketer" && project.marketingEditSession?.active; const manualEngineer = user?.role === "Engineer" && project.source === "manual"; const canAdd = isOwner || marketerDraft || marketerEditing || manualEngineer;
   const visiblePanels = (project.panels || []).filter((panel) => !query.trim() || `${panel.panelName} ${panel.panelCode}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const add = async () => { setBusy(true); try { const { data } = await createPanel(id, {}); navigate(`/projects/${id}/panels/${data.panel._id}`); } catch (error) { toast.error(error.response?.data?.message || "تعذر إضافة اللوحة."); } finally { setBusy(false); } };
+  const add = async () => { setShowSubmitError(false); setBusy(true); try { const { data } = await createPanel(id, {}); navigate(`/projects/${id}/panels/${data.panel._id}`); } catch (error) { toast.error(error.response?.data?.message || "تعذر إضافة اللوحة."); } finally { setBusy(false); } };
   const remove = async (panel) => { try { await deletePanelRecord(id, panel._id); setProject((current) => ({ ...current, panels: current.panels.filter((item) => item._id !== panel._id) })); } catch (error) { toast.error(error.response?.data?.message || "تعذر حذف اللوحة."); } };
   const submit = async () => { setBusy(true); try { const { data } = await submitMarketingProject(id); setProject(data.project); if (data.notified === 0 || data.notificationFailed > 0) toast.error(data.notificationMessage || "تم إرسال المشروع، لكن لم تصل رسالة WhatsApp لأي مهندس."); } catch (error) { toast.error(error.response?.data?.message || "تعذر إرسال المشروع."); } finally { setBusy(false); } };
   const quoteReadyStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
@@ -76,12 +79,22 @@ export default function ProjectFolder() {
   const generatePreview = async () => { setBusy(true); try { const { data } = await completeProject(id); await navigator.clipboard.writeText(data.previewUrl); toast.success(data.notified ? "تم حفظ المشروع وإرساله للمندوب بنجاح." : "تم حفظ المشروع وإصدار رابط المعاينة بنجاح."); if (data.notificationMessage) toast.error(data.notificationMessage, { duration: 7000 }); await load(); } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ المشروع وإرساله للمندوب."); } finally { setBusy(false); } };
   const needsSetup = project.status === "created" && ["Engineer", "OwnerManager"].includes(user?.role);
   const copyProjectCode = async () => {
-    await navigator.clipboard.writeText(project.projectCode);
-    setCodeCopied(true);
-    window.setTimeout(() => setCodeCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(project.projectCode);
+      setCodeCopied(true);
+      window.setTimeout(() => setCodeCopied(false), 1600);
+    } catch { toast.error("تعذر نسخ رقم المشروع."); }
   };
-  const hasPanels = Boolean(project.panels?.length);
-  return <DashboardLayout notAllowed={false}><main className="project-folder-page" dir="rtl"><button type="button" className="project-folder-back" onClick={() => navigate("/projects")}><FiArrowRight /> الرجوع للمشاريع</button>{needsSetup ? <ProjectSetup project={project} onComplete={setProject} /> : <><header className="project-folder-header"><div><span className="project-folder-code-wrap"><bdi className="project-folder-code" dir="ltr">{project.projectCode}</bdi><button type="button" className="project-code-copy" onClick={copyProjectCode} aria-label="نسخ رقم المشروع">{codeCopied ? <FiCheck /> : <FiCopy />}{codeCopied ? "تم النسخ" : "نسخ"}</button></span><h1>{project.client?.name || "مشروع بدون عميل"}</h1><p>{project.panelCount || 0} لوحة · {projectStates[project.status]}</p></div><div className="project-folder-actions"><button type="button" onClick={load} disabled={busy}><FiRefreshCw /> تحديث</button>{canAdd && <button type="button" className="primary" onClick={add} disabled={busy}><FiPlus /> لوحة جديدة</button>}{canGeneratePreview && <button type="button" className="primary" onClick={generatePreview} disabled={busy}><FiSend /> {busy ? "جاري حفظ المشروع وإرساله..." : "حفظ المشروع وإرساله للمندوب"}</button>}{marketerDraft && <span className="project-submit-action"><button type="button" className="submit" onClick={submit} disabled={busy || !hasPanels} aria-describedby={!hasPanels ? "project-submit-error" : undefined}><FiSend /> {busy ? "جاري إرسال المشروع..." : "إرسال المشروع للمهندسين"}</button>{!hasPanels && <small id="project-submit-error" className="form-field-error">يجب إضافة لوحة واحدة على الأقل قبل الإرسال.</small>}</span>}</div></header>
+  const panelsList = project.panels || [];
+  const hasSavedPanels = panelsList.length > 0 && panelsList.every((panel) => panel.marketerSaved);
+  const submitErrorMessage = panelsList.length === 0 ? "يجب إضافة لوحة واحدة على الأقل وحفظ بياناتها قبل الإرسال." : "يجب حفظ بيانات جميع اللوحات قبل إرسال المشروع للمهندسين.";
+  const showTimedSubmitError = () => {
+    window.clearTimeout(submitErrorTimer.current);
+    setShowSubmitError(true);
+    submitErrorTimer.current = window.setTimeout(() => setShowSubmitError(false), 3000);
+  };
+  const trySubmit = () => { if (!hasSavedPanels) { showTimedSubmitError(); return; } setShowSubmitError(false); submit(); };
+  return <DashboardLayout notAllowed={false}><main className="project-folder-page" dir="rtl"><button type="button" className="project-folder-back" onClick={() => navigate("/projects")}><FiArrowRight /> الرجوع للمشاريع</button>{needsSetup ? <ProjectSetup project={project} onComplete={setProject} /> : <><header className="project-folder-header"><div><button type="button" className="project-folder-code-wrap" onClick={copyProjectCode} aria-label={`نسخ رقم المشروع ${project.projectCode}`}>{codeCopied ? <FiCheck /> : <FiCopy />}<bdi className="project-folder-code" dir="ltr">{project.projectCode}</bdi></button><h1>{project.client?.name || "مشروع بدون عميل"}</h1><p>{project.panelCount || 0} لوحة · {projectStates[project.status]}</p></div><div className="project-folder-actions"><button type="button" onClick={load} disabled={busy}><FiRefreshCw /> تحديث</button>{canAdd && <button type="button" className="primary" onClick={add} disabled={busy}><FiPlus /> لوحة جديدة</button>}{canGeneratePreview && <button type="button" className="primary" onClick={generatePreview} disabled={busy}><FiSend /> {busy ? "جاري حفظ المشروع وإرساله..." : "حفظ المشروع وإرساله للمندوب"}</button>}{marketerDraft && <span className="project-submit-action"><button type="button" className={`submit${!hasSavedPanels ? " is-disabled" : ""}`} onClick={trySubmit} disabled={busy} aria-disabled={!hasSavedPanels} aria-describedby={showSubmitError && !hasSavedPanels ? "project-submit-error" : undefined}><FiSend /> {busy ? "جاري إرسال المشروع..." : "إرسال المشروع للمهندسين"}</button>{showSubmitError && !hasSavedPanels && <small id="project-submit-error" className="form-field-error">{submitErrorMessage}</small>}</span>}</div></header>
     {marketerDraft && <aside className="project-submit-reminder">بعد الانتهاء من إضافة اللوحات اضغط «إرسال المشروع للمهندسين». لن يظهر المشروع للمهندسين قبل الإرسال.</aside>}
     <div className="project-panels-toolbar"><h2>Panels</h2><label><FiSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ابحث باسم أو رقم اللوحة" /></label></div>
     {visiblePanels.length ? <section className="panel-folder-grid">{visiblePanels.map((panel) => <PanelCard key={panel._id} panel={panel} onOpen={() => navigate(`/projects/${id}/panels/${panel._id}`)} canDelete={isOwner || (marketerDraft && panel.status === "draft")} onDelete={() => remove(panel)} />)}</section> : <section className="empty-panel-folder"><h2>لا توجد لوحات داخل المشروع</h2><p>ابدأ بإضافة أول لوحة، ثم احفظ بياناتها قبل إرسال المشروع.</p>{canAdd && <button type="button" onClick={add}><FiPlus /> إضافة لوحة</button>}</section>}</>}

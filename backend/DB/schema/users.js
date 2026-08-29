@@ -30,7 +30,9 @@ const userSchema = new mongoose.Schema({
     whatsappOptInRequired: { type: Boolean, default: false },
     whatsappOptInVerifiedAt: { type: Date, default: null },
     whatsappOptInMessageId: { type: String, default: null },
-    isDeleted: { type: Boolean, default: false, required: true }
+    isDeleted: { type: Boolean, default: false, required: true },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
 })
 
 userSchema.index(

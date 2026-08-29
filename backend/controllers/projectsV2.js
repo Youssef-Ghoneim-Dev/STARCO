@@ -266,22 +266,25 @@ const removeProject = async (req, res, next) => { try {
 } catch (error) { next(error); } };
 
 const getDeletedProjects = async (req, res, next) => { try {
-    if (!isOwner(req.user)) return res.status(403).json({ status: "error", message: "سلة المشاريع متاحة للـOwner Manager فقط." });
-    const deleted = await projects.find({ isDeleted: true });
+    const condition = { isDeleted: true };
+    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+    const deleted = await projects.find(condition);
     res.json(await Promise.all(deleted.map((project) => hydrate(project, true, req.user))));
 } catch (error) { next(error); } };
 
 const restoreProject = async (req, res, next) => { try {
-    if (!isOwner(req.user)) return res.status(403).json({ status: "error", message: "استعادة المشاريع متاحة للـOwner Manager فقط." });
-    const project = await projects.update({ _id: req.params.id, isDeleted: true }, { isDeleted: false, deletedAt: null, deletedBy: null });
+    const condition = { _id: req.params.id, isDeleted: true };
+    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+    const project = await projects.update(condition, { isDeleted: false, deletedAt: null, deletedBy: null });
     if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
     await panels.updateMany({ projectId: project._id }, { $set: { isDeleted: false, deletedAt: null, deletedBy: null } });
     res.json({ status: "ok", project: await hydrate(project, false, req.user) });
 } catch (error) { next(error); } };
 
 const permanentlyDeleteProject = async (req, res, next) => { try {
-    if (!isOwner(req.user)) return res.status(403).json({ status: "error", message: "الحذف النهائي متاح للـOwner Manager فقط." });
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: true });
+    const condition = { _id: req.params.id, isDeleted: true };
+    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+    const project = await projects.findOne(condition);
     if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
     const projectPanels = await panels.find({ projectId: project._id });
     const storageIds = projectPanels.flatMap((panel) => [

@@ -9,6 +9,7 @@ import "../styles/management.css";
 
 function DeletedProjects() {
   const { user } = useAuth();
+  const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
   const [activeTab, setActiveTab] = useState("projects");
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ function DeletedProjects() {
           </div>
         </div>
 
-        {user?.role === "OwnerManager" && <div className="recycle-bin-tabs"><button type="button" className={activeTab === "projects" ? "active" : ""} onClick={() => setActiveTab("projects")}>المشاريع</button><button type="button" className={activeTab === "users" ? "active" : ""} onClick={() => setActiveTab("users")}>المستخدمون</button></div>}
+        {canManageUsers && <div className="recycle-bin-tabs"><button type="button" className={activeTab === "projects" ? "active" : ""} onClick={() => setActiveTab("projects")}>المشاريع</button><button type="button" className={activeTab === "users" ? "active" : ""} onClick={() => setActiveTab("users")}>المستخدمون</button></div>}
 
         {activeTab === "users" ? <DeletedUsersList /> : loading ? <p className="management-empty">جاري التحميل...</p> : projects.length === 0 ? (
           <p className="management-empty">لا توجد مشاريع محذوفة.</p>

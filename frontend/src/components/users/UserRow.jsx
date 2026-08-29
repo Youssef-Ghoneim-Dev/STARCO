@@ -13,6 +13,7 @@ function UserRow({ user, reload, mode }) {
   const [editing, setEditing] = useState(false);
   const [profile, setProfile] = useState({ name: user.name, phoneNumber: user.phoneNumber || "" });
   const { user: currentUser } = useAuth();
+  const availableRoles = currentUser?.role === "OwnerManager" ? roles : [user.role];
   const isPending = mode === "pending";
   const isCurrentUser = String(currentUser?.id || currentUser?._id || "") === String(user._id);
   const whatsappUrl = user.phoneNumber ? `https://wa.me/${String(user.phoneNumber).replace(/\D/g, "")}` : null;
@@ -55,7 +56,7 @@ function UserRow({ user, reload, mode }) {
 
       <span>{user.email}</span>
       <span className="phone-value">{user.phoneNumber || "—"}</span>
-      <div className="role-editor"><select value={role} onChange={(event) => changeRole(event.target.value)} disabled={user.isDeleted || saving || isCurrentUser}>{roles.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
+      <div className="role-editor"><select value={role} onChange={(event) => changeRole(event.target.value)} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"}>{availableRoles.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
 
       <div className="users-actions">
         {!user.isDeleted && !isCurrentUser && <button type="button" className="edit-user-btn" onClick={() => setEditing(true)} aria-label="Edit user"><HiOutlinePencil /></button>}

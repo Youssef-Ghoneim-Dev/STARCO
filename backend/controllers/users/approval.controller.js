@@ -1,4 +1,6 @@
 const models = require("../../models/users")
+const managedRole = (manager) => manager.role === "MarketingManager" ? "Marketer" : manager.role === "ProductionManager" ? "Engineer" : null;
+const canManageTarget = (manager, targetUser) => manager.role === "OwnerManager" || Boolean(targetUser && managedRole(manager) === targetUser.role);
 const getPendingUsers = async (req, res, next) => {
     try {
         const user = req.user;
@@ -8,10 +10,10 @@ const getPendingUsers = async (req, res, next) => {
                 isDeleted: false
             })
             return res.status(200).json(users)
-        } else if (user.role === "MarketingManager") {
+        } else if (managedRole(user)) {
             const users = await models.selectall({
                 approved: false,
-                role: "Marketer",
+                role: managedRole(user),
                 isDeleted: false,
             })
             return res.status(200).json(users)
@@ -32,6 +34,7 @@ const approveUser = async (req, res, next) => {
         const manager = req.user
         const userId = req.params.id;
         const targetUser = await models.select_one({ _id: userId })
+        if (!targetUser) return res.status(404).json({ status: "error", message: "User not found." });
         if (targetUser.approved) {
             return res.status(409).json({
                 status: "error",
@@ -50,7 +53,7 @@ const approveUser = async (req, res, next) => {
                 status: "ok",
                 message: "user approved",
             })
-        } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
+        } else if (canManageTarget(manager, targetUser)) {
             const result = await models.approve(userId);
             if (result === null) {
                 return res.status(409).json({
@@ -98,7 +101,7 @@ const deletePendingUser = async (req, res, next) => {
                 status: "ok",
                 message: "user is deleted",
             })
-        } else if (manager.role === "MarketingManager" && targetUser.role === "Marketer") {
+        } else if (canManageTarget(manager, targetUser)) {
             const deletedUser = await models.deleteForever({
                 _id: userId,
                 approved: false
