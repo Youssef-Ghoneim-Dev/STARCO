@@ -465,8 +465,38 @@
 .projects-filter .app-select-menu button:hover { background: #edf5f8; }
 .projects-filter .app-select-menu button.is-selected { color: #fff; background: var(--primary); }
 
-.panel-index-card { cursor: pointer; }
-.panel-index-card-code { display: block; margin: -7px 0 15px; color: #46708a; direction: ltr; font-weight: 800; }
+.panels-index-grid { align-items: stretch; }
+.panel-index-card {
+    position: relative;
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    min-height: 300px;
+    padding: 24px;
+    overflow: hidden;
+    border: 1px solid #d6e2e9;
+    border-radius: 22px;
+    background: linear-gradient(145deg, #fff 0%, #fff 70%, #f1f7fa 100%);
+    box-shadow: 0 8px 24px rgba(34, 72, 94, .06);
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.panel-index-card::after { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 5px; background: #376d88; }
+.panel-index-card:hover { transform: translateY(-4px); border-color: #a9c6d5; box-shadow: 0 16px 34px rgba(34, 72, 94, .12); }
+.panel-index-card:focus-visible { outline: 3px solid rgba(55, 109, 136, .24); outline-offset: 3px; }
+.panel-index-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.panel-index-card-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; color: #376d88; background: #e8f2f7; font-size: 27px; }
+.panel-index-card-title { display: grid; gap: 7px; }
+.panel-index-card-title h3 { margin: 0; color: #112b3f; font-size: clamp(1.2rem, 2vw, 1.55rem); line-height: 1.45; }
+.panel-index-card-title code { width: fit-content; max-width: 100%; color: #46708a; direction: ltr; font-family: inherit; font-weight: 900; overflow-wrap: anywhere; }
+.panel-index-card-project { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 13px 14px; border-radius: 14px; color: #41657b; background: #f3f8fa; }
+.panel-index-card-project > svg { flex: 0 0 auto; width: 22px; height: 22px; }
+.panel-index-card-project > div { display: grid; min-width: 0; gap: 3px; }
+.panel-index-card-project span { color: #748591; font-size: 12px; font-weight: 700; }
+.panel-index-card-project strong { overflow: hidden; color: #203f53; text-overflow: ellipsis; white-space: nowrap; }
+.panel-index-card-dates { display: grid; gap: 9px; margin-top: auto; padding-top: 15px; border-top: 1px solid #e2ebf0; color: #697b88; font-size: 13px; font-weight: 700; }
+.panel-index-card-dates > div { display: flex; align-items: center; gap: 8px; }
+.panel-index-card-dates svg { flex: 0 0 auto; width: 18px; height: 18px; color: #52778d; }
 
 @media (max-width: 600px) {
 

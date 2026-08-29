@@ -1,6 +1,5 @@
-import { HiOutlineCalendar, HiOutlineClock } from "react-icons/hi";
+import { HiOutlineCalendar, HiOutlineClock, HiOutlineFolder, HiOutlineViewGrid } from "react-icons/hi";
 import { getPanelNameDirection } from "../../utils/panelNameDirection";
-import projectImage from "../../assets/images/1.svg";
 
 const statusDetails = {
   draft: ["Draft", "editing"],
@@ -31,19 +30,22 @@ export default function PanelIndexCard({ panel, onOpen }) {
   const [statusLabel, statusClass] = statusDetails[panel.status] || [panel.status || "Unknown", "pending"];
   const name = panel.panelName || panel.panelCode || "Panel";
   const clientName = panel.project?.client?.name || "Client not specified";
-  return <article className="project-card panel-index-card" onClick={onOpen} role="button" tabIndex="0" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen(); }}>
-    <div className="project-image">
-      <img src={projectImage} alt="Panel" />
-      <div className="project-client-badge" dir="auto">{clientName}</div>
+  return <article className="panel-index-card" onClick={onOpen} role="button" tabIndex="0" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen(); }}>
+    <header className="panel-index-card-header">
+      <span className="panel-index-card-icon"><HiOutlineViewGrid /></span>
+      <span className={`project-status-badge ${statusClass}`}>{statusLabel}</span>
+    </header>
+    <div className="panel-index-card-title">
+      <h3><bdi dir={getPanelNameDirection(name)}>{name}</bdi></h3>
+      <code>{panel.panelCode || "—"}</code>
     </div>
-    <div className="project-body">
-      <div className="project-title-row">
-        <h3><bdi dir={getPanelNameDirection(name)}>{name}</bdi></h3>
-        <span className={`project-status-badge ${statusClass}`}>{statusLabel}</span>
-      </div>
-      <code className="panel-index-card-code">{panel.panelCode}</code>
-      <div className="project-date"><HiOutlineCalendar /><span>Created: {formatDate(panel.createdAt)}</span></div>
-      <div className="project-date"><HiOutlineClock /><span>Last updated: {formatDate(panel.updatedAt)}</span></div>
+    <div className="panel-index-card-project">
+      <HiOutlineFolder />
+      <div><span>Project / Client</span><strong dir="auto">{panel.project?.projectCode || "—"} · {clientName}</strong></div>
     </div>
+    <footer className="panel-index-card-dates">
+      <div><HiOutlineCalendar /><span>Created: {formatDate(panel.createdAt)}</span></div>
+      <div><HiOutlineClock /><span>Last updated: {formatDate(panel.updatedAt)}</span></div>
+    </footer>
   </article>;
 }

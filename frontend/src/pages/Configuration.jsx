@@ -162,8 +162,12 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
 
 function Configuration() {
   const { user } = useAuth();
-  const canManagePricing = user?.role === "OwnerManager" || user?.role === "Engineer";
+  const canManagePricing = ["OwnerManager", "Engineer", "ProductionManager"].includes(user?.role);
+  const canEditFormulas = ["OwnerManager", "ProductionManager"].includes(user?.role);
+  const canManageCopper = ["OwnerManager", "ProductionManager"].includes(user?.role);
+  const canManageTemplates = ["OwnerManager", "MarketingManager"].includes(user?.role);
   const isOwner = user?.role === "OwnerManager";
+  const canAccessConfiguration = canManagePricing || canManageTemplates;
   const [config, setConfig] = useState(defaultConfig);
   const [templates, setTemplates] = useState({ startProject: "", panel: "" });
   const [loading, setLoading] = useState(true);
@@ -173,20 +177,23 @@ function Configuration() {
   const [connectingDrive, setConnectingDrive] = useState(false);
 
   useEffect(() => {
-    if (!canManagePricing) return;
-    const requests = [getSystemConfiguration()];
-    if (isOwner) requests.push(getWhatsappTemplates(), getGoogleDriveStatus());
-
-    Promise.all(requests)
+    if (!canAccessConfiguration) return;
+    Promise.all([
+      canManagePricing ? getSystemConfiguration() : Promise.resolve(null),
+      canManageTemplates ? getWhatsappTemplates() : Promise.resolve(null),
+      isOwner ? getGoogleDriveStatus() : Promise.resolve(null),
+    ])
       .then(([configurationResponse, templatesResponse, driveResponse]) => {
-        const incoming = configurationResponse.data || {};
-        setConfig({ ...defaultConfig, ...incoming, prices: { ...defaultConfig.prices, ...(incoming.prices || {}) }, parts: { chair: { ...defaultConfig.parts.chair, ...(incoming.parts?.chair || {}) }, omega: { ...defaultConfig.parts.omega, ...(incoming.parts?.omega || {}) } }, panelTypes: incoming.panelTypes || [], copperConfiguration: { ...defaultConfig.copperConfiguration, ...(incoming.copperConfiguration || {}), branchLengths: { ...defaultConfig.copperConfiguration.branchLengths, ...(incoming.copperConfiguration?.branchLengths || {}) } } });
+        if (configurationResponse) {
+          const incoming = configurationResponse.data || {};
+          setConfig({ ...defaultConfig, ...incoming, prices: { ...defaultConfig.prices, ...(incoming.prices || {}) }, parts: { chair: { ...defaultConfig.parts.chair, ...(incoming.parts?.chair || {}) }, omega: { ...defaultConfig.parts.omega, ...(incoming.parts?.omega || {}) } }, panelTypes: incoming.panelTypes || [], copperConfiguration: { ...defaultConfig.copperConfiguration, ...(incoming.copperConfiguration || {}), branchLengths: { ...defaultConfig.copperConfiguration.branchLengths, ...(incoming.copperConfiguration?.branchLengths || {}) } } });
+        }
         if (templatesResponse) setTemplates(templatesResponse.data);
         if (driveResponse) setDriveStatus(driveResponse.data);
       })
       .catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل الإعدادات."))
       .finally(() => setLoading(false));
-  }, [canManagePricing, isOwner]);
+  }, [canAccessConfiguration, canManagePricing, canManageTemplates, isOwner]);
 
   const savePricing = async (event) => {
     event?.preventDefault();
@@ -218,13 +225,14 @@ function Configuration() {
     catch (error) { setConnectingDrive(false); toast.error(error?.response?.data?.message || "تعذر بدء ربط Google Drive."); }
   };
 
-  if (!canManagePricing) return <DashboardLayout notAllowed><p className="configuration-denied">هذه الصفحة غير متاحة لحسابك.</p></DashboardLayout>;
+  if (!canAccessConfiguration) return <DashboardLayout notAllowed><p className="configuration-denied">هذه الصفحة غير متاحة لحسابك.</p></DashboardLayout>;
 
   return <DashboardLayout notAllowed><section className="configuration-page" dir="rtl">
     <div className="configuration-heading"><h1>الإعدادات</h1></div>
     {loading ? <div className="configuration-loading" role="status" aria-live="polite"><span className="configuration-loading-spinner" /><p>جاري تحميل الإعدادات...</p></div> : <>
-    <PanelTypesEditor panelTypes={config.panelTypes || []} canEditFormulas={isOwner} onChange={(panelTypes) => setConfig((current) => ({ ...current, panelTypes }))} onSave={savePricing} saving={savingPricing} />
-    {isOwner && <CopperConfigurationEditor configuration={config.copperConfiguration} onChange={(copperConfiguration) => setConfig((current) => ({ ...current, copperConfiguration }))} onSave={savePricing} saving={savingPricing} />}
+    {canManagePricing && <>
+    <PanelTypesEditor panelTypes={config.panelTypes || []} canEditFormulas={canEditFormulas} onChange={(panelTypes) => setConfig((current) => ({ ...current, panelTypes }))} onSave={savePricing} saving={savingPricing} />
+    {canManageCopper && <CopperConfigurationEditor configuration={config.copperConfiguration} onChange={(copperConfiguration) => setConfig((current) => ({ ...current, copperConfiguration }))} onSave={savePricing} saving={savingPricing} />}
     <form className="pricing-form" onSubmit={savePricing}>
       <h2>أسعار الخامات</h2>
       <div className="configuration-grid two-columns"><NumberField label="سعر الصاج" value={config.sheetPrice} onChange={(value) => setConfig((current) => ({ ...current, sheetPrice: value }))} /><NumberField label="سعر الدهان" value={config.paintPrice} onChange={(value) => setConfig((current) => ({ ...current, paintPrice: value }))} /></div>
@@ -234,10 +242,15 @@ function Configuration() {
       <div className="configuration-grid two-columns">{partSettings.map(([part, title]) => <fieldset className="part-settings" key={part}><legend>{title}</legend>{partFields.map(([key, label]) => <NumberField key={key} label={label} value={config.parts[part][key]} onChange={(value) => setConfig((current) => ({ ...current, parts: { ...current.parts, [part]: { ...current.parts[part], [key]: value } } }))} />)}</fieldset>)}</div>
       <button type="submit" disabled={loading || savingPricing}>{savingPricing ? "جاري الحفظ..." : "حفظ إعدادات التسعير"}</button>
     </form>
-    {isOwner && <><div className="configuration-heading configuration-subheading"><h2>قوالب WhatsApp</h2><p>هذه القوالب خاصة بمدير النظام فقط.</p></div>
-      <form className="template-form" onSubmit={saveTemplates}><label htmlFor="start-template">قالب بدء مشروع جديد</label><textarea id="start-template" value={templates.startProject} onChange={(event) => setTemplates((current) => ({ ...current, startProject: event.target.value }))} disabled={loading || savingTemplates} spellCheck="false" /><label htmlFor="panel-template">قالب بيانات اللوحة</label><textarea id="panel-template" value={templates.panel} onChange={(event) => setTemplates((current) => ({ ...current, panel: event.target.value }))} disabled={loading || savingTemplates} spellCheck="false" /><p className="template-note">يمكنك إضافة سطور إرشادية، لكن لا تحذف أوامر STARCO وأسماء الحقول الأساسية.</p><button type="submit" disabled={loading || savingTemplates}>{savingTemplates ? "جاري الحفظ..." : "حفظ القوالب"}</button></form>
-      <section className="drive-connection-card"><div><h2>حفظ مرفقات WhatsApp</h2><p>{driveStatus.connected ? "Google Drive مربوط وجاهز لحفظ الصور والتسجيلات." : driveStatus.needsReconnect ? "انتهى تصريح Google Drive. أعد ربط الحساب حتى تعمل الصور وملفات PDF من جديد." : "اربط حساب Google الشخصي لحفظ الصور والتسجيلات في مساحتك."}</p></div><button type="button" onClick={connectGoogleDrive} disabled={loading || connectingDrive}>{connectingDrive ? "جاري الفتح..." : driveStatus.connected || driveStatus.needsReconnect ? "إعادة ربط Google Drive" : "ربط Google Drive"}</button></section>
     </>}
+    {canManageTemplates && <><div className="configuration-heading configuration-subheading"><h2>قوالب WhatsApp</h2><p>قالب بدء المشروع وقالب بيانات اللوحة المستخدمان مع المندوبين.</p></div>
+      <form className="template-form whatsapp-template-editor" onSubmit={saveTemplates}>
+        <article className="whatsapp-template-card"><div className="whatsapp-template-card-heading"><div><span>قالب المشروع</span><strong>بدء مشروع جديد</strong></div><code dir="ltr">STARCO START</code></div><label htmlFor="start-template">نص القالب وحقوله</label><textarea id="start-template" value={templates.startProject} onChange={(event) => setTemplates((current) => ({ ...current, startProject: event.target.value }))} disabled={loading || savingTemplates} spellCheck="false" /></article>
+        <article className="whatsapp-template-card"><div className="whatsapp-template-card-heading"><div><span>قالب اللوحة</span><strong>إضافة بيانات لوحة</strong></div><code dir="ltr">STARCO PANEL</code></div><label htmlFor="panel-template">نص القالب وحقوله</label><textarea id="panel-template" value={templates.panel} onChange={(event) => setTemplates((current) => ({ ...current, panel: event.target.value }))} disabled={loading || savingTemplates} spellCheck="false" /></article>
+        <p className="template-note">يمكن تعديل الإرشادات، مع الاحتفاظ بأوامر STARCO وأسماء الحقول الأساسية حتى يقرأ النظام الرسائل بصورة صحيحة.</p><button type="submit" disabled={loading || savingTemplates}>{savingTemplates ? "جاري الحفظ..." : "حفظ قوالب WhatsApp"}</button>
+      </form>
+    </>}
+    {isOwner && <section className="drive-connection-card"><div><h2>حفظ مرفقات WhatsApp</h2><p>{driveStatus.connected ? "Google Drive مربوط وجاهز لحفظ الصور والتسجيلات." : driveStatus.needsReconnect ? "انتهى تصريح Google Drive. أعد ربط الحساب حتى تعمل الصور وملفات PDF من جديد." : "اربط حساب Google الشخصي لحفظ الصور والتسجيلات في مساحتك."}</p></div><button type="button" onClick={connectGoogleDrive} disabled={loading || connectingDrive}>{connectingDrive ? "جاري الفتح..." : driveStatus.connected || driveStatus.needsReconnect ? "إعادة ربط Google Drive" : "ربط Google Drive"}</button></section>}
     </>}
   </section></DashboardLayout>;
 }

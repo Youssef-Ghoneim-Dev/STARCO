@@ -116,7 +116,10 @@ const listAllPanels = async (req, res, next) => { try {
     list = list.filter((panel) => {
         const project = projectMap.get(String(panel.projectId));
         if (!project) return false;
-        return req.user.role !== "MarketingManager" || ["marketing", "whatsapp"].includes(project.source);
+        if (req.user.role === "MarketingManager") {
+            return project.status !== "draft" && ["marketing", "whatsapp"].includes(project.source);
+        }
+        return true;
     });
     res.json(list.map((panel) => {
         const project = projectMap.get(String(panel.projectId));

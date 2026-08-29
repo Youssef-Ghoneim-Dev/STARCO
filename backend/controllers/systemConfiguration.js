@@ -6,6 +6,9 @@ const googleDrive = require("../services/googleDrive");
 // CheckUserToken refreshes req.user from MongoDB. Using the JWT role here made
 // permissions stale after a user's role was edited by Owner Manager.
 const isOwnerManager = (req) => req.user?.role === "OwnerManager";
+const isProductionManager = (req) => req.user?.role === "ProductionManager";
+const canManagePricing = (req) => ["OwnerManager", "Engineer", "ProductionManager"].includes(req.user?.role);
+const canManageWhatsappTemplates = (req) => ["OwnerManager", "MarketingManager"].includes(req.user?.role);
 
 const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
     const requestedByKey = new Map(requestedTypes.map((type) => [type.key, type]));
@@ -36,7 +39,7 @@ const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
 
 const get = async (req, res, next) => {
     try {
-        if (["Marketer", "MarketingManager", "ProductionManager"].includes(req.user?.role)) {
+        if (["Marketer", "MarketingManager"].includes(req.user?.role)) {
             const config = await models.get();
             return res.status(200).json({
                 panelTypes: (config?.panelTypes || []).map((type) => ({
@@ -46,10 +49,7 @@ const get = async (req, res, next) => {
                 }))
             });
         }
-        if (
-            req.user?.role !== "OwnerManager" &&
-            req.user?.role !== "Engineer"
-        ) {
+        if (!canManagePricing(req)) {
             return res.status(403).json({
                 status: "error",
                 message: "You are not allowed"
@@ -66,10 +66,7 @@ const get = async (req, res, next) => {
 
 const update = async (req, res, next) => {
     try {
-        if (
-            req.user?.role !== "OwnerManager" &&
-            req.user?.role !== "Engineer"
-        ) {
+        if (!canManagePricing(req)) {
             return res.status(403).json({
                 status: "error",
                 message: "You are not allowed"
@@ -78,7 +75,7 @@ const update = async (req, res, next) => {
         const updateData = { ...req.body };
         // المهندس يعدّل الأسعار والأجزاء، لكن المعادلات وتعريف نوع اللوحة
         // يبقيان محفوظين كما حددهما Owner Manager.
-        if (!isOwnerManager(req)) {
+        if (!isOwnerManager(req) && !isProductionManager(req)) {
             const currentConfig = await models.get();
             updateData.panelTypes = sanitizeEngineerPanelTypes(currentConfig?.panelTypes || [], updateData.panelTypes || []);
             updateData.copperConfiguration = currentConfig?.copperConfiguration;
@@ -97,8 +94,8 @@ const update = async (req, res, next) => {
 
 const getWhatsappTemplates = async (req, res, next) => {
     try {
-        if (!isOwnerManager(req)) {
-            return res.status(403).json({ status: "error", message: "Only Owner Manager can manage WhatsApp templates" });
+        if (!canManageWhatsappTemplates(req)) {
+            return res.status(403).json({ status: "error", message: "You are not allowed to manage WhatsApp templates" });
         }
 
         const config = await models.get();
@@ -110,8 +107,8 @@ const getWhatsappTemplates = async (req, res, next) => {
 
 const updateWhatsappTemplates = async (req, res, next) => {
     try {
-        if (!isOwnerManager(req)) {
-            return res.status(403).json({ status: "error", message: "Only Owner Manager can manage WhatsApp templates" });
+        if (!canManageWhatsappTemplates(req)) {
+            return res.status(403).json({ status: "error", message: "You are not allowed to manage WhatsApp templates" });
         }
         if (!isValidTemplates(req.body)) {
             return res.status(400).json({

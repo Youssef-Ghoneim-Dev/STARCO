@@ -39,6 +39,6 @@ export default function Panels() {
   }), [panels, query, status]);
   return <DashboardLayout notAllowed>
     <ProjectsHeader query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} onRefresh={load} refreshing={loading} title="Panels" subtitle="Manage all your panels in one place." searchPlaceholder="Search by panel name..." statusOptions={panelStatuses} showCreate={false} />
-    {loading ? <div className="empty-projects">Loading...</div> : visible.length ? <section className="projects-grid">{visible.map((panel) => <PanelIndexCard key={panel._id} panel={panel} onOpen={() => navigate(`/projects/${panel.projectId}/panels/${panel._id}`)} />)}</section> : <div className="empty-projects">No panels found</div>}
+    {loading ? <div className="empty-projects">Loading...</div> : visible.length ? <section className="projects-grid panels-index-grid">{visible.map((panel) => <PanelIndexCard key={panel._id} panel={panel} onOpen={() => navigate(`/projects/${panel.projectId}/panels/${panel._id}`)} />)}</section> : <div className="empty-projects">No panels found</div>}
   </DashboardLayout>;
 }

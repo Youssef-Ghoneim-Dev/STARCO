@@ -26,7 +26,8 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const role = user?.role;
   const canUseRecycleBin = Boolean(role);
   const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
-  const canManageClients = ["OwnerManager", "Engineer", "Marketer", "MarketingManager"].includes(role);
+  const canManageClients = ["OwnerManager", "Engineer", "Marketer", "MarketingManager", "ProductionManager"].includes(role);
+  const canManageConfiguration = ["OwnerManager", "Engineer", "ProductionManager", "MarketingManager"].includes(role);
   const canViewProjects = true;
 
   const logout = () => {
@@ -90,7 +91,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
                   Recycle Bin
                 </NavLink>
               )}
-              {(role === "Engineer" || role === "OwnerManager") && (
+              {canManageConfiguration && (
                 <NavLink to="/configuration" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
                   <HiOutlineCog />
                   Configuration
@@ -134,7 +135,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
         {canManageUsers && (
           <NavLink to="/pending-users" onClick={onClose}><HiOutlineUserAdd /><span>Pending</span></NavLink>
         )}
-        {(role === "Engineer" || role === "OwnerManager") && (
+        {canManageConfiguration && (
           <NavLink to="/configuration" onClick={onClose}>
             <HiOutlineCog />
             <span>Settings</span>
