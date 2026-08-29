@@ -251,10 +251,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     ].includes(activePanel?.status) || hasPanelExecution;
   const marketerCanEdit =
     project?.status === "draft" ||
-    Boolean(
-      project?.marketingEditSession?.active &&
-      activePanel?.status === "editing",
-    );
+    Boolean(project?.marketingEditSession?.active);
   const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
   const claimedByAnotherEngineer =
     user?.role === "Engineer" && project?.readOnlyForCurrentUser;

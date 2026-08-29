@@ -2,7 +2,7 @@
 self.addEventListener("push", (event) => {
   let payload;
   try { payload = event.data?.json?.() || {}; } catch { payload = { body: event.data?.text?.() || "" }; }
-  event.waitUntil(self.registration.showNotification(payload.title || "STARCO Panels", {
+  event.waitUntil(Promise.all([self.registration.showNotification(payload.title || "STARCO Panels", {
     body: payload.body || "لديك تحديث جديد في المشروع.",
     icon: "/logo.jpg",
     badge: "/logo.jpg",
@@ -11,7 +11,9 @@ self.addEventListener("push", (event) => {
     tag: payload.projectId ? `starco-project-${payload.projectId}-${payload.type || "update"}` : undefined,
     renotify: true,
     data: { url: payload.url || "/dashboard" },
-  }));
+  }), clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+    windows.forEach((client) => client.postMessage({ type: "STARCO_NOTIFICATION_RECEIVED" }));
+  })]));
 });
 
 self.addEventListener("notificationclick", (event) => {

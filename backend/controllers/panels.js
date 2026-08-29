@@ -54,14 +54,27 @@ const validateMarketerData = (data = {}) => {
     }
     return errors;
 };
-const publicPanel = (panel) => {
-    const object = panel.toObject ? panel.toObject() : panel;
+const publicPanel = (panel, useMarketingDraft = false) => {
+    const stored = panel.toObject ? panel.toObject() : panel;
+    const object = useMarketingDraft && stored.marketingDraft ? { ...stored, ...stored.marketingDraft } : stored;
+    const safeObject = { ...object };
+    delete safeObject.marketingDraft;
+    delete safeObject.marketingDraftDeleted;
     const marketerThickness = object.marketerData?.thickness || [];
     const pricingThickness = object.pricing?.thickness || [];
     const executionStatus = object.status === "executionPdfRequested" ? "requested" : object.status === "executionPdfReady" ? "ready" : executionStatuses.includes(object.status) ? "confirmed" : "notRequested";
     const manufacturingStatus = object.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(object.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(object.status) ? "downloadedToLaser" : "notStarted";
     const stageRows = (object.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
     const activeStage = stageRows.find((stage) => stage.status === "active");
+    const productionHistory = (object.statusHistory || []).filter((entry) => entry.action === "productionNotesUpdated" || String(entry.action || "").startsWith("stage:")).map((entry) => ({
+        action: entry.action === "productionNotesUpdated" ? "notes" : String(entry.action).split(":")[1],
+        stageKey: (entry.stageKey || entry.from) === "pendingLaserDownload" ? "awaitingLaserDownload" : (entry.stageKey || entry.from),
+        reason: entry.reason || entry.note || "",
+        details: entry.details || "",
+        actorName: entry.actorName || "",
+        actorRole: entry.actorRole || "",
+        createdAt: entry.createdAt
+    }));
     const pricingCopper = object.pricing?.copper || {};
     const marketerCopper = object.marketerData?.copperDetails || {};
     const copper = Object.keys(pricingCopper).length ? pricingCopper : {
@@ -69,7 +82,7 @@ const publicPanel = (panel) => {
         main: { optionKey: marketerCopper.mainKey || "" },
         branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) }))
     };
-    return { ...object, ...object.marketerData, ...object.pricing, copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows } };
+    return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
 };
 const refreshProjectCompletion = async (projectId) => {
     const list = await panels.find({ projectId, isDeleted: false });
@@ -116,8 +129,10 @@ const listAllPanels = async (req, res, next) => { try {
     list = list.filter((panel) => {
         const project = projectMap.get(String(panel.projectId));
         if (!project) return false;
+        const viewerOwnsDraft = isMarketer(req.user) && sameId(project.marketingEditSession?.openedBy, req.user._id);
+        if (panel.status === "draft" && project.status !== "draft" && !viewerOwnsDraft) return false;
         if (req.user.role === "MarketingManager") {
-            return project.status !== "draft" && ["marketing", "whatsapp"].includes(project.source);
+            return project.status !== "draft" && panel.status !== "draft" && ["marketing", "whatsapp"].includes(project.source);
         }
         return true;
     });
@@ -132,13 +147,17 @@ const listPanels = async (req, res, next) => { try {
     if (isMarketer(req.user) && !sameId(project.marketingId, req.user._id)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض لوحات هذا المشروع." });
     const condition = { projectId: project._id, isDeleted: false };
     if (req.user.role === "ProductionManager") condition.status = { $in: executionStatuses };
-    res.json((await panels.find(condition)).map(publicPanel));
+    const useMarketingDraft = isMarketer(req.user) && sameId(project.marketingEditSession?.openedBy, req.user._id);
+    const list = (await panels.find(condition)).filter((panel) => !(useMarketingDraft && panel.marketingDraftDeleted));
+    res.json(list.map((panel) => publicPanel(panel, useMarketingDraft)));
 } catch (error) { next(error); } };
 const getPanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (isMarketer(req.user) && !sameId(project.marketingId, req.user._id)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذه اللوحة." });
     if (req.user.role === "ProductionManager" && !executionStatuses.includes(panel.status)) return res.status(403).json({ status: "error", message: "اللوحة لم تصل إلى مرحلة التنفيذ بعد." });
-    res.json(publicPanel(panel));
+    const useMarketingDraft = isMarketer(req.user) && sameId(project.marketingEditSession?.openedBy, req.user._id);
+    if (useMarketingDraft && panel.marketingDraftDeleted) return res.status(404).json({ status: "error", message: "اللوحة محذوفة من مسودة التعديل." });
+    res.json(publicPanel(panel, useMarketingDraft));
 } catch (error) { next(error); } };
 const createPanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
@@ -155,9 +174,20 @@ const updatePanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId);
     if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     const payload = normalizePanelPayload(req.body); const update = {};
-    const marketerCanEdit = (marketerOwns(req, project, panel) && (panel.status === "draft" || (panel.status === "editing" && project.marketingEditSession?.active))) || (isOwner(req.user) && panel.status === "draft");
+    const marketerSessionEdit = marketerOwns(req, project, panel) && project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id);
+    const marketerCanEdit = (marketerOwns(req, project, panel) && panel.status === "draft") || marketerSessionEdit || (isOwner(req.user) && panel.status === "draft");
     const engineerCanEdit = (isOwner(req.user) || (isEngineer(req.user) && sameId(panel.engineerId, req.user._id))) && ["pricing", "editing"].includes(panel.status);
     if (!marketerCanEdit && !engineerCanEdit) return res.status(409).json({ status: "error", message: "هذه اللوحة ليست مفتوحة لك للتعديل الآن." });
+    if (marketerSessionEdit && panel.status !== "draft") {
+        const draft = { ...(panel.marketingDraft || {}), panelName: payload.panelName != null ? String(payload.panelName).trim() : (panel.marketingDraft?.panelName || panel.panelName), marketerData: { ...(panel.marketingDraft?.marketerData || panel.marketerData.toObject()), ...payload.marketerData } };
+        if (req.body?.marketerSaved === true) {
+            const fields = validateMarketerData(draft.marketerData);
+            if (Object.keys(fields).length) return res.status(400).json({ status: "error", code: "PANEL_VALIDATION_ERROR", message: "أكمل بيانات اللوحة الإلزامية قبل الحفظ.", fields });
+            draft.marketerSaved = true;
+        }
+        const saved = await panels.update({ _id: panel._id }, { marketingDraft: draft });
+        return res.json({ status: "ok", panel: publicPanel(saved, true) });
+    }
     if (payload.panelName != null) update.panelName = String(payload.panelName).trim();
     if (marketerCanEdit) {
         update.marketerData = { ...panel.marketerData.toObject(), ...payload.marketerData };
@@ -193,19 +223,34 @@ const openEditing = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (!isOwner(req.user) && !marketerOwns(req, project, panel)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تعديل اللوحة." });
     if (panel.lock?.userId && panel.lock.expiresAt > new Date() && !sameId(panel.lock.userId, req.user._id) && !isOwner(req.user)) return res.status(409).json({ status: "error", message: "المهندس يعمل على هذه اللوحة الآن؛ أرسل طلب تعديل أو انتظر انتهاء الحجز." });
-    const saved = await panels.update({ _id: panel._id }, { status: "editing", $push: { statusHistory: history(req, panel.status, "editing", "editingOpened") } });
-    await projects.update({ _id: project._id }, { status: "inProgress", marketingEditSession: { active: true, openedBy: req.user._id, openedAt: new Date() }, previewGeneratedAt: null }); res.json({ status: "ok", panel: publicPanel(saved) });
+    const draft = panel.marketingDraft || { panelName: panel.panelName, marketerData: panel.marketerData.toObject(), marketerSaved: true };
+    const saved = await panels.update({ _id: panel._id }, { marketingDraft: draft, marketingDraftDeleted: false });
+    const savedProject = await projects.update({ _id: project._id }, { marketingEditSession: { active: true, openedBy: req.user._id, openedAt: new Date() } }); res.json({ status: "ok", project: savedProject, panel: publicPanel(saved, true) });
 } catch (error) { next(error); } };
 const submitEdits = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); if (!project || (!isOwner(req.user) && !sameId(project.marketingEditSession?.openedBy, req.user._id))) return res.status(403).json({ status: "error", message: "لا توجد جلسة تعديل مفتوحة." });
-    await panels.updateMany({ projectId: project._id, isDeleted: false, status: { $in: ["draft", "editing"] } }, { $set: { status: "pendingPricing", engineerId: null, assignedAt: null, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null } } });
+    const editedPanels = await panels.find({ projectId: project._id, isDeleted: false, $or: [{ status: "draft" }, { marketingDraft: { $ne: null } }, { marketingDraftDeleted: true }] });
+    for (const panel of editedPanels) {
+        if (panel.marketingDraftDeleted) {
+            await panels.update({ _id: panel._id }, { isDeleted: true, deletedAt: new Date(), deletedBy: req.user._id, marketingDraft: null, marketingDraftDeleted: false });
+            await projects.update({ _id: project._id }, { $pull: { panelIds: panel._id } });
+            continue;
+        }
+        const draft = panel.marketingDraft || {};
+        await panels.update({ _id: panel._id }, { ...(draft.panelName != null ? { panelName: draft.panelName } : {}), ...(draft.marketerData ? { marketerData: draft.marketerData } : {}), marketerSaved: draft.marketerSaved ?? panel.marketerSaved, marketingDraft: null, marketingDraftDeleted: false, status: "pendingPricing", engineerId: null, assignedAt: null, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null } });
+    }
     const savedProject = await projects.update({ _id: project._id }, { status: "inProgress", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
     await createInternalNotifications({ roles: ["Engineer", "OwnerManager"], excludeUserId: req.user._id, project: savedProject, type: "projectPricingUpdated", title: "تعديلات جديدة في انتظار التسعير", body: `${project.projectCode} — ${project.client?.name || "المشروع"}`, actor: req.user });
     res.json({ status: "ok", message: "تم إرسال اللوحات الجديدة والمعدلة للتسعير." });
 } catch (error) { next(error); } };
 const deletePanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    const marketerSessionDelete = marketerOwns(req, project, panel) && project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id);
     const marketerCanDelete = marketerOwns(req, project, panel) && panel.status === "draft";
+    if (marketerSessionDelete && panel.status !== "draft") {
+        await panels.update({ _id: panel._id }, { marketingDraftDeleted: true });
+        return res.json({ status: "ok", message: "تم حذف اللوحة من مسودة التعديلات." });
+    }
     if (!isOwner(req.user) && !marketerCanDelete) return res.status(403).json({ status: "error", message: "بعد إرسال اللوحة لا يمكن حذفها إلا بواسطة Owner Manager." });
     await panels.update({ _id: panel._id }, { isDeleted: true, deletedAt: new Date(), deletedBy: req.user._id }); await projects.update({ _id: project._id }, { $pull: { panelIds: panel._id }, previewGeneratedAt: null }); res.json({ status: "ok", message: "تم نقل اللوحة إلى سلة المحذوفات." });
 } catch (error) { next(error); } };
@@ -315,13 +360,14 @@ const finishExecutionPdf = async (req, res, next) => { try {
 const skipExecutionPdf = (req, res, next) => transition(req, res, next, { from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "executionPdf.skipped": true, "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id }, internalNotification: (project, savedPanel) => ({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], type: "executionPdfReady", title: "تم تخطي PDF التنفيذ واللوحة جاهزة للمراجعة", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
 const requestExecutionPdfChanges = async (req, res, next) => { try { const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!["Marketer", "MarketingManager", "OwnerManager"].includes(req.user.role) || panel.status !== "executionPdfReady") return res.status(409).json({ status: "error", message: "لا يمكن طلب تعديل هذه اللوحة الآن." }); if (isMarketer(req.user) && !marketerOwns(req, project, panel)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية طلب تعديل هذه اللوحة." }); const saved = await panels.update({ _id: panel._id }, { status: "editing", $push: { statusHistory: history(req, panel.status, "editing", "executionChangesRequested") } }); await projects.update({ _id: project._id }, { status: "inProgress", marketingEditSession: { active: true, openedBy: req.user._id, openedAt: new Date() }, previewGeneratedAt: null }); await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "executionPdfChangesRequested", title: "مطلوب تعديل PDF التنفيذ", body: `${panel.panelName} — ${project.client?.name || project.projectCode}`, actor: req.user }); res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) }); } catch (error) { next(error); } };
 const confirmExecution = (req, res, next) => transition(req, res, next, { from: ["executionPdfReady", "executionPdfRequested"], to: "manufacturingFilesPending", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": req.user._id }, notify: (project, panel) => notifyPanelPeople(panel, [], (recipient) => sendExecutionConfirmed(recipient.phoneNumber, project, panel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["ProductionManager", "OwnerManager"], type: "executionConfirmed", title: "تم تأكيد تنفيذ اللوحة", body: `${savedPanel.panelName} — برجاء تجهيز ملفات التصنيع` }) });
-const finishManufacturing = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!(panel.manufacturing?.files || []).length) return res.status(400).json({ status: "error", message: "ارفع ملف تصنيع واحدًا على الأقل." }); return transition(req, res, next, { from: ["manufacturingFilesPending"], to: "manufacturingFilesReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "manufacturing.notes": String(req.body?.notes || "").slice(0, 2000), "manufacturing.stages": stages.map((key, index) => ({ key, status: index === 0 ? "active" : "pending", startedAt: index === 0 ? new Date() : null })) }, notify: (project, savedPanel) => notifyRoles(["ProductionManager", "OwnerManager"], (recipient) => sendPanelFilesReady(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ roles: ["ProductionManager", "OwnerManager"], type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${savedPanel.panelName} — برجاء تنزيل الملفات إلى الليزر` }) }); } catch (error) { next(error); } };
+const finishManufacturing = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!(panel.manufacturing?.files || []).length) return res.status(400).json({ status: "error", message: "ارفع ملف تصنيع واحدًا على الأقل." }); return transition(req, res, next, { from: ["manufacturingFilesPending"], to: "manufacturingFilesReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "manufacturing.engineerNotes": String(req.body?.notes || "").slice(0, 2000), "manufacturing.stages": stages.map((key, index) => ({ key, status: index === 0 ? "active" : "pending", startedAt: index === 0 ? new Date() : null })) }, notify: (project, savedPanel) => notifyRoles(["ProductionManager", "OwnerManager"], (recipient) => sendPanelFilesReady(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ roles: ["ProductionManager", "OwnerManager"], type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${savedPanel.panelName} — برجاء تنزيل الملفات إلى الليزر` }) }); } catch (error) { next(error); } };
 const updateStage = async (req, res, next) => { try {
     if (!["ProductionManager", "OwnerManager"].includes(req.user.role)) return res.status(403).json({ status: "error", message: "متابعة الإنتاج متاحة لمدير التنفيذ." });
     const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     const notes = String(req.body?.notes || "").slice(0, 2000);
     if (req.body.action === "notes") {
-        const saved = await panels.update({ _id: panel._id }, { "manufacturing.notes": notes, $push: { statusHistory: history(req, panel.status, panel.status, "productionNotesUpdated") } });
+        const notesHistory = { ...history(req, panel.status, panel.status, "productionNotesUpdated"), stageKey: panel.manufacturing?.stages?.find((stage) => stage.status === "active")?.key || "", details: notes };
+        const saved = await panels.update({ _id: panel._id }, { "manufacturing.productionNotes": notes, $push: { statusHistory: notesHistory } });
         const project = await loadProject(panel.projectId);
         return res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
     }
@@ -331,7 +377,8 @@ const updateStage = async (req, res, next) => { try {
     else if (req.body.action === "completed") { const index = stages.indexOf(current.key); current.status = "completed"; current.completedAt = new Date(); current.completedBy = req.user._id; const nextStage = panel.manufacturing.stages[index + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); } }
     else return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم." });
     const active = panel.manufacturing.stages.find((stage) => stage.status === "active"); const nextStatus = active?.key || "completed";
-    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.notes": notes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: history(req, panel.status, nextStatus, `stage:${req.body.action}`, req.body.reason || "") } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
+    const stageHistory = { ...history(req, panel.status, nextStatus, `stage:${req.body.action}`), stageKey: current.key, reason: String(req.body.reason || "").trim(), details: String(req.body.details || "").trim() };
+    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.productionNotes": notes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: stageHistory } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
     await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
     res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };

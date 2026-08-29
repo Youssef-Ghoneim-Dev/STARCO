@@ -604,22 +604,25 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   );
   const updateCopper = useCallback((updater) => {
     updatePanel(activePanel, (panel) => {
+      const configuredPrice = systemConfig?.copperConfiguration?.pricePerKg ?? "";
+      const currentCopper = panel.copper || {};
       const copper = updater({
         enabled: false,
-        pricePerKg: "",
+        pricePerKg: currentCopper.pricePerKg === "" || currentCopper.pricePerKg == null ? configuredPrice : currentCopper.pricePerKg,
         earthPrice: "",
         groundPrice: "",
         main: { optionKey: "", length: "", barCount: 1 },
         branches: [],
-        ...(panel.copper || {}),
+        ...currentCopper,
       });
+      if (copper.pricePerKg === "" || copper.pricePerKg == null) copper.pricePerKg = configuredPrice;
       return {
         ...panel,
         hasCopper: Boolean(copper.enabled),
         copper,
       };
     });
-  }, [activePanel, updatePanel]);
+  }, [activePanel, systemConfig?.copperConfiguration?.pricePerKg, updatePanel]);
   const applyPanelType = useCallback((typeKey) => {
     const selectedType = (systemConfig?.panelTypes || []).find((type) => type.key === typeKey);
     if (!selectedType) return;

@@ -46,12 +46,24 @@ export function NotificationProvider({ children }) {
       return undefined;
     }
     refresh();
-    const interval = window.setInterval(() => refresh({ quiet: true }), 20000);
+    const interval = window.setInterval(() => refresh({ quiet: true }), 10000);
     const onRefresh = () => refresh({ quiet: true });
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh({ quiet: true });
+    };
+    const onServiceWorkerMessage = (event) => {
+      if (event.data?.type === "STARCO_NOTIFICATION_RECEIVED") refresh({ quiet: true });
+    };
     window.addEventListener("notifications:refresh", onRefresh);
+    window.addEventListener("focus", onRefresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("notifications:refresh", onRefresh);
+      window.removeEventListener("focus", onRefresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
     };
   }, [pending, refresh, user]);
 

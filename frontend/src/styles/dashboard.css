@@ -522,7 +522,7 @@
 }
 
 .notification-list {
-    max-height: min(520px, 65vh);
+    max-height: min(290px, 42vh);
     overflow-y: auto;
     overscroll-behavior: contain;
 }
@@ -580,7 +580,7 @@
         width: auto;
         max-height: calc(100dvh - 96px);
     }
-    .notification-list { max-height: calc(100dvh - 245px); }
+    .notification-list { max-height: min(270px, calc(100dvh - 245px)); }
 }
 
 .logout-confirm-backdrop {

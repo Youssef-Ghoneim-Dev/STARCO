@@ -34,7 +34,7 @@ function MarketingProjectEditor() {
     : [];
   const canEditActivePanel =
     panel.status === "draft" ||
-    (panel.status === "editing" && project.marketingEditSession?.active);
+    project.marketingEditSession?.active;
 
   const patchPanel = (patch) => {
     if (!canEditActivePanel) return;

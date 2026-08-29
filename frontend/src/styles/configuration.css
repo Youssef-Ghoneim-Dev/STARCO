@@ -84,6 +84,15 @@
     opacity: .65;
 }
 
+.whatsapp-template-editor { gap: 18px; }
+.whatsapp-template-card { display: grid; gap: 11px; padding: 18px; border: 1px solid #d9e5eb; border-radius: 16px; background: #f8fbfc; }
+.whatsapp-template-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.whatsapp-template-card-heading > div { display: grid; gap: 3px; }
+.whatsapp-template-card-heading span { color: var(--text-light); font-size: 13px; font-weight: 700; }
+.whatsapp-template-card-heading strong { color: var(--primary); font-size: 18px; }
+.whatsapp-template-card-heading code { padding: 8px 12px; border: 1px solid #bcd3df; border-radius: 999px; color: #285b73; background: #eaf4f8; font: 800 13px/1.2 monospace; white-space: nowrap; }
+.whatsapp-template-card textarea { background: #fff; }
+
 .pricing-form {
     display: grid;
     gap: 18px;
@@ -459,7 +468,17 @@
 .copper-catalog-settings > summary strong { font-size: 16px; }
 .copper-catalog-settings > summary span { color: var(--text-light); font-size: 12px; font-weight: 600; }
 .copper-catalog-settings-body { padding: 0 16px 16px; border-top: 1px solid #e3edf1; }
-.copper-section-save { justify-self: start; min-width: 190px; font-weight: 800; }
+.copper-section-save {
+    justify-self: start;
+    min-width: 190px;
+    border-color: #2f718d !important;
+    color: #fff !important;
+    background: linear-gradient(135deg, #397b96, #285d76) !important;
+    box-shadow: 0 8px 18px rgba(40, 93, 118, .18);
+    font-weight: 900;
+}
+.copper-section-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 11px 22px rgba(40, 93, 118, .24); }
+.copper-section-save:disabled { opacity: .62; box-shadow: none; }
 .copper-catalog-actions { display: grid; justify-items: start; gap: 10px; }
 
 @media (max-width: 1050px) {
@@ -488,6 +507,7 @@
     .copper-configuration-heading button { width: 100%; }
     .copper-setting-fields, .copper-formula-settings, .copper-formula-variables { grid-template-columns: 1fr; }
     .copper-bar-count-controls { align-items: stretch; flex-direction: column; }
+    .whatsapp-template-card-heading { align-items: flex-start; flex-direction: column; }
     .copper-bar-count-add { flex: 0 0 auto; width: 100%; }
 
     .pricing-form>button {

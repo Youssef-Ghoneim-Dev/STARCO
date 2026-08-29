@@ -25,24 +25,35 @@ const whatsappFailureReason = (row) => {
 const canSeeProject = (user, project) => isOwner(user) || (isMarketer(user) ? sameId(project.marketingId, user._id) : project.status !== "draft");
 const hydrate = async (project, includeDeleted = false, viewer = null) => {
     const object = project.toObject ? project.toObject() : project;
-    const projectPanels = await panels.find({ projectId: project._id, ...(includeDeleted ? {} : { isDeleted: false }) });
+    const allProjectPanels = await panels.find({ projectId: project._id, ...(includeDeleted ? {} : { isDeleted: false }) });
+    const marketerOwnsSession = isMarketer(viewer) && sameId(object.marketingId, viewer?._id) && sameId(object.marketingEditSession?.openedBy, viewer?._id);
+    const projectPanels = allProjectPanels.filter((panel) => {
+        if (marketerOwnsSession && panel.marketingDraftDeleted) return false;
+        if (panel.status === "draft" && object.status !== "draft" && !marketerOwnsSession) return false;
+        return true;
+    });
     const [marketer, engineerRows] = await Promise.all([
         object.marketingId ? users.select_one({ _id: object.marketingId, isDeleted: false }) : null,
         users.selectall({ _id: { $in: projectPanels.map((panel) => panel.engineerId).filter(Boolean) }, isDeleted: false })
     ]);
     const engineerMap = new Map(engineerRows.map((user) => [String(user._id), { _id: user._id, name: user.name }]));
     const visiblePanels = projectPanels.map((panel) => {
-        const value = panel.toObject?.() || panel;
+        const storedValue = panel.toObject?.() || panel;
+        const value = marketerOwnsSession && storedValue.marketingDraft ? { ...storedValue, ...storedValue.marketingDraft } : storedValue;
+        const safeValue = { ...value };
+        delete safeValue.marketingDraft;
+        delete safeValue.marketingDraftDeleted;
         const executionStatuses = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
         const executionStatus = value.status === "executionPdfRequested" ? "requested" : value.status === "executionPdfReady" ? "ready" : executionStatuses.includes(value.status) ? "confirmed" : "notRequested";
         const manufacturingStatus = value.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(value.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status) ? "downloadedToLaser" : "notStarted";
         const productionStages = (value.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
+        const productionHistory = (value.statusHistory || []).filter((entry) => entry.action === "productionNotesUpdated" || String(entry.action || "").startsWith("stage:")).map((entry) => ({ action: entry.action === "productionNotesUpdated" ? "notes" : String(entry.action).split(":")[1], stageKey: (entry.stageKey || entry.from) === "pendingLaserDownload" ? "awaitingLaserDownload" : (entry.stageKey || entry.from), reason: entry.reason || entry.note || "", details: entry.details || "", actorName: entry.actorName || "", actorRole: entry.actorRole || "", createdAt: entry.createdAt }));
         const marketerThickness = value.marketerData?.thickness || [];
         const pricingThickness = value.pricing?.thickness || [];
         const pricingCopper = value.pricing?.copper || {};
         const marketerCopper = value.marketerData?.copperDetails || {};
         const copper = Object.keys(pricingCopper).length ? pricingCopper : { enabled: Boolean(value.marketerData?.hasCopper), main: { optionKey: marketerCopper.mainKey || "" }, branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) })) };
-        const withEngineer = { ...value, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages } };
+        const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
         if (viewer?.role !== "ProductionManager") return withEngineer;
         const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
@@ -319,7 +330,7 @@ const getProjectMediaFile = async (req, res, next) => { try {
 const uploadProjectMedia = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.body?.panelId, projectId: req.params.id, isDeleted: false });
     if (!project || !panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
-    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || (panel.status === "editing" && project.marketingEditSession?.active)));
+    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || (project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id))));
     if (!canEdit) return res.status(403).json({ status: "error", message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية." });
     if (!req.file || (!req.file.mimetype.startsWith("image/") && !req.file.mimetype.startsWith("audio/"))) return res.status(400).json({ status: "error", message: "اختر صورة أو تسجيلًا صوتيًا أولًا." });
     const stored = await uploadFile({ buffer: req.file.buffer, fileName: `panel-${panel.panelCode}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`, mimeType: req.file.mimetype });
@@ -329,7 +340,7 @@ const uploadProjectMedia = async (req, res, next) => { try {
 const deleteProjectMedia = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const media = project && await findMedia(project._id, req.params.mediaId);
     if (!project || !media) return res.status(404).json({ status: "error", message: "المرفق غير موجود." });
-    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || (media.panel.status === "editing" && project.marketingEditSession?.active)));
+    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || (project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id))));
     if (!canEdit) return res.status(403).json({ status: "error", message: "لا يمكنك حذف هذا المرفق الآن." });
     await deleteStoredFile(media.file.storageFileId); await panels.update({ _id: media.panel._id }, { $pull: { attachments: { _id: media.file._id } } }); res.json({ status: "ok" });
 } catch (error) { next(error); } };

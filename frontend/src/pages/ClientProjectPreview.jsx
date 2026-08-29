@@ -55,6 +55,7 @@ function ClientProjectPreview() {
   const [state, setState] = useState({ loading: true, executionLoading: false, error: "" });
   const documentsRef = useRef({ quote: null, executions: {} });
   const executionLoadKeyRef = useRef("");
+  const executionNoticeTimerRef = useRef(null);
   const key = previewKey || searchParams.get("key") || "";
   const executionPanels = useMemo(() => (project?.panels || []).filter((panel) => (
     executionReadyStatuses.has(panel.executionPdf?.status)
@@ -69,17 +70,22 @@ function ClientProjectPreview() {
   ));
   const executionWasSkipped = (project?.panels || []).some((panel) => panel.executionPdf?.skipped);
 
+  const showExecutionNotice = (message) => {
+    window.clearTimeout(executionNoticeTimerRef.current);
+    setExecutionNotice(message);
+    executionNoticeTimerRef.current = window.setTimeout(() => setExecutionNotice(""), 3000);
+  };
   const openExecutionDocument = () => {
     if (!executionWasRequested) {
-      setExecutionNotice("لم يتم طلب PDF تنفيذ لهذا المشروع حتى الآن.");
+      showExecutionNotice("لطلب ملف PDF التنفيذ، يرجى التواصل مع مسؤول المشروع.");
       return;
     }
     if (executionWasSkipped && !executionPanels.length) {
-      setExecutionNotice("تم تخطي مرحلة PDF التنفيذ لهذا المشروع، لذلك لا يوجد ملف للعرض.");
+      showExecutionNotice("لا يتوفر ملف PDF تنفيذ لهذا المشروع. يرجى التواصل مع مسؤول المشروع.");
       return;
     }
     if (!executionPanels.length || state.executionLoading || !selectedExecutionDocument) {
-      setExecutionNotice("ما زلنا في حالة تجهيز PDF التنفيذ. سيظهر هنا بمجرد اعتماده.");
+      showExecutionNotice("ملف PDF التنفيذ قيد التجهيز، وسيظهر هنا بمجرد اعتماده.");
       return;
     }
     setExecutionNotice("");
@@ -159,6 +165,7 @@ function ClientProjectPreview() {
   }, [executionPanels, key]);
 
   useEffect(() => () => {
+    window.clearTimeout(executionNoticeTimerRef.current);
     safeDestroyPdf(documentsRef.current.quote);
     Object.values(documentsRef.current.executions).forEach(safeDestroyPdf);
   }, []);

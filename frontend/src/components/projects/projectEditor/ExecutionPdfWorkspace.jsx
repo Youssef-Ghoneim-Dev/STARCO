@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HiOutlineArrowLeft, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
+import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
 import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
@@ -139,8 +139,13 @@ function ExecutionPdfWorkspace() {
   const { user } = useAuth();
   const { project, setProject, activePanel, savingProject } = useProject();
   const [busy, setBusy] = useState(false);
+  const [uploadingExecution, setUploadingExecution] = useState(false);
+  const [generatingExecution, setGeneratingExecution] = useState(false);
+  const [uploadingManufacturing, setUploadingManufacturing] = useState(false);
+  const [finishingManufacturing, setFinishingManufacturing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [previewCopied, setPreviewCopied] = useState(false);
   const executionInputRefs = useRef({});
   const loadedExecutionDesignKey = useRef("");
   const manufacturingInputRef = useRef(null);
@@ -150,11 +155,13 @@ function ExecutionPdfWorkspace() {
   const files = useMemo(() => workflow.files || [], [workflow.files]);
   const manufacturing = panel?.manufacturing || { status: "notStarted", files: [], notes: "" };
   const manufacturingFiles = useMemo(() => manufacturing.files || [], [manufacturing.files]);
-  const [manufacturingNotes, setManufacturingNotes] = useState(manufacturing.notes || "");
+  const [engineerFileNotes, setEngineerFileNotes] = useState(manufacturing.engineerNotes || manufacturing.notes || "");
+  const [manufacturingNotes, setManufacturingNotes] = useState(manufacturing.productionNotes || "");
   const [stageDecision, setStageDecision] = useState("");
   const [delayReason, setDelayReason] = useState("");
   const [delayDetails, setDelayDetails] = useState("");
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [stageSavedFeedback, setStageSavedFeedback] = useState(null);
+  const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
   const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
   const [executionPreviews, setExecutionPreviews] = useState({});
@@ -177,11 +184,14 @@ function ExecutionPdfWorkspace() {
   });
 
   useEffect(() => {
-    setManufacturingNotes(manufacturing.notes || "");
+    setEngineerFileNotes(manufacturing.engineerNotes || manufacturing.notes || "");
+    setManufacturingNotes(manufacturing.productionNotes || "");
     setStageDecision("");
     setDelayReason("");
     setDelayDetails("");
-  }, [panel?.panelId, manufacturing.notes, manufacturing.currentStage]);
+  }, [panel?.panelId, manufacturing.engineerNotes, manufacturing.notes, manufacturing.productionNotes, manufacturing.currentStage]);
+
+  useEffect(() => () => window.clearTimeout(stageSavedTimerRef.current), []);
 
   useEffect(() => {
     const designKey = `${panel?.panelId || ""}:${workflow.status || ""}:${workflow.requestedAt || ""}`;
@@ -207,7 +217,11 @@ function ExecutionPdfWorkspace() {
     }));
   }, [manufacturing.currentStage, manufacturing.productionStages]);
   const activeProductionStage = productionStages.find((stage) => stage.status === "active");
-  const manufacturingNotesChanged = manufacturingNotes !== String(manufacturing.notes || "");
+  const manufacturingNotesChanged = manufacturingNotes !== String(manufacturing.productionNotes || "");
+  const productionHistory = useMemo(() => manufacturing.productionHistory || [], [manufacturing.productionHistory]);
+  const latestProductionUpdate = productionHistory[productionHistory.length - 1];
+  const stageHasUnsavedChanges = Boolean(stageDecision || manufacturingNotesChanged || delayReason || delayDetails.trim());
+  const productionStageTitle = (key) => productionStageDefinitions.find((stage) => stage.key === key)?.title || "مرحلة الإنتاج";
   const stageIcon = (key) => ({
     awaitingLaserDownload: <HiOutlineCloudDownload />,
     laser: <HiOutlineLightningBolt />,
@@ -227,6 +241,12 @@ function ExecutionPdfWorkspace() {
     await navigator.clipboard.writeText(project._id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  };
+  const copyPreviewLink = async () => {
+    if (!project.quotePreviewUrl) return;
+    await navigator.clipboard.writeText(project.quotePreviewUrl);
+    setPreviewCopied(true);
+    window.setTimeout(() => setPreviewCopied(false), 1600);
   };
 
   const issueOrder = async () => {
@@ -252,7 +272,7 @@ function ExecutionPdfWorkspace() {
     // backend verify the actual file contents before storing it.
     const filesToUpload = Array.from(selectedFiles || []).filter((file) => file?.size > 0);
     if (!filesToUpload.length) return toast.error("اختر صورة أولًا.");
-    setBusy(true);
+    setUploadingExecution(true);
     try {
       let latestProject = project;
       for (const file of filesToUpload) {
@@ -262,7 +282,7 @@ function ExecutionPdfWorkspace() {
       setProject(latestProject);
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر رفع الملف.");
-    } finally { setBusy(false); }
+    } finally { setUploadingExecution(false); }
   };
 
   const executionImageFiles = useMemo(() => files.filter((file) => file.purpose !== "generatedPdf" && (String(file.mimeType || "").startsWith("image/") || /\.(?:jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.fileName || ""))), [files]);
@@ -348,7 +368,7 @@ function ExecutionPdfWorkspace() {
     if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
     if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
     if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
-    setBusy(true);
+    setGeneratingExecution(true);
     try {
       await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
       // Generate once locally to verify the persisted design. The resulting
@@ -361,19 +381,8 @@ function ExecutionPdfWorkspace() {
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
     } finally {
-      setBusy(false);
+      setGeneratingExecution(false);
     }
-  };
-
-  const openGeneratedExecutionPdf = async () => {
-    setBusy(true);
-    try {
-      const url = URL.createObjectURL(await buildExecutionPdf(defaultExecutionDesign(panel, workflow)));
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) {
-      toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
-    } finally { setBusy(false); }
   };
 
   const removeExecutionFile = async (file) => {
@@ -433,7 +442,7 @@ function ExecutionPdfWorkspace() {
       toast.error("مرحلة التجربة تقبل الصور فقط حاليًا.");
       return;
     }
-    setBusy(true);
+    setUploadingManufacturing(true);
     try {
       let latestProject = project;
       for (const file of selected) {
@@ -442,17 +451,17 @@ function ExecutionPdfWorkspace() {
       }
       setProject(latestProject);
     } catch (error) { toast.error(error.response?.data?.message || error.message || "تعذر رفع ملف التصنيع."); }
-    finally { setBusy(false); }
+    finally { setUploadingManufacturing(false); }
   };
 
   const finishManufacturing = async () => {
-    setBusy(true);
+    setFinishingManufacturing(true);
     try {
-      const { data } = await finishManufacturingFiles(project._id, panel.panelId, manufacturingNotes);
+      const { data } = await finishManufacturingFiles(project._id, panel.panelId, engineerFileNotes);
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       if (data.notification?.includes("تعذر")) toast.error(data.notification);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر إتمام ملفات التصنيع."); }
-    finally { setBusy(false); }
+    finally { setFinishingManufacturing(false); }
   };
 
   const downloadManufacturingFile = async (file) => {
@@ -498,6 +507,15 @@ function ExecutionPdfWorkspace() {
         notes: manufacturingNotes,
       });
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
+      const savedMessage = stageDecision === "completed"
+        ? "تم حفظ اكتمال المرحلة والانتقال للمرحلة التالية بنجاح."
+        : stageDecision === "delayed"
+          ? "تم حفظ حالة التأخير وسببها بنجاح."
+          : "تم حفظ الملاحظات العامة بنجاح.";
+      setStageSavedFeedback({ message: savedMessage, savedAt: new Date().toISOString() });
+      window.clearTimeout(stageSavedTimerRef.current);
+      stageSavedTimerRef.current = window.setTimeout(() => setStageSavedFeedback(null), 5000);
+      toast.success("تم حفظ تحديث المرحلة بنجاح.");
       setStageDecision("");
       setDelayReason("");
       setDelayDetails("");
@@ -551,33 +569,59 @@ function ExecutionPdfWorkspace() {
             </div>
           </article>)}
         </div>
+        {(manufacturing.engineerNotes || manufacturing.notes) && <aside className="manufacturing-engineer-note"><b>ملاحظات المهندس مع الملفات</b><p>{manufacturing.engineerNotes || manufacturing.notes}</p></aside>}
         {canDownloadManufacturing && <button type="button" className="manufacturing-download-all" onClick={downloadAllManufacturingFiles}><HiOutlineCloudDownload /> تحميل جميع الملفات ZIP</button>}
       </div>
     </details>
 
-    {canManageProductionStages && <section className="production-stages-board">
-      <header><div><h2><HiOutlineViewGrid /> مراحل الإنتاج</h2><p>قم بتحديث حالة كل مرحلة يوميًا</p></div></header>
-      <div className="production-stages-track">
-        {productionStages.map((stage, index) => <article key={stage.key} className={`production-stage-card stage-${index + 1} ${stage.status}`}>
-          <span className="production-stage-number">{index + 1}</span>
-          <div className="production-stage-title"><span className="production-stage-icon">{stageIcon(stage.key)}</span><div><h4>{stage.title}</h4><p>{stage.description}</p></div></div>
-          <div className="production-stage-choice-line">
-            <label><input type="radio" disabled={stage.status !== "active"} checked={stage.status === "completed" || (stage.status === "active" && stageDecision === "completed")} onChange={() => setStageDecision("completed")} /> تمت</label>
-            <label><input type="radio" disabled={stage.status !== "active"} checked={stage.status === "active" && stageDecision === "delayed"} onChange={() => setStageDecision("delayed")} /> لم تتم</label>
-          </div>
-          {stage.status === "active" && stageDecision === "delayed" && stage.key === "awaitingLaserDownload" && <div className="production-fixed-warning">برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}
-          {stage.status === "active" && stageDecision === "delayed" && stage.key !== "awaitingLaserDownload" && <div className="production-delay-fields">
-            <label>سبب التأخير<ExecutionSelect value={delayReason} placeholder="اختر سبب التأخير" onChange={(value) => { setDelayReason(value); if (value !== "أخرى") setDelayDetails(""); }} options={(productionDelayReasons[stage.key] || []).map((reason) => ({ value: reason, label: reason }))} /></label>
-            {delayReason === "أخرى" && <label>سبب التأخير<textarea value={delayDetails} onChange={(event) => setDelayDetails(event.target.value)} placeholder="اكتب سبب التأخير..." /></label>}
-          </div>}
+    {canManageProductionStages && <section className="production-stages-board production-stages-redesign">
+      <header><div><h2><HiOutlineViewGrid /> مراحل الإنتاج</h2><p>المرحلة الحالية فقط متاحة للتحديث، وباقي المراحل تتحرك تلقائيًا.</p></div></header>
+
+      <div className="production-stage-stepper" aria-label="تقدم مراحل الإنتاج">
+        {productionStages.map((stage, index) => <article key={stage.key} className={`production-stage-step stage-${index + 1} ${stage.status}`} aria-current={stage.status === "active" ? "step" : undefined}>
+          <span className="production-stage-step-number">{stage.status === "completed" ? <HiOutlineCheckCircle /> : index + 1}</span>
+          <span className="production-stage-step-icon">{stageIcon(stage.key)}</span>
+          <div><b>{stage.title}</b><small>{stage.status === "completed" ? "تمت" : stage.status === "active" ? "المرحلة الحالية" : "لم تبدأ"}</small></div>
         </article>)}
       </div>
-    </section>}
 
-    {canManageProductionStages && <section className="production-footer-controls">
-      <label><span>ملاحظات عامة (اختياري)</span><textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
-      <div><button type="button" className="production-history-toggle" onClick={() => setHistoryOpen((value) => !value)}><HiOutlineClock /> عرض سجل التحديثات</button><button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || (!stageDecision && !manufacturingNotesChanged)}>{busy ? "جاري الحفظ..." : "حفظ التحديثات"}</button></div>
-      {historyOpen && <div className="production-history-list">{(manufacturing.productionHistory || []).length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...manufacturing.productionHistory].reverse().map((item, index) => <div key={`${item.createdAt}-${index}`}><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><span>{item.reason === "أخرى" ? item.details : item.reason || item.details || ""}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>)}</div>}
+      {stageSavedFeedback && <div className="production-save-success" role="status"><HiOutlineCheckCircle /><div><b>تم الحفظ بنجاح</b><span>{stageSavedFeedback.message}</span></div></div>}
+
+      {activeProductionStage ? <section className="production-active-stage-panel">
+        <div className="production-active-stage-main">
+          <header>
+            <span className="production-active-stage-icon">{stageIcon(activeProductionStage.key)}</span>
+            <div><small>المرحلة الحالية</small><h3>{activeProductionStage.title}</h3><p>{activeProductionStage.description}</p></div>
+          </header>
+
+          <div className="production-stage-decision-grid">
+            <button type="button" className={stageDecision === "completed" ? "selected completed" : ""} onClick={() => { setStageDecision("completed"); setDelayReason(""); setDelayDetails(""); setStageSavedFeedback(null); }}><HiOutlineCheckCircle /><span><b>تمت المرحلة</b><small>حفظ الإتمام والانتقال للمرحلة التالية</small></span></button>
+            <button type="button" className={stageDecision === "delayed" ? "selected delayed" : ""} onClick={() => { setStageDecision("delayed"); setStageSavedFeedback(null); }}><HiOutlineExclamationCircle /><span><b>لم تتم</b><small>تسجيل تأخير مع توضيح السبب</small></span></button>
+          </div>
+
+          {stageDecision === "delayed" && activeProductionStage.key === "awaitingLaserDownload" && <div className="production-fixed-warning"><HiOutlineExclamationCircle /> برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}
+          {stageDecision === "delayed" && activeProductionStage.key !== "awaitingLaserDownload" && <div className="production-delay-fields production-active-delay-fields">
+            <label>سبب التأخير<ExecutionSelect value={delayReason} placeholder="اختر سبب التأخير" onChange={(value) => { setDelayReason(value); if (value !== "أخرى") setDelayDetails(""); }} options={(productionDelayReasons[activeProductionStage.key] || []).map((reason) => ({ value: reason, label: reason }))} /></label>
+            {delayReason === "أخرى" && <label>اكتب سبب التأخير<textarea value={delayDetails} onChange={(event) => setDelayDetails(event.target.value)} placeholder="وضح سبب التأخير..." /></label>}
+          </div>}
+        </div>
+
+        <aside className="production-active-stage-side">
+          <label><span>ملاحظات عامة <small>(اختياري)</small></span><textarea value={manufacturingNotes} onChange={(event) => { setManufacturingNotes(event.target.value); setStageSavedFeedback(null); }} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
+          {stageHasUnsavedChanges && <p className="production-unsaved-note"><span /> توجد تعديلات لم تُحفظ بعد</p>}
+          <button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !stageHasUnsavedChanges}>{busy ? "جاري حفظ التحديث..." : "حفظ تحديث المرحلة"}</button>
+          <small className="production-last-update">{latestProductionUpdate?.createdAt ? `آخر تحديث محفوظ: ${new Date(latestProductionUpdate.createdAt).toLocaleString("ar-EG")}` : "لم يُحفظ تحديث لهذه المرحلة بعد"}</small>
+        </aside>
+      </section> : <div className="production-all-complete"><HiOutlineCheckCircle /><div><h3>اكتملت جميع مراحل الإنتاج</h3><p>تم إنهاء تنفيذ هذه اللوحة بالكامل.</p></div></div>}
+
+      <details className="production-history-disclosure">
+        <summary><span><HiOutlineClock /><span><b>سجل تحديثات المراحل</b><small>عرض الحالات والأسباب والملاحظات التي تم حفظها</small></span></span><span className="production-history-count">{productionHistory.length} تحديث <IoChevronDown /></span></summary>
+        <div className="production-history-list">{productionHistory.length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...productionHistory].reverse().map((item, index) => <article key={`${item.createdAt}-${index}`}>
+          <span className={`production-history-mark ${item.action}`} />
+          <div><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><small>{productionStageTitle(item.stageKey)}</small>{(item.reason || item.details) && <p>{item.reason === "أخرى" ? item.details : item.reason || item.details}</p>}</div>
+          <div className="production-history-meta"><span>{item.actorName || "مستخدم النظام"}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>
+        </article>)}</div>
+      </details>
     </section>}
   </section>;
 
@@ -613,12 +657,13 @@ function ExecutionPdfWorkspace() {
           <label><b>Paint</b><input dir="ltr" value={executionDesign.paint} onChange={(event) => setExecutionDesign((current) => ({ ...current, paint: event.target.value }))} /></label>
         </div>
         <section className={`execution-image-library ${dragging ? "dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); uploadFiles(event.dataTransfer.files, "gallery"); }}>
-          <div className="execution-library-heading"><div><h4>صور PDF التنفيذ</h4><p>القص الافتراضي يحذف 25% من اليمين و25% من اليسار.</p></div><button type="button" onClick={() => executionInputRefs.current.gallery?.click()} disabled={busy}><HiOutlineCloudUpload /> رفع الصور</button></div>
+          <div className="execution-library-heading"><div><h4>صور PDF التنفيذ</h4><p>القص الافتراضي يحذف 25% من اليمين و25% من اليسار مع توسيط الصورة.</p></div><button type="button" onClick={() => executionInputRefs.current.gallery?.click()} disabled={uploadingExecution}><HiOutlineCloudUpload /> {uploadingExecution ? "جاري رفع الصور..." : "رفع الصور"}</button></div>
+          {uploadingExecution && <div className="section-loading-overlay" role="status"><span className="route-spinner" /> جاري رفع وتجهيز الصور...</div>}
           <input ref={(node) => { executionInputRefs.current.gallery = node; }} type="file" accept="image/*" multiple hidden onChange={(event) => { const selected = Array.from(event.target.files || []); event.target.value = ""; uploadFiles(selected, "gallery"); }} />
           {executionImageFiles.length === 0 ? <div className="execution-library-empty"><HiOutlinePhotograph /><b>ارفع خمس أو ست صور للبدء</b></div> : <div className="execution-library-grid">
             {executionImageFiles.map((file) => <article key={file._id} className="execution-library-card">
               <button type="button" className="execution-library-preview" onClick={() => setCropFileId(String(file._id))}>
-                {executionPreviews[String(file._id)] ? <img src={executionPreviews[String(file._id)]} alt={file.fileName} style={{ clipPath: `inset(0 ${(executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 2}% 0 ${(executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 2}%)`, transform: `scale(${executionDesign.transforms[String(file._id)]?.zoom ?? 1})`, transformOrigin: `${executionDesign.transforms[String(file._id)]?.positionX ?? 50}% ${executionDesign.transforms[String(file._id)]?.positionY ?? 50}%` }} /> : <HiOutlinePhotograph />}
+                {executionPreviews[String(file._id)] ? <img src={executionPreviews[String(file._id)]} alt={file.fileName} style={{ clipPath: `inset(0 ${(executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 2}% 0 ${(executionDesign.transforms[String(file._id)]?.cropX ?? 50) / 2}%)`, transform: `translate(-50%, -50%) scale(${executionDesign.transforms[String(file._id)]?.zoom ?? 1})`, transformOrigin: `${executionDesign.transforms[String(file._id)]?.positionX ?? 50}% ${executionDesign.transforms[String(file._id)]?.positionY ?? 50}%` }} /> : <HiOutlinePhotograph />}
                 <span>تعديل القص</span>
               </button>
               <div className="execution-image-assignments">{assignmentOptions.map((option) => <button type="button" key={option.value} className={isImageAssigned(file._id, option.value) ? "selected" : ""} onClick={() => toggleImageAssignment(file._id, option.value)}>{option.label}</button>)}</div>
@@ -636,7 +681,7 @@ function ExecutionPdfWorkspace() {
       </section>
       {cropFile && <div className="execution-crop-modal" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setCropFileId(""); }}>
         <section><header><div><h3>ضبط قص الصورة</h3><p>{cropFile.fileName}</p></div><button type="button" onClick={() => setCropFileId("")}><HiOutlineX /></button></header>
-          <div className="execution-crop-preview">{executionPreviews[String(cropFile._id)] && <img src={executionPreviews[String(cropFile._id)]} alt="معاينة القص" style={{ clipPath: `inset(0 ${cropTransform.cropX / 2}% 0 ${cropTransform.cropX / 2}%)`, transform: `scale(${cropTransform.zoom})`, transformOrigin: `${cropTransform.positionX}% ${cropTransform.positionY}%` }} />}</div>
+          <div className="execution-crop-preview">{executionPreviews[String(cropFile._id)] && <img src={executionPreviews[String(cropFile._id)]} alt="معاينة القص" style={{ clipPath: `inset(0 ${cropTransform.cropX / 2}% 0 ${cropTransform.cropX / 2}%)`, transform: `translate(-50%, -50%) scale(${cropTransform.zoom})`, transformOrigin: `${cropTransform.positionX}% ${cropTransform.positionY}%` }} />}</div>
           <div className="execution-crop-controls">
             <label>القص الأفقي: {cropTransform.cropX}%<input type="range" min="0" max="75" step="1" value={cropTransform.cropX} onChange={(event) => updateTransform(String(cropFile._id), "cropX", event.target.value)} /></label>
             <label>التكبير: {Number(cropTransform.zoom).toFixed(1)}×<input type="range" min="1" max="3" step="0.1" value={cropTransform.zoom} onChange={(event) => updateTransform(String(cropFile._id), "zoom", event.target.value)} /></label>
@@ -648,15 +693,12 @@ function ExecutionPdfWorkspace() {
       </div>}
       <div className="execution-pdf-actions">
         <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy}>تخطي هذه المرحلة</button>
-        <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={busy}>{busy ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>
+        <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={generatingExecution}>{generatingExecution ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>
       </div>
     </>}
 
     {workflow.status === "requested" && !canPreparePdf && <div className="execution-status-notice waiting">تم إصدار أمر PDF التنفيذ، وهو الآن بانتظار تجهيز المهندس.</div>}
-    {workflow.status !== "notRequested" && workflow.status !== "requested" && !workflow.skipped && <div className="execution-document-switcher">
-      <button type="button" disabled={!project.quotePreviewUrl} onClick={() => project.quotePreviewUrl && window.open(project.quotePreviewUrl, "_blank", "noopener,noreferrer")}><HiOutlineDocumentText /> رؤية عرض السعر</button>
-      <button type="button" className="primary" onClick={openGeneratedExecutionPdf} disabled={busy}><HiOutlineDocumentText /> رؤية PDF التنفيذ</button>
-    </div>}
+    {workflow.status !== "notRequested" && workflow.status !== "requested" && !workflow.skipped && project.quotePreviewUrl && <div className="execution-preview-link"><HiOutlineDocumentText /><span><b>رابط معاينة عرض السعر وPDF التنفيذ</b><small>يمكنك فتح الرابط أو نسخه وإرساله للعميل.</small></span><a href={project.quotePreviewUrl} target="_blank" rel="noreferrer">{project.quotePreviewUrl}</a><button type="button" onClick={copyPreviewLink}><HiOutlineClipboardCopy /> {previewCopied ? "تم النسخ" : "نسخ الرابط"}</button></div>}
 
     {workflow.status === "ready" && <>
       <div className="execution-status-notice ready">تم تجهيز PDF التنفيذ لهذه اللوحة، وهو الآن بانتظار قرار التنفيذ.</div>
@@ -682,6 +724,7 @@ function ExecutionPdfWorkspace() {
         onDrop={(event) => { event.preventDefault(); setDragging(false); uploadManufacturingFiles(event.dataTransfer.files); }}
         onClick={() => manufacturingInputRef.current?.click()}
       >
+        {uploadingManufacturing && <div className="section-loading-overlay" role="status"><span className="route-spinner" /> جاري رفع ملفات التصنيع...</div>}
         <HiOutlineCloudUpload />
         <h3>اسحب صور التصنيع هنا</h3>
         <p>أو اضغط لاختيار صورة أو أكثر من الجهاز.</p>
@@ -712,9 +755,9 @@ function ExecutionPdfWorkspace() {
         </article>)}
       </div>}
       <label className="manufacturing-notes-label">معلومات إضافية للملفات
-        <textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي تعليمات أو معلومات يحتاجها مدير التنفيذ..." />
+        <textarea value={engineerFileNotes} onChange={(event) => setEngineerFileNotes(event.target.value)} placeholder="اكتب أي تعليمات أو معلومات يحتاجها مدير التنفيذ..." />
       </label>
-      <button type="button" className="finish-execution-pdf-btn" onClick={finishManufacturing} disabled={busy || manufacturingFiles.length === 0}>{busy ? "جاري الحفظ..." : "حفظ وإتمام رفع ملفات التصنيع"}</button>
+      <button type="button" className="finish-execution-pdf-btn" onClick={finishManufacturing} disabled={finishingManufacturing || uploadingManufacturing || manufacturingFiles.length === 0}>{finishingManufacturing ? "جاري حفظ البيانات..." : "حفظ وإتمام رفع ملفات التصنيع"}</button>
     </section>}
 
     {manufacturing.status === "awaitingFiles" && !canPrepareManufacturing && <div className="execution-status-notice waiting">تم تأكيد التنفيذ، واللوحة الآن بانتظار رفع المهندس لملفات التصنيع.</div>}

@@ -1462,6 +1462,7 @@
 }
 
 .execution-image-library {
+    position: relative;
     margin-top: 20px;
     padding: 18px;
     border: 1px solid #d7e2eb;
@@ -1554,11 +1555,14 @@
 }
 
 .execution-library-preview img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: auto;
     max-width: none;
     height: 100%;
     display: block;
-    margin: auto;
+    margin: 0;
     object-fit: contain;
     transition: transform .2s ease, clip-path .2s ease;
 }
@@ -1740,6 +1744,7 @@
 }
 
 .execution-crop-preview {
+    position: relative;
     width: 100%;
     aspect-ratio: 16/9;
     overflow: hidden;
@@ -1752,6 +1757,9 @@
 }
 
 .execution-crop-preview img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: auto;
     max-width: none;
     height: 100%;
@@ -1841,6 +1849,52 @@
         grid-template-columns: 1fr;
     }
 }
+
+.section-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: inherit;
+    color: #214e66;
+    background: rgba(245, 251, 254, .86);
+    backdrop-filter: blur(4px);
+    font-weight: 900;
+}
+
+.execution-preview-link {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: center;
+    margin: 18px 0;
+    padding: 16px 18px;
+    border: 1px solid #cddde6;
+    border-radius: 16px;
+    color: #244f66;
+    background: #f7fbfd;
+}
+.execution-preview-link > svg { font-size: 1.55rem; }
+.execution-preview-link span { display: grid; gap: 3px; }
+.execution-preview-link small { color: #71818b; }
+.execution-preview-link a { grid-column: 1 / -1; overflow-wrap: anywhere; color: #176a99; direction: ltr; text-align: left; }
+.execution-preview-link > button { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #bfd4df; border-radius: 10px; color: #285d78; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+
+.manufacturing-engineer-note {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-inline-start: 4px solid #376d88;
+    border-radius: 12px;
+    color: #274b5e;
+    background: #eef7fb;
+}
+.manufacturing-engineer-note p { margin: 6px 0 0; white-space: pre-wrap; }
+
+.manufacturing-files-section,
+.execution-dropzone { position: relative; }
 
 .form-field-error {
     display: block;

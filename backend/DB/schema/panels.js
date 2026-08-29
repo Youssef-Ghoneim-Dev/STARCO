@@ -16,6 +16,7 @@ const stageSchema = new mongoose.Schema({
 }, { _id: false });
 const historySchema = new mongoose.Schema({
     from: { type: String, default: "" }, to: { type: String, default: "" }, action: { type: String, required: true }, note: { type: String, default: "" },
+    stageKey: { type: String, default: "" }, reason: { type: String, default: "" }, details: { type: String, default: "" },
     actorId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, actorName: { type: String, default: "" }, actorRole: { type: String, default: "" }, createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 const panelStatuses = ["draft", "pendingPricing", "pricing", "quoteCompleted", "editing", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
@@ -26,6 +27,8 @@ module.exports = new mongoose.Schema({
     source: { type: String, enum: ["marketing", "whatsapp", "manual"], default: "marketing" },
     status: { type: String, enum: panelStatuses, default: "draft", index: true }, panelName: { type: String, default: "" },
     marketerSaved: { type: Boolean, default: false },
+    marketingDraft: { type: mongoose.Schema.Types.Mixed, default: null },
+    marketingDraftDeleted: { type: Boolean, default: false },
     marketingId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null, index: true }, engineerId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null, index: true }, assignedAt: { type: Date, default: null },
     lock: { userId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, role: { type: String, default: "" }, acquiredAt: { type: Date, default: null }, expiresAt: { type: Date, default: null } },
     marketerData: { panelType: { type: String, default: "" }, panelTypeKey: { type: String, default: "" }, thickness: [{ type: Number }], hasCopper: { type: Boolean, default: null }, controlInstallation: { type: String, default: "" }, additionalDetails: { type: String, default: "" }, copperDetails: { type: mongoose.Schema.Types.Mixed, default: {} } },
@@ -38,7 +41,7 @@ module.exports = new mongoose.Schema({
         readyAt: { type: Date, default: null }, readyBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
         confirmedAt: { type: Date, default: null }, confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, skipped: { type: Boolean, default: false }
     },
-    manufacturing: { files: { type: [storedFileSchema], default: [] }, notes: { type: String, default: "" }, stages: { type: [stageSchema], default: [] }, lastReminderAt: { type: Date, default: null } },
+    manufacturing: { files: { type: [storedFileSchema], default: [] }, notes: { type: String, default: "" }, engineerNotes: { type: String, default: "" }, productionNotes: { type: String, default: "" }, stages: { type: [stageSchema], default: [] }, lastReminderAt: { type: Date, default: null } },
     statusHistory: { type: [historySchema], default: [] }, quoteCompletedAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false, index: true }, deletedAt: { type: Date, default: null }, deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
 }, { timestamps: true });
