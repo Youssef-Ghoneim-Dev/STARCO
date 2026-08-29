@@ -24,7 +24,30 @@ import {
 } from "../../../services/projectsAPI";
 import { createExecutionPdf } from "../../../utils/executionPdf";
 
-const quoteFinishedStatuses = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"];
+const quoteFinishedStatuses = [
+  "quoteCompleted",
+  "executionPdfRequested",
+  "executionPdfReady",
+  "executionConfirmed",
+  "manufacturingFilesPending",
+  "manufacturingFilesReady",
+  "pendingLaserDownload",
+  "laser",
+  "manufacturing",
+  "painting",
+  "assembly",
+  "completed",
+];
+
+const productionTrackingStatuses = new Set([
+  "manufacturingFilesReady",
+  "pendingLaserDownload",
+  "laser",
+  "manufacturing",
+  "painting",
+  "assembly",
+  "completed",
+]);
 
 const productionStageDefinitions = [
   { key: "awaitingLaserDownload", title: "تنزيل الملفات إلى الليزر", description: "إرسال ملفات اللوحة إلى ماكينة الليزر" },
@@ -173,7 +196,10 @@ function ExecutionPdfWorkspace() {
       ? manufacturing.currentStage
       : "awaitingLaserDownload";
     const currentIndex = productionStageDefinitions.findIndex((stage) => stage.key === currentKey);
-    const stored = new Map((manufacturing.productionStages || []).map((stage) => [stage.key, stage]));
+    const stored = new Map((manufacturing.productionStages || []).map((stage) => [
+      stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key,
+      stage,
+    ]));
     return productionStageDefinitions.map((definition, index) => ({
       ...definition,
       ...(stored.get(definition.key) || {}),
@@ -482,7 +508,10 @@ function ExecutionPdfWorkspace() {
   // intentionally remains `inProgress` until every panel is fully completed.
   if (!quoteFinishedStatuses.includes(panel?.status)) return null;
 
-  if (["filesReady", "downloadedToLaser"].includes(manufacturing.status)) return <section className="production-tracking-page" dir="rtl">
+  const isProductionTracking = ["filesReady", "downloadedToLaser"].includes(manufacturing.status)
+    || productionTrackingStatuses.has(panel?.status);
+
+  if (isProductionTracking) return <section className="production-tracking-page" dir="rtl">
     <header className="production-tracking-titlebar">
       <h1>متابعة مراحل الإنتاج</h1>
       <button type="button" onClick={() => navigate("/projects")}><HiOutlineArrowLeft /> الرجوع للمشاريع</button>
@@ -668,8 +697,18 @@ function ExecutionPdfWorkspace() {
           }}
         />
       </div>
-      {manufacturingFiles.length > 0 && <div className="manufacturing-files-list">
-        {manufacturingFiles.map((file) => <span key={file._id || file.storageFileId}><HiOutlinePhotograph />{file.fileName}</span>)}
+      {manufacturingFiles.length > 0 && <div className="manufacturing-download-grid manufacturing-uploaded-grid">
+        {manufacturingFiles.map((file) => <article className="manufacturing-file-card" key={file._id || file.storageFileId}>
+          <div className="manufacturing-file-card-heading">
+            <span className={`manufacturing-file-icon ${manufacturingFileType(file).toLowerCase()}`}>
+              {String(file.mimeType || "").startsWith("image/") ? <HiOutlinePhotograph /> : <HiOutlineDocumentText />}
+            </span>
+            <div><b title={file.fileName}>{file.fileName}</b><small>{formatFileSize(file.fileSize)} · {manufacturingFileType(file)}</small></div>
+          </div>
+          <div className="manufacturing-file-card-actions">
+            <button type="button" className="manufacturing-file-download" onClick={() => downloadManufacturingFile(file)}><HiOutlineCloudDownload /> تحميل</button>
+          </div>
+        </article>)}
       </div>}
       <label className="manufacturing-notes-label">معلومات إضافية للملفات
         <textarea value={manufacturingNotes} onChange={(event) => setManufacturingNotes(event.target.value)} placeholder="اكتب أي تعليمات أو معلومات يحتاجها مدير التنفيذ..." />

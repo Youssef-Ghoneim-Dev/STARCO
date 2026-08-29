@@ -50,6 +50,7 @@ function ClientProjectPreview() {
   const [executionDocuments, setExecutionDocuments] = useState({});
   const [activeDocument, setActiveDocument] = useState("quote");
   const [selectedPanelId, setSelectedPanelId] = useState("");
+  const [executionNotice, setExecutionNotice] = useState("");
   const [state, setState] = useState({ loading: true, executionLoading: false, error: "" });
   const documentsRef = useRef({ quote: null, executions: {} });
   const executionLoadKeyRef = useRef("");
@@ -62,6 +63,27 @@ function ClientProjectPreview() {
   const selectedPanel = executionPanels.find((panel) => panelKey(panel) === String(selectedPanelId)) || executionPanels[0];
   const selectedExecutionDocument = executionDocuments[panelKey(selectedPanel)] || null;
   const displayedDocument = activeDocument === "execution" ? selectedExecutionDocument : quoteDocument;
+  const executionWasRequested = (project?.panels || []).some((panel) => (
+    panel.executionPdf?.status && panel.executionPdf.status !== "notRequested"
+  ));
+  const executionWasSkipped = (project?.panels || []).some((panel) => panel.executionPdf?.skipped);
+
+  const openExecutionDocument = () => {
+    if (!executionWasRequested) {
+      setExecutionNotice("لم يتم طلب PDF تنفيذ لهذا المشروع حتى الآن.");
+      return;
+    }
+    if (executionWasSkipped && !executionPanels.length) {
+      setExecutionNotice("تم تخطي مرحلة PDF التنفيذ لهذا المشروع، لذلك لا يوجد ملف للعرض.");
+      return;
+    }
+    if (!executionPanels.length || state.executionLoading || !selectedExecutionDocument) {
+      setExecutionNotice("ما زلنا في حالة تجهيز PDF التنفيذ. سيظهر هنا بمجرد اعتماده.");
+      return;
+    }
+    setExecutionNotice("");
+    setActiveDocument("execution");
+  };
 
   useEffect(() => {
     let active = true;
@@ -149,10 +171,11 @@ function ClientProjectPreview() {
       <p>للعرض فقط</p>
     </header>
     <section className="client-preview-document-controls" aria-label="اختيار المستند">
-      <button type="button" className={activeDocument === "quote" ? "active" : ""} onClick={() => setActiveDocument("quote")}><strong>رؤية عرض السعر</strong><span>المستند الأساسي للمشروع</span></button>
-      {executionPanels.length > 0 && <button type="button" className={activeDocument === "execution" ? "active" : ""} onClick={() => selectedExecutionDocument && setActiveDocument("execution")} disabled={state.executionLoading || !selectedExecutionDocument}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : "يتم تحميله مرة واحدة مع الصفحة"}</span></button>}
+      <button type="button" className={activeDocument === "quote" ? "active" : ""} onClick={() => { setActiveDocument("quote"); setExecutionNotice(""); }}><strong>رؤية عرض السعر</strong><span>المستند الأساسي للمشروع</span></button>
+      <button type="button" className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`} onClick={openExecutionDocument} aria-disabled={!selectedExecutionDocument}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : executionWasRequested ? "قيد التجهيز" : "لم يتم طلبه بعد"}</span></button>
       {executionPanels.length > 1 && <label>اللوحة<select value={selectedPanelId} onChange={(event) => { setSelectedPanelId(event.target.value); setActiveDocument("quote"); }}>{executionPanels.map((panel) => <option key={panelKey(panel)} value={panelKey(panel)}>{panel.panelName || panel.panelCode}</option>)}</select></label>}
     </section>
+    {executionNotice && <p className="client-preview-document-notice" role="status">{executionNotice}</p>}
     {state.error && <p className="client-preview-inline-error">{state.error}</p>}
     <section className="client-preview-pdf" aria-label={activeDocument === "execution" ? "معاينة PDF التنفيذ" : "معاينة ملف عرض السعر STARCO"}>
       {Array.from({ length: displayedDocument?.numPages || 0 }, (_, index) => <PdfPage key={`${activeDocument}-${selectedPanelId}-${index + 1}`} pdfDocument={displayedDocument} pageNumber={index + 1} title={activeDocument === "execution" ? "PDF التنفيذ" : "عرض السعر"} />)}

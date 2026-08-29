@@ -161,8 +161,7 @@ const completeQuote = async (req, res, next) => { try {
     if (!["pricing", "editing"].includes(panel.status)) return res.status(409).json({ status: "error", message: "اللوحة ليست في مرحلة التسعير." });
     if (!Array.isArray(panel.pricing?.thickness) || panel.pricing.thickness.length === 0) return res.status(400).json({ status: "error", message: "يرجى اختيار سمك الصاج قبل إتمام تسعير اللوحة." });
     const saved = await panels.update({ _id: panel._id }, { status: "quoteCompleted", quoteCompletedAt: new Date(), lock: { userId: null, role: "", acquiredAt: null, expiresAt: null }, $push: { statusHistory: history(req, panel.status, "quoteCompleted", "quoteCompleted") } });
-    const project = await projects.update({ _id: panel.projectId }, { status: "inProgress", previewGeneratedAt: null });
-    await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelQuoteReady", title: "عرض سعر اللوحة جاهز", body: `${saved.panelName} — ${project.client?.name || project.projectCode}`, actor: req.user });
+    await projects.update({ _id: panel.projectId }, { status: "inProgress", previewGeneratedAt: null });
     res.json({ status: "ok", panel: publicPanel(saved) });
 } catch (error) { next(error); } };
 const openEditing = async (req, res, next) => { try {
@@ -302,7 +301,7 @@ const updateStage = async (req, res, next) => { try {
     else return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم." });
     const active = panel.manufacturing.stages.find((stage) => stage.status === "active"); const nextStatus = active?.key || "completed";
     const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: history(req, panel.status, nextStatus, `stage:${req.body.action}`, req.body.reason || "") } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
-    await createInternalNotifications({ userIds: [project.marketingId, panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
+    await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
     res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
 

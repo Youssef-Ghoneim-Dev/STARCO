@@ -1483,6 +1483,7 @@
 .manufacturing-files-section p { color: var(--text-light); }
 .manufacturing-files-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
 .manufacturing-files-list span { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 8px 11px; border-radius: 9px; background: #f1f5f9; color: var(--text); overflow-wrap: anywhere; }
+.manufacturing-uploaded-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
 .manufacturing-notes-label { display: grid; gap: 8px; margin-top: 16px; color: var(--text); font-weight: 800; }
 .manufacturing-notes-label textarea { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 100px; box-sizing: border-box; resize: vertical; padding: 13px; border: 1px solid var(--border); border-radius: 11px; font: inherit; }
 .manufacturing-files-section > .finish-execution-pdf-btn { width: 100%; margin-top: 14px; }
@@ -1604,18 +1605,18 @@
 .production-files-accordion[open] .production-files-chevron { transform: rotate(180deg); }
 .production-files-content { padding: 0 18px 17px; }
 .production-files-content .manufacturing-download-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 13px; margin: 0; }
-.production-files-content .manufacturing-file-card { min-height: 115px; padding: 13px; border-radius: 9px; box-shadow: none; }
-.production-files-content .manufacturing-file-icon { width: 36px; height: 42px; font-size: 22px; }
-.production-files-content .manufacturing-file-card-actions { grid-template-columns: 1fr 34px; }
-.production-files-content .manufacturing-file-card-actions button { min-height: 32px; border-radius: 6px; }
-.production-files-content .manufacturing-download-all { min-height: 38px; margin-top: 12px; border: 1px solid #bdd1df; border-radius: 7px; background: #f3f7fc; color: #366b8b; font-size: .78rem; }
-.production-stages-board { padding: 17px 18px 19px; border: 1px solid #dce4ea; border-radius: 13px; background: #fff; }
+.production-files-content .manufacturing-file-card { min-height: 142px; padding: 15px; border-radius: 13px; box-shadow: 0 3px 10px rgba(21, 47, 63, .04); }
+.production-files-content .manufacturing-file-icon { width: 42px; height: 48px; font-size: 25px; }
+.production-files-content .manufacturing-file-card-actions { grid-template-columns: 1fr; }
+.production-files-content .manufacturing-file-card-actions button { min-height: 38px; border-radius: 8px; font-size: .86rem; }
+.production-files-content .manufacturing-download-all { min-height: 48px; margin-top: 14px; border: 1px solid #bdd1df; border-radius: 10px; background: #f3f7fc; color: #366b8b; font-size: .9rem; }
+.production-stages-board { padding: 22px 22px 24px; border: 1px solid #dce4ea; border-radius: 15px; background: #fff; }
 .production-stages-board > header { display: flex; align-items: center; justify-content: space-between; }
-.production-stages-board > header h2 { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 1.1rem; }
-.production-stages-board > header h2 svg { color: #366f90; font-size: 23px; }
-.production-stages-board > header p { margin: 4px 0 0; color: #7b8792; font-size: .7rem; }
+.production-stages-board > header h2 { display: inline-flex; align-items: center; gap: 9px; margin: 0; font-size: 1.35rem; }
+.production-stages-board > header h2 svg { color: #366f90; font-size: 27px; }
+.production-stages-board > header p { margin: 6px 0 0; color: #667483; font-size: .84rem; }
 .production-stages-board .production-stages-track { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; margin-top: 18px; overflow: visible; }
-.production-stages-board .production-stage-card { min-height: 225px; padding: 20px 13px 13px; border-width: 1px; border-radius: 10px; box-shadow: none; transform: none; filter: none; opacity: 1; }
+.production-stages-board .production-stage-card { min-height: 260px; padding: 23px 16px 16px; border-width: 1px; border-radius: 13px; box-shadow: none; transform: none; filter: none; opacity: 1; }
 .production-stages-board .production-stage-card:not(:last-child)::after { top: 52px; left: -23px; width: 23px; border-color: #bac6ce; }
 .production-stages-board .production-stage-card.stage-1 { border-color: #b7d4e2; background: #fbfeff; --stage-color: #2183aa; }
 .production-stages-board .production-stage-card.stage-2 { border-color: #d9cef3; background: #fdfcff; --stage-color: #7754c8; }
@@ -1628,14 +1629,14 @@
 .production-stages-board .production-stage-number { top: -11px; right: 50%; width: 25px; height: 25px; transform: translateX(50%); background: var(--stage-color); font-size: .72rem; }
 .production-stages-board .production-stage-title { display: flex; align-items: flex-start; gap: 8px; padding-top: 6px; }
 .production-stages-board .production-stage-title > div { min-width: 0; }
-.production-stages-board .production-stage-title h4 { min-height: auto; font-size: .84rem; }
-.production-stages-board .production-stage-title p { font-size: .66rem; }
-.production-stage-icon { flex: 0 0 auto; color: var(--stage-color); font-size: 24px; }
+.production-stages-board .production-stage-title h4 { min-height: auto; font-size: 1rem; line-height: 1.6; }
+.production-stages-board .production-stage-title p { font-size: .78rem; line-height: 1.65; }
+.production-stage-icon { flex: 0 0 auto; color: var(--stage-color); font-size: 28px; }
 .production-stage-choice-line { display: flex; justify-content: center; gap: 18px; margin-top: auto; padding-top: 8px; border-top: 1px solid #e5e9ec; }
-.production-stage-choice-line label { display: inline-flex; align-items: center; gap: 5px; color: #576674; font-size: .72rem; font-weight: 800; }
+.production-stage-choice-line label { display: inline-flex; align-items: center; gap: 6px; color: #485867; font-size: .86rem; font-weight: 800; }
 .production-stage-choice-line input { accent-color: var(--stage-color); }
 .production-stages-board .production-delay-fields { margin-top: 2px; }
-.production-stages-board .production-fixed-warning { font-size: .68rem; }
+.production-stages-board .production-fixed-warning { font-size: .8rem; }
 .production-footer-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; padding: 18px; border: 1px solid #dce4ea; border-radius: 13px; background: #fff; }
 .production-footer-controls > label { display: grid; align-items: start; gap: 8px; color: #506171; font-size: .82rem; font-weight: 800; }
 .production-footer-controls textarea { width: 100%; min-height: 76px; box-sizing: border-box; padding: 11px 12px; border: 1px solid #d5dfe6; border-radius: 7px; font: inherit; resize: vertical; }

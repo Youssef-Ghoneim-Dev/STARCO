@@ -36,7 +36,7 @@ const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
 
 const get = async (req, res, next) => {
     try {
-        if (req.user?.role === "Marketer") {
+        if (["Marketer", "MarketingManager", "ProductionManager"].includes(req.user?.role)) {
             const config = await models.get();
             return res.status(200).json({
                 panelTypes: (config?.panelTypes || []).map((type) => ({
