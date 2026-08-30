@@ -49,6 +49,15 @@ module.exports = new mongoose.Schema({
         confirmedAt: { type: Date, default: null }, confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, skipped: { type: Boolean, default: false }
     },
     manufacturing: { files: { type: [storedFileSchema], default: [] }, notes: { type: String, default: "" }, engineerNotes: { type: String, default: "" }, productionNotes: { type: String, default: "" }, stages: { type: [stageSchema], default: [] }, lastReminderAt: { type: Date, default: null } },
+    deliverySchedule: {
+        requestedDate: { type: Date, default: null },
+        status: { type: String, enum: ["none", "pending", "accepted", "rejected"], default: "none" },
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        requestedAt: { type: Date, default: null },
+        respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+        respondedAt: { type: Date, default: null },
+        responseNote: { type: String, default: "" }
+    },
     statusHistory: { type: [historySchema], default: [] }, quoteCompletedAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false, index: true }, deletedAt: { type: Date, default: null }, deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }
 }, { timestamps: true });

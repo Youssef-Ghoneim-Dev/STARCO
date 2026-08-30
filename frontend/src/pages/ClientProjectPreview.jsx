@@ -5,7 +5,6 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { getClientExecutionPdfFile, getClientProjectPreview, getClientProjectPreviewByKey } from "../services/projectsAPI";
 import { createExecutionPdf } from "../utils/executionPdf";
 import { createProjectPdf } from "../utils/projectPdf";
-import StyledSelect from "../components/common/StyledSelect";
 import "../styles/ClientProjectPreview.css";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -181,7 +180,23 @@ function ClientProjectPreview() {
     <section className="client-preview-document-controls" aria-label="اختيار المستند">
       <button type="button" className={activeDocument === "quote" ? "active" : ""} onClick={() => { setActiveDocument("quote"); setExecutionNotice(""); }}><strong>رؤية عرض السعر</strong><span>المستند الأساسي للمشروع</span></button>
       <button type="button" className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`} onClick={openExecutionDocument} aria-disabled={!selectedExecutionDocument}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : executionWasRequested ? "قيد التجهيز" : "لم يتم طلبه بعد"}</span></button>
-      {executionPanels.length > 1 && <label>اللوحة<StyledSelect value={selectedPanelId} onChange={(value) => { setSelectedPanelId(value); setActiveDocument("quote"); }} options={executionPanels.map((panel) => ({ value: panelKey(panel), label: panel.panelName || panel.panelCode }))} /></label>}
+      {activeDocument === "execution" && executionPanels.length > 1 && <section className="client-execution-panel-switcher" aria-label="لوحات PDF التنفيذ">
+        <header>
+          <div><strong>لوحات التنفيذ</strong><span>اختر اللوحة لعرض ملفها فورًا</span></div>
+          <bdi dir="ltr">{Math.max(1, executionPanels.findIndex((panel) => panelKey(panel) === String(selectedPanelId)) + 1)} / {executionPanels.length}</bdi>
+        </header>
+        <div className="client-execution-panel-track">
+          {executionPanels.map((panel, index) => {
+            const id = panelKey(panel);
+            const selected = id === String(selectedPanelId);
+            return <button type="button" key={id} className={selected ? "is-active" : ""} onClick={() => setSelectedPanelId(id)} aria-pressed={selected}>
+              <span className="client-execution-panel-number">{String(index + 1).padStart(2, "0")}</span>
+              <span className="client-execution-panel-name"><small>لوحة التنفيذ</small><bdi dir="ltr">{panel.panelName || panel.panelCode}</bdi></span>
+              <span className="client-execution-panel-indicator" aria-hidden="true" />
+            </button>;
+          })}
+        </div>
+      </section>}
     </section>
     {executionNotice && <p className="client-preview-document-notice" role="status">{executionNotice}</p>}
     {state.error && <p className="client-preview-inline-error">{state.error}</p>}

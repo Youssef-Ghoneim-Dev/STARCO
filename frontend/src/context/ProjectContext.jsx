@@ -270,8 +270,8 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   useEffect(() => {
     let mounted = true;
 
-    const loadSavedProject = async () => {
-        setLoadingProject(true);
+    const loadSavedProject = async ({ quiet = false } = {}) => {
+        if (!quiet) setLoadingProject(true);
         try {
           setProjectLoadError("");
           const { data } = await getProject(projectId);
@@ -301,12 +301,22 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
             setProjectLoadError(getSaveErrorMessage(error));
           }
         } finally {
-          if (mounted) setLoadingProject(false);
+          if (mounted && !quiet) setLoadingProject(false);
         }
     };
 
     loadSavedProject();
-    return () => { mounted = false; };
+    const refreshFromWorkflow = (event) => {
+      const requestedProjectId = event?.detail?.projectId;
+      if (!requestedProjectId || String(requestedProjectId) === String(projectId)) {
+        loadSavedProject({ quiet: true });
+      }
+    };
+    window.addEventListener("project:refresh", refreshFromWorkflow);
+    return () => {
+      mounted = false;
+      window.removeEventListener("project:refresh", refreshFromWorkflow);
+    };
   }, [projectId]);
 
   useEffect(() => {

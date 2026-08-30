@@ -82,6 +82,16 @@ export const requestExecutionPdfChanges = (id, panelId) => api.post(`/projects/$
 
 export const confirmProjectExecution = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/execution/confirm`);
 
+export const requestPanelDeliverySchedule = (projectId, panelId, requestedDate) => api.post(
+    `/projects/${projectId}/panels/${panelId}/delivery-schedule/request`,
+    { requestedDate },
+);
+
+export const respondPanelDeliverySchedule = (projectId, panelId, decision, responseNote = "") => api.post(
+    `/projects/${projectId}/panels/${panelId}/delivery-schedule/respond`,
+    { decision, responseNote },
+);
+
 export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(
     `/projects/${projectId}/panels/${panelId}/execution-pdf/files/${fileId}`,
     { responseType: "blob" },

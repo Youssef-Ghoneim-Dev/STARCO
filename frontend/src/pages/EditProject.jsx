@@ -10,7 +10,7 @@ import WhatsappProjectData from "../components/projects/projectEditor/WhatsappPr
 import MarketingProjectEditor from "../components/projects/projectEditor/MarketingProjectEditor";
 import ExecutionPdfWorkspace from "../components/projects/projectEditor/ExecutionPdfWorkspace";
 import { useAuth } from "../context/AuthContext";
-import { claimPanel } from "../services/projectsAPI";
+import { claimPanel, getProject } from "../services/projectsAPI";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
 import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
@@ -125,6 +125,9 @@ function ProjectAuditSummary({ showMarketer = false, showEngineer = false }) {
 
 function ProjectPreviewLink() {
   const { project } = useProject();
+  const includesExecutionPdf = (project?.panels || []).some((panel) =>
+    ["ready", "confirmed"].includes(panel.executionPdf?.status),
+  );
   const link = project?.clientPreviewToken
     ? `${window.location.origin}/p/${project.clientPreviewToken}`
     : "";
@@ -139,7 +142,7 @@ function ProjectPreviewLink() {
   return (
     <section className="project-preview-link-card" dir="rtl">
       <div>
-        <span>رابط معاينة عرض السعر</span>
+        <span>{includesExecutionPdf ? "رابط معاينة عرض السعر وPDF التنفيذ" : "رابط معاينة عرض السعر"}</span>
         <a href={link} target="_blank" rel="noreferrer">
           {link}
         </a>
@@ -256,7 +259,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     const message = isQuoteCompleted
       ? ""
       : isExecutionPhase
-        ? "المشروع دخل مرحلة التنفيذ. تابع حالة PDF التنفيذ من البطاقة التالية."
+        ? ""
         : isCompleted
           ? "هذا المشروع مكتمل نهائيًا."
           : "هذا المشروع أُرسل للمهندس أو يعمل عليه حاليًا، لذلك بياناته للعرض فقط.";
@@ -432,6 +435,12 @@ function EditProject() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { notifications, readProject } = useNotifications();
+  const latestWorkflowNotification = notifications.find((item) => String(item.projectId) === String(id));
+  const latestWorkflowNotificationId = latestWorkflowNotification?._id;
+  useEffect(() => {
+    if (!latestWorkflowNotificationId) return;
+    window.dispatchEvent(new CustomEvent("project:refresh", { detail: { projectId: id } }));
+  }, [id, latestWorkflowNotificationId]);
   useEffect(() => {
     if (user?.role !== "Engineer") return;
     const stopNotification = notifications.find((item) => !item.readAt && item.type === "panelMarketingEditStarted" && String(item.projectId) === String(id));
@@ -476,6 +485,31 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
+  useEffect(() => {
+    if (user?.role !== "Engineer" || !panel?._id) return undefined;
+    let active = true;
+    const checkForMarketingEdit = async () => {
+      try {
+        const { data } = await getProject(project._id);
+        if (!active) return;
+        const remotePanel = (data?.panels || []).find((item) =>
+          String(item._id || item.panelId) === String(panel._id || panel.panelId),
+        );
+        if (remotePanel?.marketingEditSession?.active) {
+          toast.error("المندوب طلب تعديل هذه اللوحة. تم إيقاف العمل وإعادتك إلى المشاريع.", { duration: 7000 });
+          navigate("/projects", { replace: true });
+        }
+      } catch {
+        // The regular notification refresh remains the fallback.
+      }
+    };
+    checkForMarketingEdit();
+    const interval = window.setInterval(checkForMarketingEdit, 1500);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [navigate, panel?._id, panel?.panelId, project?._id, user?.role]);
   useEffect(() => {
     if (user?.role === "Engineer" && panel?.marketingEditSession?.active) {
       toast.error("المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.", { duration: 7000 });

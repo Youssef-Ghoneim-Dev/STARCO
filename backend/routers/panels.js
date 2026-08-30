@@ -23,6 +23,8 @@ router.post("/:panelId/execution-pdf/finish", controller.finishExecutionPdf);
 router.post("/:panelId/execution-pdf/skip", controller.skipExecutionPdf);
 router.post("/:panelId/execution-pdf/request-changes", controller.requestExecutionPdfChanges);
 router.post("/:panelId/execution/confirm", controller.confirmExecution);
+router.post("/:panelId/delivery-schedule/request", controller.requestDeliverySchedule);
+router.post("/:panelId/delivery-schedule/respond", controller.respondDeliverySchedule);
 router.post("/:panelId/manufacturing/files", upload.single("file"), controller.uploadManufacturing);
 router.get("/:panelId/manufacturing/files/:fileId", controller.downloadManufacturing);
 router.get("/:panelId/manufacturing/archive", controller.downloadManufacturingArchive);

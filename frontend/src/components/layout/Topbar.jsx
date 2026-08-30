@@ -27,6 +27,9 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
     if (!notification.readAt) await readOne(notification._id).catch(() => {});
     setOpen(false);
     navigate(notification.link || "/dashboard");
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("project:refresh", {
+      detail: { projectId: notification.projectId },
+    })), 0);
   };
 
   const activateDeviceNotifications = async () => {

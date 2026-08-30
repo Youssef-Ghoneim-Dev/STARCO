@@ -10,7 +10,7 @@ import MarketingManagerDashboard from "../components/dashboard/MarketingManagerD
 import ProductionManagerDashboard from "../components/dashboard/ProductionManagerDashboard";
 import MarketerDashboard from "../components/dashboard/MarketerDashboard";
 import { useAuth } from "../context/AuthContext";
-import { getProjects } from "../services/projectsAPI";
+import { getAllPanels, getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
 import toast from "react-hot-toast";
 import { FaWhatsapp } from "react-icons/fa";
@@ -20,6 +20,7 @@ import "../styles/dashboardHome.css";
 function Dashboard() {
   const { loading, accountStatus, user, reloadProfile, refreshing } = useAuth();
   const [projects, setProjects] = useState([]);
+  const [panels, setPanels] = useState([]);
   const [clientsCount, setClientsCount] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const canManageClients = ["OwnerManager", "Engineer", "Marketer", "MarketingManager", "ProductionManager"].includes(user?.role);
@@ -29,19 +30,11 @@ function Dashboard() {
       setDashboardLoading(false);
       return;
     }
-    // Production managers do not have access to the general projects listing.
-    // Their dashboard is still rendered, but it must not repeatedly call an
-    // endpoint the backend intentionally rejects.
-    if (user.role === "ProductionManager") {
-      setProjects([]);
-      setDashboardLoading(false);
-      return Promise.resolve();
-    }
     setDashboardLoading(true);
-    const requests = [getProjects()];
-    if (canManageClients) requests.push(getAllClients());
-    return Promise.all(requests).then(([projectsResponse, clientsResponse]) => {
+    const requests = [getProjects(), getAllPanels(), canManageClients ? getAllClients() : Promise.resolve(null)];
+    return Promise.all(requests).then(([projectsResponse, panelsResponse, clientsResponse]) => {
       setProjects(Array.isArray(projectsResponse.data) ? projectsResponse.data : []);
+      setPanels(Array.isArray(panelsResponse.data) ? panelsResponse.data : []);
       setClientsCount(clientsResponse?.data?.clients?.length || 0);
     }).catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل ملخص لوحة التحكم.")).finally(() => setDashboardLoading(false));
   }, [loading, user, canManageClients, accountStatus]);
@@ -126,23 +119,23 @@ function Dashboard() {
   }
 
   if (user?.role === "OwnerManager") {
-    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} panels={panels} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "Engineer") {
-    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "MarketingManager") {
-    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "ProductionManager") {
-    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "Marketer") {
-    return <DashboardLayout notAllowed><MarketerDashboard name={user?.name} projects={projects} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><MarketerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   return (

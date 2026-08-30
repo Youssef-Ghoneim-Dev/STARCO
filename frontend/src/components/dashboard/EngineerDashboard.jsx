@@ -33,10 +33,12 @@ const sameDay = (value, target) => {
   return date.getFullYear() === target.getFullYear() && date.getMonth() === target.getMonth() && date.getDate() === target.getDate();
 };
 
-const projectName = (project) => project?.panels?.[0]?.panelName?.trim() || project?.client?.name || "مشروع بدون اسم";
-const projectCode = (project) => project?.projectNumber || project?.code || String(project?._id || "").slice(-8).toUpperCase() || "—";
+const projectName = (project) => project?.panelName?.trim() || project?.panels?.[0]?.panelName?.trim() || project?.project?.client?.name || project?.client?.name || "لوحة بدون اسم";
+const projectCode = (project) => project?.panelCode || project?.project?.projectCode || project?.projectNumber || project?.code || String(project?._id || "").slice(-8).toUpperCase() || "—";
 const projectUpdatedAt = (project) => new Date(project?.updatedAt || project?.createdAt || Date.now());
 const isStatus = (project, values) => values.includes(String(project?.status || ""));
+const itemLink = (item) => item?.project?._id && item?._id ? `/projects/${item.project._id}/panels/${item._id}` : `/projects/${item?._id}`;
+const clientName = (item) => item?.project?.client?.name || item?.client?.name || "عميل غير محدد";
 
 const statusItems = [
   { key: "new", label: "جديدة", color: "#4b79dd" },
@@ -76,8 +78,8 @@ function ProjectMiniList({ title, projects, emptyText, actionLabel }) {
   return <section className="engineer-panel engineer-project-list-card">
     <h2>{title}</h2>
     <div className="engineer-project-list">
-      {projects.length ? projects.map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}>
-        <div><strong>{projectName(project)}</strong><span>{project.client?.name || "عميل غير محدد"} · {projectCode(project)}</span></div>
+      {projects.length ? projects.map((project, index) => <Link to={itemLink(project)} key={project._id || index}>
+        <div><strong>{projectName(project)}</strong><span>{clientName(project)} · {projectCode(project)}</span></div>
         <small>{project.status === "pending" ? "جديد" : "عرض سعر"}</small>
       </Link>) : <p className="engineer-empty">{emptyText}</p>}
     </div>
@@ -85,7 +87,7 @@ function ProjectMiniList({ title, projects, emptyText, actionLabel }) {
   </section>;
 }
 
-function EngineerDashboard({ name, projects, loading, onRefresh }) {
+function EngineerDashboard({ name, panels = [], loading, onRefresh }) {
   const today = useMemo(() => new Date(), []);
   const minimumDate = useMemo(() => {
     const date = new Date(today);
@@ -100,10 +102,10 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
   const isYesterday = dateValue(selectedDate) === dateValue(yesterday);
   const selectedLabel = isToday ? "اليوم" : isYesterday ? "أمس" : selectedDate.toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
   const preset = isToday ? "today" : isYesterday ? "yesterday" : "custom";
-  const selectedProjects = projects.filter((project) => sameDay(project.createdAt || project.updatedAt, selectedDate));
-  const yesterdayProjects = projects.filter((project) => sameDay(project.createdAt || project.updatedAt, new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 1)));
+  const selectedProjects = panels.filter((project) => sameDay(project.createdAt || project.updatedAt, selectedDate));
+  const yesterdayProjects = panels.filter((project) => sameDay(project.createdAt || project.updatedAt, new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 1)));
 
-  const counts = useMemo(() => projects.reduce((result, project) => {
+  const counts = panels.reduce((result, project) => {
     const status = String(project.status || "");
     if (status === "completed") result.completed += 1;
     else if (/manufactur/i.test(status)) result.manufacturing += 1;
@@ -112,16 +114,16 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
     else if (["pending", "marketingDraft"].includes(status)) result.new += 1;
     else result.pricing += 1;
     return result;
-  }, { new: 0, pricing: 0, pdf: 0, execution: 0, manufacturing: 0, completed: 0 }), [projects]);
+  }, { new: 0, pricing: 0, pdf: 0, execution: 0, manufacturing: 0, completed: 0 });
 
-  const sortedProjects = useMemo(() => [...projects].sort((a, b) => projectUpdatedAt(b) - projectUpdatedAt(a)), [projects]);
+  const sortedProjects = [...panels].sort((a, b) => projectUpdatedAt(b) - projectUpdatedAt(a));
   const todayRequests = sortedProjects.filter((project) => sameDay(project.createdAt, selectedDate)).slice(0, 5);
   const executionOrders = sortedProjects.filter((project) => isStatus(project, ["executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "execution", "executing"])).slice(0, 3);
   const priorityProjects = sortedProjects.filter((project) => project.status !== "completed").slice(0, 4);
   const completedToday = selectedProjects.filter((project) => project.status === "completed").length;
   const previousCompleted = yesterdayProjects.filter((project) => project.status === "completed").length;
   const delta = selectedProjects.length - yesterdayProjects.length;
-  const completedThisMonth = projects.filter((project) => {
+  const completedThisMonth = panels.filter((project) => {
     const date = projectUpdatedAt(project);
     return project.status === "completed" && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   }).length;
@@ -153,7 +155,7 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
     </header>
 
     <section className="engineer-metrics-grid">
-      <EngineerMetric tone="blue" icon={<HiOutlineFolder />} title="إجمالي مشاريعي" value={loading ? "—" : projects.length} note={`${delta >= 0 ? "+" : ""}${delta} مقارنة بالأمس`} />
+      <EngineerMetric tone="blue" icon={<HiOutlineFolder />} title="اللوحات المتاحة والمسندة" value={loading ? "—" : panels.length} note={`${delta >= 0 ? "+" : ""}${delta} مقارنة بالأمس`} />
       <EngineerMetric tone="green" icon={<HiOutlineCalendar />} title={`طلبات جديدة (${selectedLabel})`} value={loading ? "—" : selectedProjects.length} note={`${selectedProjects.length - yesterdayProjects.length >= 0 ? "+" : ""}${selectedProjects.length - yesterdayProjects.length} مقارنة بالأمس`} />
       <EngineerMetric tone="amber" icon={<HiOutlineClock />} title="قيد عرض السعر" value={loading ? "—" : counts.pricing + counts.new} note={`${counts.pricing + counts.new} مشروع يحتاج مراجعة`} />
       <EngineerMetric tone="violet" icon={<HiOutlineDocumentText />} title="في انتظار PDF تنفيذ" value={loading ? "—" : counts.pdf} note="طلبات جاهزة للرفع" />
@@ -164,15 +166,15 @@ function EngineerDashboard({ name, projects, loading, onRefresh }) {
     <section className="engineer-main-grid">
       <aside className="engineer-side-stack">
         <section className="engineer-panel engineer-quick-actions"><h2>إجراءات سريعة</h2><Link className="primary" to="/new-project"><HiOutlinePlus />مشروع جديد</Link><Link to="/projects"><HiOutlineCloudUpload />رفع ملفات التنفيذ PDF</Link><Link to="/projects"><HiOutlineFolder />رفع ملفات التصنيع</Link><Link to="/projects"><HiOutlineFolder />مشاريعي</Link><Link to="/configuration"><HiOutlineTemplate />الإعدادات والقوالب</Link></section>
-        <section className="engineer-panel engineer-deadlines"><h2>المواعيد النهائية اليوم</h2>{priorityProjects.slice(0, 3).map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}><div><strong>{projectName(project)}</strong><span>{index === 0 ? "تسليم عرض السعر" : index === 1 ? "رفع PDF التنفيذ" : "رفع ملفات التصنيع"}</span></div><time>{index + 4}:00 م</time></Link>)}{!priorityProjects.length && <p className="engineer-empty">لا توجد مواعيد اليوم</p>}<Link className="engineer-more-link" to="/projects">عرض جميع المواعيد <HiOutlineExternalLink /></Link></section>
+        <section className="engineer-panel engineer-deadlines"><h2>المواعيد النهائية اليوم</h2>{priorityProjects.slice(0, 3).map((project, index) => <Link to={itemLink(project)} key={project._id || index}><div><strong>{projectName(project)}</strong><span>{index === 0 ? "تسليم عرض السعر" : index === 1 ? "رفع PDF التنفيذ" : "رفع ملفات التصنيع"}</span></div><time>{index + 4}:00 م</time></Link>)}{!priorityProjects.length && <p className="engineer-empty">لا توجد مواعيد اليوم</p>}<Link className="engineer-more-link" to="/projects">عرض جميع المواعيد <HiOutlineExternalLink /></Link></section>
         <section className="engineer-panel engineer-notes"><h2>ملاحظات سريعة</h2><p>لا توجد ملاحظات جديدة</p><button type="button"><HiOutlinePlus />إضافة ملاحظة</button></section>
       </aside>
 
       <div className="engineer-content-grid">
-        <section className="engineer-panel engineer-execution-card"><h2>أوامر التنفيذ الجاهزة للعمل عليها</h2><div>{executionOrders.length ? executionOrders.map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}><div><strong>{projectName(project)}</strong><span>{project.client?.name || "عميل غير محدد"} · {projectCode(project)}</span></div><small>أمر تنفيذ</small></Link>) : <p className="engineer-empty">لا توجد أوامر تنفيذ جاهزة</p>}</div><Link className="engineer-more-link" to="/projects">عرض جميع أوامر التنفيذ <HiOutlineExternalLink /></Link></section>
-        <EngineerStatusCard counts={counts} total={projects.length} />
+        <section className="engineer-panel engineer-execution-card"><h2>أوامر التنفيذ الجاهزة للعمل عليها</h2><div>{executionOrders.length ? executionOrders.map((project, index) => <Link to={itemLink(project)} key={project._id || index}><div><strong>{projectName(project)}</strong><span>{clientName(project)} · {projectCode(project)}</span></div><small>أمر تنفيذ</small></Link>) : <p className="engineer-empty">لا توجد أوامر تنفيذ جاهزة</p>}</div><Link className="engineer-more-link" to="/projects">عرض جميع أوامر التنفيذ <HiOutlineExternalLink /></Link></section>
+        <EngineerStatusCard counts={counts} total={panels.length} />
         <ProjectMiniList title={`طلبات ${selectedLabel}`} projects={todayRequests} emptyText="لا توجد طلبات في هذا التاريخ" actionLabel="عرض جميع الطلبات" />
-        <section className="engineer-panel engineer-priority-card"><h2>أعلى الأولويات</h2>{priorityProjects.map((project, index) => <Link to={`/projects/${project._id}`} key={project._id || index}><div><HiOutlineExclamation /><span><strong>{projectName(project)}</strong><small>{index < 2 ? "مستحق خلال ساعات" : "مستحق اليوم"}</small></span></div><b className={index < 2 ? "high" : "medium"}>{index < 2 ? "عالية" : "متوسطة"}</b></Link>)}{!priorityProjects.length && <p className="engineer-empty">لا توجد أولويات حاليًا</p>}<Link className="engineer-more-link" to="/projects">عرض جميع الأولويات <HiOutlineExternalLink /></Link></section>
+        <section className="engineer-panel engineer-priority-card"><h2>أعلى الأولويات</h2>{priorityProjects.map((project, index) => <Link to={itemLink(project)} key={project._id || index}><div><HiOutlineExclamation /><span><strong>{projectName(project)}</strong><small>{index < 2 ? "مستحق خلال ساعات" : "مستحق اليوم"}</small></span></div><b className={index < 2 ? "high" : "medium"}>{index < 2 ? "عالية" : "متوسطة"}</b></Link>)}{!priorityProjects.length && <p className="engineer-empty">لا توجد أولويات حاليًا</p>}<Link className="engineer-more-link" to="/projects">عرض جميع الأولويات <HiOutlineExternalLink /></Link></section>
         <section className="engineer-panel engineer-recent-card"><h2>المشاريع الأخيرة</h2><div className="engineer-table-scroll"><table><thead><tr><th>المشروع</th><th>الحالة</th><th>آخر تحديث</th><th>التقدم</th></tr></thead><tbody>{sortedProjects.slice(0, 5).map((project, index) => <tr key={project._id || index}><td>{projectName(project)}</td><td>{project.status === "completed" ? "مكتمل" : project.status === "inProgress" ? "أمر تنفيذ" : "عرض سعر"}</td><td>{projectUpdatedAt(project).toLocaleDateString("ar-EG")}</td><td><span className="engineer-progress"><i style={{ width: `${project.status === "completed" ? 100 : 30 + index * 12}%` }} /></span></td></tr>)}</tbody></table></div><Link className="engineer-more-link" to="/projects">عرض جميع مشاريعي <HiOutlineExternalLink /></Link></section>
         <section className="engineer-panel engineer-performance-card"><h2>أدائي {selectedLabel}</h2><div><span><strong>{selectedProjects.length}</strong>مشاريع جديدة</span><span><strong>{completedToday}</strong>عروض أسعار مكتملة</span><span><strong>{counts.pdf}</strong>PDF تنفيذ مرفوعة</span><span><strong>{counts.manufacturing}</strong>ملفات تصنيع مرفوعة</span></div><p>{completedToday - previousCompleted >= 0 ? "+" : ""}{completedToday - previousCompleted} مقارنة بالأمس</p></section>
       </div>

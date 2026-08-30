@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
+import { HiOutlineArrowLeft, HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
 import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
@@ -16,6 +16,8 @@ import {
   getManufacturingArchive,
   getManufacturingFile,
   requestExecutionPdf,
+  requestPanelDeliverySchedule,
+  respondPanelDeliverySchedule,
   saveExecutionPdfDesign,
   skipExecutionPdf,
   uploadExecutionPdfFile,
@@ -98,6 +100,21 @@ const manufacturingFileType = (file) => {
   return "FILE";
 };
 
+const dateInputValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+function ExecutionStatusCard({ tone = "info", icon, title, description }) {
+  return <div className={`execution-status-card ${tone}`} role="status">
+    <span className="execution-status-card-icon">{icon}</span>
+    <div><strong>{title}</strong><span>{description}</span></div>
+    <i aria-hidden="true" />
+  </div>;
+}
+
 const defaultExecutionDesign = (panel, workflow) => {
   const dimensions = panel?.dimensions || panel?.pricing?.dimensions || {};
   const centimeters = [dimensions.length, dimensions.width, dimensions.depth]
@@ -145,7 +162,6 @@ function ExecutionPdfWorkspace() {
   const [finishingManufacturing, setFinishingManufacturing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [previewCopied, setPreviewCopied] = useState(false);
   const executionInputRefs = useRef({});
   const loadedExecutionDesignKey = useRef("");
   const manufacturingInputRef = useRef(null);
@@ -154,6 +170,7 @@ function ExecutionPdfWorkspace() {
   const workflow = useMemo(() => executionPdfState || { status: "notRequested", files: [] }, [executionPdfState]);
   const files = useMemo(() => workflow.files || [], [workflow.files]);
   const manufacturing = panel?.manufacturing || { status: "notStarted", files: [], notes: "" };
+  const deliverySchedule = panel?.deliverySchedule || { status: "none" };
   const manufacturingFiles = useMemo(() => manufacturing.files || [], [manufacturing.files]);
   const [engineerFileNotes, setEngineerFileNotes] = useState(manufacturing.engineerNotes || manufacturing.notes || "");
   const [manufacturingNotes, setManufacturingNotes] = useState(manufacturing.productionNotes || "");
@@ -161,6 +178,8 @@ function ExecutionPdfWorkspace() {
   const [delayReason, setDelayReason] = useState("");
   const [delayDetails, setDelayDetails] = useState("");
   const [stageSavedFeedback, setStageSavedFeedback] = useState(null);
+  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(() => dateInputValue(deliverySchedule.requestedDate));
+  const [deliveryResponseNote, setDeliveryResponseNote] = useState("");
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
   const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
@@ -176,6 +195,8 @@ function ExecutionPdfWorkspace() {
   const canPrepareManufacturing = ["Engineer", "OwnerManager"].includes(user?.role);
   const canDownloadManufacturing = ["Engineer", "OwnerManager", "ProductionManager"].includes(user?.role);
   const canManageProductionStages = ["OwnerManager", "ProductionManager"].includes(user?.role);
+  const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && panel?.status !== "completed";
+  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role);
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
     marketingRepresentative: project.marketingRepresentative || nextProject.marketingRepresentative,
@@ -190,6 +211,11 @@ function ExecutionPdfWorkspace() {
     setDelayReason("");
     setDelayDetails("");
   }, [panel?.panelId, manufacturing.engineerNotes, manufacturing.notes, manufacturing.productionNotes, manufacturing.currentStage]);
+
+  useEffect(() => {
+    setRequestedDeliveryDate(dateInputValue(deliverySchedule.requestedDate));
+    setDeliveryResponseNote(deliverySchedule.responseNote || "");
+  }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.responseNote]);
 
   useEffect(() => () => window.clearTimeout(stageSavedTimerRef.current), []);
 
@@ -241,12 +267,6 @@ function ExecutionPdfWorkspace() {
     await navigator.clipboard.writeText(project._id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
-  };
-  const copyPreviewLink = async () => {
-    if (!project.quotePreviewUrl) return;
-    await navigator.clipboard.writeText(project.quotePreviewUrl);
-    setPreviewCopied(true);
-    window.setTimeout(() => setPreviewCopied(false), 1600);
   };
 
   const issueOrder = async () => {
@@ -424,6 +444,27 @@ function ExecutionPdfWorkspace() {
     finally { setBusy(false); }
   };
 
+  const requestDeliveryDate = async () => {
+    if (!requestedDeliveryDate) return toast.error("اختر موعد انتهاء اللوحة أولًا.");
+    setBusy(true);
+    try {
+      const { data } = await requestPanelDeliverySchedule(project._id, panel.panelId, requestedDeliveryDate);
+      setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
+      toast.success(data.message || "تم إرسال الموعد لمدير التنفيذ.");
+    } catch (error) { toast.error(error.response?.data?.message || "تعذر إرسال الموعد."); }
+    finally { setBusy(false); }
+  };
+
+  const respondToDeliveryDate = async (decision) => {
+    setBusy(true);
+    try {
+      const { data } = await respondPanelDeliverySchedule(project._id, panel.panelId, decision, deliveryResponseNote);
+      setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
+      toast.success(data.message || "تم حفظ قرار الموعد.");
+    } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ قرار الموعد."); }
+    finally { setBusy(false); }
+  };
+
   const uploadManufacturingFiles = async (selectedFiles) => {
     const incoming = Array.from(selectedFiles || []).filter((file) => file?.name);
     const selected = incoming.filter(isManufacturingTestImage);
@@ -520,6 +561,24 @@ function ExecutionPdfWorkspace() {
   const isProductionTracking = ["filesReady", "downloadedToLaser"].includes(manufacturing.status)
     || productionTrackingStatuses.has(panel?.status);
 
+  const deliveryStatusLabels = { none: "لم يُحدد موعد", pending: "بانتظار قرار مدير التنفيذ", accepted: "تم اعتماد الموعد", rejected: "الموعد غير مناسب" };
+  const renderDeliverySchedule = () => {
+    if (!canRequestDeliverySchedule && !canRespondDeliverySchedule && deliverySchedule.status === "none") return null;
+    return <section className={`panel-delivery-schedule ${deliverySchedule.status || "none"}`}>
+      <header>
+        <span><HiOutlineCalendar /></span>
+        <div><h3>موعد انتهاء اللوحة</h3><p>تحديد واعتماد الموعد المتوقع لتسليم اللوحة.</p></div>
+        <b>{deliveryStatusLabels[deliverySchedule.status] || deliveryStatusLabels.none}</b>
+      </header>
+      <div className="panel-delivery-schedule-body">
+        <div className="panel-delivery-date-summary"><small>الموعد المطلوب</small><strong>{deliverySchedule.requestedDate ? formatProjectDate(deliverySchedule.requestedDate) : "لم يتم تحديده"}</strong>{deliverySchedule.respondedAt && <span>آخر قرار: {formatProjectDate(deliverySchedule.respondedAt, true)}</span>}</div>
+        {canRequestDeliverySchedule && <div className="panel-delivery-request"><label>اختر الموعد<input type="date" min={dateInputValue(new Date())} value={requestedDeliveryDate} onChange={(event) => setRequestedDeliveryDate(event.target.value)} /></label><button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}>{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button></div>}
+        {canRespondDeliverySchedule && deliverySchedule.status === "pending" && <div className="panel-delivery-response"><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، يمكن التنفيذ</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy}><HiOutlineX /> لا، الموعد غير مناسب</button></div></div>}
+        {deliverySchedule.responseNote && deliverySchedule.status !== "pending" && <aside><b>ملاحظة مدير التنفيذ</b><p>{deliverySchedule.responseNote}</p></aside>}
+      </div>
+    </section>;
+  };
+
   if (isProductionTracking) return <section className="production-tracking-page" dir="rtl">
     <header className="production-tracking-titlebar">
       <h1>متابعة مراحل الإنتاج</h1>
@@ -542,6 +601,8 @@ function ExecutionPdfWorkspace() {
         <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div></>}
       </div>
     </section>
+
+    {renderDeliverySchedule()}
 
     <details className="production-files-accordion" open>
       <summary><span><HiOutlineFolder /><b>ملفات التصنيع</b><small>جميع الملفات المرفوعة من قبل المهندس</small></span><IoChevronDown className="production-files-chevron" /></summary>
@@ -629,6 +690,8 @@ function ExecutionPdfWorkspace() {
       </button>
     </header>
 
+    {renderDeliverySchedule()}
+
     {workflow.status === "notRequested" && <div className="execution-order-card">
       <div><h3>لم يصدر أمر PDF تنفيذ لهذه اللوحة بعد</h3><p>اختر سمك الصاج الذي أكده العميل، ثم أصدر أمر التنفيذ.</p></div>
       {canIssueOrder && <div className="execution-order-controls">
@@ -688,19 +751,17 @@ function ExecutionPdfWorkspace() {
       </div>
     </>}
 
-    {workflow.status === "requested" && !canPreparePdf && <div className="execution-status-notice waiting">تم إصدار أمر PDF التنفيذ، وهو الآن بانتظار تجهيز المهندس.</div>}
-    {workflow.status !== "notRequested" && workflow.status !== "requested" && !workflow.skipped && project.quotePreviewUrl && <div className="execution-preview-link"><HiOutlineDocumentText /><span><b>رابط معاينة عرض السعر وPDF التنفيذ</b><small>يمكنك فتح الرابط أو نسخه وإرساله للعميل.</small></span><a href={project.quotePreviewUrl} target="_blank" rel="noreferrer">{project.quotePreviewUrl}</a><button type="button" onClick={copyPreviewLink}><HiOutlineClipboardCopy /> {previewCopied ? "تم النسخ" : "نسخ الرابط"}</button></div>}
-
+    {workflow.status === "requested" && !canPreparePdf && <ExecutionStatusCard tone="info" icon={<HiOutlineClock />} title="تم إصدار أمر PDF التنفيذ" description="اللوحة الآن بانتظار تجهيز الملف من المهندس المسؤول." />}
     {workflow.status === "ready" && <>
-      <div className="execution-status-notice ready">تم تجهيز PDF التنفيذ لهذه اللوحة، وهو الآن بانتظار قرار التنفيذ.</div>
+      <ExecutionStatusCard tone="success" icon={<HiOutlineCheckCircle />} title="ملف التنفيذ جاهز للمراجعة" description="راجع الملف، ثم اختر تعديل اللوحة أو تأكيد التنفيذ." />
       {canReviewPdf && <div className="execution-review-actions">
         <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel._id || panel.panelId, options)} className="request-changes-btn" label="تعديل اللوحة" />
         <button type="button" className="confirm-execution-btn" onClick={confirmExecution} disabled={busy}>تأكيد التنفيذ</button>
       </div>}
     </>}
-    {workflow.status === "changesRequested" && <div className="execution-status-notice waiting">تم طلب تعديلات وفتح بيانات التسعير للمهندس مع الاحتفاظ بالقيم الحالية.</div>}
-    {workflow.status === "skipped" && <div className="execution-status-notice skipped">تم تخطي PDF التنفيذ والانتقال مباشرةً إلى رفع ملفات التصنيع.</div>}
-    {workflow.status === "confirmed" && <div className="execution-status-notice ready">تم تأكيد التنفيذ وفتح مرحلة ملفات التصنيع.</div>}
+    {workflow.status === "changesRequested" && <ExecutionStatusCard tone="attention" icon={<HiOutlineExclamationCircle />} title="تم إرسال طلب التعديل" description="فُتحت بيانات التسعير للمهندس مع الاحتفاظ بجميع القيم الحالية." />}
+    {workflow.status === "skipped" && <ExecutionStatusCard tone="info" icon={<HiOutlineLightningBolt />} title="تم تخطي ملف PDF التنفيذ" description="انتقلت اللوحة مباشرةً إلى مرحلة رفع ملفات التصنيع." />}
+    {workflow.status === "confirmed" && manufacturing.status !== "awaitingFiles" && <ExecutionStatusCard tone="success" icon={<HiOutlineCheckCircle />} title="تم تأكيد التنفيذ" description="فُتحت مرحلة ملفات التصنيع بنجاح." />}
 
     {manufacturing.status === "awaitingFiles" && canPrepareManufacturing && <section className="manufacturing-files-section">
       <div>
@@ -751,7 +812,7 @@ function ExecutionPdfWorkspace() {
       <button type="button" className="finish-execution-pdf-btn" onClick={finishManufacturing} disabled={finishingManufacturing || uploadingManufacturing || manufacturingFiles.length === 0}>{finishingManufacturing ? "جاري حفظ البيانات..." : "حفظ وإتمام رفع ملفات التصنيع"}</button>
     </section>}
 
-    {manufacturing.status === "awaitingFiles" && !canPrepareManufacturing && <div className="execution-status-notice waiting">تم تأكيد التنفيذ، واللوحة الآن بانتظار رفع المهندس لملفات التصنيع.</div>}
+    {manufacturing.status === "awaitingFiles" && !canPrepareManufacturing && <ExecutionStatusCard tone="info" icon={<HiOutlineClock />} title="تم تأكيد التنفيذ" description="اللوحة الآن بانتظار رفع المهندس لملفات التصنيع." />}
 
   </section>;
 }
