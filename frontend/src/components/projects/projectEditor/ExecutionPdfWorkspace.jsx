@@ -5,6 +5,7 @@ import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
+import PanelEditAction from "../PanelEditAction";
 import { getPanelNameDirection } from "../../../utils/panelNameDirection";
 import {
   finishExecutionPdf,
@@ -15,7 +16,6 @@ import {
   getManufacturingArchive,
   getManufacturingFile,
   requestExecutionPdf,
-  requestExecutionPdfChanges,
   saveExecutionPdfDesign,
   skipExecutionPdf,
   uploadExecutionPdfFile,
@@ -137,7 +137,7 @@ function ExecutionSelect({ value, options, placeholder, onChange }) {
 function ExecutionPdfWorkspace() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { project, setProject, activePanel, savingProject } = useProject();
+  const { project, setProject, activePanel, savingProject, beginEditing } = useProject();
   const [busy, setBusy] = useState(false);
   const [uploadingExecution, setUploadingExecution] = useState(false);
   const [generatingExecution, setGeneratingExecution] = useState(false);
@@ -411,16 +411,6 @@ function ExecutionPdfWorkspace() {
       const { data } = await skipExecutionPdf(project._id, panel.panelId);
       setProject(data.project);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تخطي المرحلة."); }
-    finally { setBusy(false); }
-  };
-
-  const requestChanges = async () => {
-    setBusy(true);
-    try {
-      const { data } = await requestExecutionPdfChanges(project._id, panel.panelId);
-      setProject(data.project);
-      if (data.notification?.includes("تعذر")) toast.error(data.notification);
-    } catch (error) { toast.error(error.response?.data?.message || "تعذر فتح المشروع للتعديل."); }
     finally { setBusy(false); }
   };
 
@@ -704,7 +694,7 @@ function ExecutionPdfWorkspace() {
     {workflow.status === "ready" && <>
       <div className="execution-status-notice ready">تم تجهيز PDF التنفيذ لهذه اللوحة، وهو الآن بانتظار قرار التنفيذ.</div>
       {canReviewPdf && <div className="execution-review-actions">
-        <button type="button" className="request-changes-btn" onClick={requestChanges} disabled={busy}>إرسال بعض التعديلات</button>
+        <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel._id || panel.panelId, options)} className="request-changes-btn" label="تعديل اللوحة" />
         <button type="button" className="confirm-execution-btn" onClick={confirmExecution} disabled={busy}>تأكيد التنفيذ</button>
       </div>}
     </>}

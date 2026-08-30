@@ -26,10 +26,10 @@ const canSeeProject = (user, project) => isOwner(user) || (isMarketer(user) ? sa
 const hydrate = async (project, includeDeleted = false, viewer = null) => {
     const object = project.toObject ? project.toObject() : project;
     const allProjectPanels = await panels.find({ projectId: project._id, ...(includeDeleted ? {} : { isDeleted: false }) });
-    const marketerOwnsSession = isMarketer(viewer) && sameId(object.marketingId, viewer?._id) && sameId(object.marketingEditSession?.openedBy, viewer?._id);
     const projectPanels = allProjectPanels.filter((panel) => {
-        if (marketerOwnsSession && panel.marketingDraftDeleted) return false;
-        if (panel.status === "draft" && object.status !== "draft" && !marketerOwnsSession) return false;
+        const viewerOwnsPanelDraft = (isMarketer(viewer) || isOwner(viewer)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, viewer?._id);
+        if (viewerOwnsPanelDraft && panel.marketingDraftDeleted) return false;
+        if (panel.status === "draft" && object.status !== "draft" && !viewerOwnsPanelDraft) return false;
         return true;
     });
     const [marketer, engineerRows] = await Promise.all([
@@ -39,7 +39,8 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
     const engineerMap = new Map(engineerRows.map((user) => [String(user._id), { _id: user._id, name: user.name }]));
     const visiblePanels = projectPanels.map((panel) => {
         const storedValue = panel.toObject?.() || panel;
-        const value = marketerOwnsSession && storedValue.marketingDraft ? { ...storedValue, ...storedValue.marketingDraft } : storedValue;
+        const viewerOwnsPanelDraft = (isMarketer(viewer) || isOwner(viewer)) && storedValue.marketingEditSession?.active && sameId(storedValue.marketingEditSession?.openedBy, viewer?._id);
+        const value = viewerOwnsPanelDraft && storedValue.marketingDraft ? { ...storedValue, ...storedValue.marketingDraft } : storedValue;
         const safeValue = { ...value };
         delete safeValue.marketingDraft;
         delete safeValue.marketingDraftDeleted;
@@ -330,7 +331,8 @@ const getProjectMediaFile = async (req, res, next) => { try {
 const uploadProjectMedia = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.body?.panelId, projectId: req.params.id, isDeleted: false });
     if (!project || !panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
-    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || (project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id))));
+    const ownsPanelEditSession = panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id);
+    const canEdit = (isOwner(req.user) && (panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || ownsPanelEditSession));
     if (!canEdit) return res.status(403).json({ status: "error", message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية." });
     if (!req.file || (!req.file.mimetype.startsWith("image/") && !req.file.mimetype.startsWith("audio/"))) return res.status(400).json({ status: "error", message: "اختر صورة أو تسجيلًا صوتيًا أولًا." });
     const stored = await uploadFile({ buffer: req.file.buffer, fileName: `panel-${panel.panelCode}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`, mimeType: req.file.mimetype });
@@ -340,7 +342,8 @@ const uploadProjectMedia = async (req, res, next) => { try {
 const deleteProjectMedia = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const media = project && await findMedia(project._id, req.params.mediaId);
     if (!project || !media) return res.status(404).json({ status: "error", message: "المرفق غير موجود." });
-    const canEdit = isOwner(req.user) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || (project.marketingEditSession?.active && sameId(project.marketingEditSession?.openedBy, req.user._id))));
+    const ownsPanelEditSession = media.panel.marketingEditSession?.active && sameId(media.panel.marketingEditSession?.openedBy, req.user._id);
+    const canEdit = (isOwner(req.user) && (media.panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || ownsPanelEditSession));
     if (!canEdit) return res.status(403).json({ status: "error", message: "لا يمكنك حذف هذا المرفق الآن." });
     await deleteStoredFile(media.file.storageFileId); await panels.update({ _id: media.panel._id }, { $pull: { attachments: { _id: media.file._id } } }); res.json({ status: "ok" });
 } catch (error) { next(error); } };

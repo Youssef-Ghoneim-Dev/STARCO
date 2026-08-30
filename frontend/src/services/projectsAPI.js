@@ -43,7 +43,7 @@ export const completeProject = (id) => {
     return api.post(`/projects/${id}/preview`);
 };
 
-export const startProjectEditing = (id, panelId) => api.post(`/projects/${id}/panels/${panelId}/open-editing`);
+export const startProjectEditing = (id, panelId, data = {}) => api.post(`/projects/${id}/panels/${panelId}/open-editing`, data);
 
 export const submitMarketingProject = (id) => api.post(`/projects/${id}/submit`);
 
@@ -57,7 +57,7 @@ export const updatePanelRecord = (projectId, panelId, data) => api.put(`/project
 export const deletePanelRecord = (projectId, panelId) => api.delete(`/projects/${projectId}/panels/${panelId}`);
 export const claimPanel = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/claim`);
 export const completePanelQuote = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/complete-quote`);
-export const submitPanelEdits = (projectId) => api.post(`/projects/${projectId}/panels/submit-edits`);
+export const submitPanelEdits = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/submit-edits`);
 export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
 export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 

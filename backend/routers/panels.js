@@ -7,7 +7,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 router.use(auth, check);
 router.get("/", controller.listPanels);
 router.post("/", controller.createPanel);
-router.post("/submit-edits", controller.submitEdits);
+router.post("/:panelId/submit-edits", controller.submitEdits);
 router.get("/:panelId", controller.getPanel);
 router.put("/:panelId", controller.updatePanel);
 router.delete("/:panelId", controller.deletePanel);

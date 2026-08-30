@@ -7,7 +7,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, updatePanelRecord } from "../services/projectsAPI";
+import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, submitPanelEdits, updatePanelRecord } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
@@ -723,15 +723,15 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
   }, [activePanel, project, projectId, readOnly, systemConfig]);
-  const beginEditing = useCallback(async (panelId) => {
+  const beginEditing = useCallback(async (panelId, options = {}) => {
     try {
-      const { data } = await startProjectEditing(projectId, panelId);
+      const { data } = await startProjectEditing(projectId, panelId, options);
       setProject((current) => ({
         ...current,
         ...(data.project || {}),
         status: data.project?.status || current.status,
         panels: current.panels.map((panel) => (panel._id === panelId || panel.panelId === panelId)
-          ? { ...panel, ...data.panel, quoteStatus: "editing" }
+          ? hydratePanel({ ...panel, ...data.panel }, current.panels.indexOf(panel), systemConfig, data.project?.status || current.status)
           : panel),
       }));
       setPreventAutoSave(false);
@@ -739,7 +739,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     } catch (error) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
-  }, [projectId]);
+  }, [projectId, systemConfig]);
   const submitMarketingProject = useCallback(async () => {
     if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
     if (!project.client.name?.trim()) return { success: false, message: "يرجى تحديد اسم العميل قبل إرسال المشروع." };
@@ -748,6 +748,11 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     try {
       const active = project.panels?.[activePanel];
       if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
+      const editingThisPanel = active?.marketingEditSession?.active;
+      if (editingThisPanel) {
+        const { data } = await submitPanelEdits(projectId, active._id);
+        return { success: true, message: data.message || "تم حفظ اللوحة وإنهاء التعديلات." };
+      }
       return { success: true, message: "تم حفظ بيانات اللوحة." };
     } catch (error) {
       const message = getSaveErrorMessage(error);

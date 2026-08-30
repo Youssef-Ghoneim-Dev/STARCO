@@ -13,13 +13,14 @@ import { useAuth } from "../context/AuthContext";
 import { claimPanel } from "../services/projectsAPI";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
 import { useNotifications } from "../context/NotificationContext";
+import PanelEditAction from "../components/projects/PanelEditAction";
+import { panelMarketingEditableStatuses } from "../utils/panelEditing";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
   readOnly = false,
   readOnlyMessage = "",
   allowPanelEditing = false,
-  isMarketer = false,
 }) {
   const { project, activePanel } = useProject();
   const [openedPanel, setOpenedPanel] = useState(activePanel);
@@ -28,7 +29,7 @@ function QuoteEditor({
     readOnly ||
     !["draft", "inProgress", "editing"].includes(panel?.quoteStatus);
   const canStartPanelEditing =
-    panel?.quoteStatus === "quoteCompleted" && (allowPanelEditing || !readOnly);
+    panelMarketingEditableStatuses.has(panel?.status) && (allowPanelEditing || !readOnly);
   return (
     <>
       {readOnlyMessage && (
@@ -51,7 +52,7 @@ function QuoteEditor({
             </bdi></h2>
             <div className="panel-detail-heading-actions">
               {canStartPanelEditing && (
-                <StartEditingButton isMarketer={isMarketer} />
+                <StartEditingButton />
               )}
               <button type="button" onClick={() => setOpenedPanel(null)}>
                 العودة إلى اللوحات
@@ -75,31 +76,10 @@ function QuoteEditor({
   );
 }
 
-function StartEditingButton({ isMarketer }) {
-  const { beginEditing, savingProject, project, activePanel } = useProject();
-  const [starting, setStarting] = useState(false);
-  const startEditing = async () => {
-    setStarting(true);
-    const panel = project?.panels?.[activePanel];
-    const result = await beginEditing(panel?._id || panel?.panelId);
-    setStarting(false);
-    if (!result.success)
-      toast.error(result.message || "تعذر تحويل المشروع إلى وضع التعديل.");
-  };
-  return (
-    <button
-      type="button"
-      className="panel-inline-edit-btn"
-      disabled={starting || savingProject}
-      onClick={startEditing}
-    >
-      {starting
-        ? "جاري التحويل..."
-        : isMarketer
-          ? "تعديل اللوحة"
-          : "تحويل إلى Editing"}
-    </button>
-  );
+function StartEditingButton() {
+  const { beginEditing, project, activePanel } = useProject();
+  const panel = project?.panels?.[activePanel];
+  return <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel?._id || panel?.panelId, options)} className="panel-inline-edit-btn" />;
 }
 
 const formatExactDate = (value) =>
@@ -198,8 +178,8 @@ function CompletedMarketingProject({ message, showExecution }) {
               {panel?.panelName || `لوحة ${activePanel + 1}`}
             </bdi></h2>
             <div className="panel-detail-heading-actions">
-              {panel?.quoteStatus === "quoteCompleted" && (
-                <StartEditingButton isMarketer />
+              {panelMarketingEditableStatuses.has(panel?.status) && (
+                <StartEditingButton />
               )}
               <button type="button" onClick={() => setOpenedPanel(null)}>
                 العودة إلى اللوحات
@@ -249,9 +229,11 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       "painting",
       "assembly",
     ].includes(activePanel?.status) || hasPanelExecution;
-  const marketerCanEdit =
-    project?.status === "draft" ||
-    Boolean(project?.marketingEditSession?.active);
+  const marketingPanelEditing = Boolean(
+    activePanel?.marketingEditSession?.active &&
+    ["Marketer", "OwnerManager"].includes(user?.role),
+  );
+  const marketerCanEdit = project?.status === "draft" || marketingPanelEditing;
   const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
   const claimedByAnotherEngineer =
     user?.role === "Engineer" && project?.readOnlyForCurrentUser;
@@ -265,6 +247,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         : "";
   const canViewQuoteReference = ["Engineer", "OwnerManager"].includes(user?.role);
 
+  if (marketingPanelEditing) return <MarketingProjectEditor />;
   if (isMarketer) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
     const message = isQuoteCompleted
@@ -440,8 +423,16 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
 
 function EditProject() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { readProject } = useNotifications();
+  const { notifications, readProject } = useNotifications();
+  useEffect(() => {
+    if (user?.role !== "Engineer") return;
+    const stopNotification = notifications.find((item) => !item.readAt && item.type === "panelMarketingEditStarted" && String(item.projectId) === String(id));
+    if (!stopNotification) return;
+    toast.error(stopNotification.title || "توقف عن العمل؛ المندوب يعدّل اللوحة الآن.", { duration: 7000 });
+    navigate("/projects", { replace: true });
+  }, [id, navigate, notifications, user?.role]);
   useEffect(() => { readProject(id); }, [id, readProject]);
   const isMarketer = user?.role === "Marketer";
   const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
@@ -479,6 +470,12 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
+  useEffect(() => {
+    if (user?.role === "Engineer" && panel?.marketingEditSession?.active) {
+      toast.error("المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.", { duration: 7000 });
+      navigate("/projects", { replace: true });
+    }
+  }, [navigate, panel?.marketingEditSession?.active, user?.role]);
   useEffect(() => {
     if (
       !panel?._id ||

@@ -34,7 +34,8 @@ function MarketingProjectEditor() {
     : [];
   const canEditActivePanel =
     panel.status === "draft" ||
-    project.marketingEditSession?.active;
+    panel.marketingEditSession?.active;
+  const editingExistingPanel = Boolean(panel.marketingEditSession?.active);
 
   const patchPanel = (patch) => {
     if (!canEditActivePanel) return;
@@ -147,6 +148,7 @@ function MarketingProjectEditor() {
     setValidationErrors({});
     const result = await submitMarketingProject();
     if (result.success) {
+      toast.success(result.message || (editingExistingPanel ? "تم حفظ اللوحة وإنهاء التعديلات." : "تم حفظ بيانات اللوحة."));
       if (result.notification?.includes("تعذر"))
         toast.error(result.notification, { duration: 7000 });
       navigate(`/projects/${project._id}`);
@@ -416,7 +418,7 @@ function MarketingProjectEditor() {
             onClick={save}
             disabled={savingProject}
           >
-            {savingProject ? "جاري الحفظ..." : "حفظ اللوحة والعودة للمشروع"}
+            {savingProject ? "جاري الحفظ..." : editingExistingPanel ? "حفظ اللوحة وإنهاء التعديلات" : "حفظ اللوحة والعودة للمشروع"}
           </button>
         </div>
       )}
