@@ -263,6 +263,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       : readOnly && user?.role !== "MarketingManager"
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
+  const canViewQuoteReference = ["Engineer", "OwnerManager"].includes(user?.role);
 
   if (isMarketer) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
@@ -361,14 +362,19 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         <details className="quote-reference-details">
           <summary>
             {isWhatsappProject
-              ? "عرض بيانات المشروع والمندوب"
+              ? canViewQuoteReference
+                ? "عرض بيانات المشروع وعرض السعر"
+                : "عرض بيانات المشروع والمندوب"
               : "عرض بيانات التسعير المحفوظة"}
           </summary>
           {isWhatsappProject ? (
-            <>
-              <PanelsTabs readOnly />
-              <WhatsappProjectData />
-            </>
+            canViewQuoteReference ? <>
+              <div className="whatsapp-project-tabs quote-reference-tabs" dir="rtl">
+                <button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button>
+                <button className={tab === "quote" ? "active" : ""} onClick={() => setTab("quote")}>عرض السعر</button>
+              </div>
+              {tab === "project-data" ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />}
+            </> : <><PanelsTabs readOnly /><WhatsappProjectData /></>
           ) : (
             <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
           )}

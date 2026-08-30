@@ -609,7 +609,8 @@ function ExecutionPdfWorkspace() {
         <aside className="production-active-stage-side">
           <label><span>ملاحظات عامة <small>(اختياري)</small></span><textarea value={manufacturingNotes} onChange={(event) => { setManufacturingNotes(event.target.value); setStageSavedFeedback(null); }} placeholder="اكتب أي ملاحظات إضافية هنا..." /></label>
           {stageHasUnsavedChanges && <p className="production-unsaved-note"><span /> توجد تعديلات لم تُحفظ بعد</p>}
-          <button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !stageHasUnsavedChanges}>{busy ? "جاري حفظ التحديث..." : "حفظ تحديث المرحلة"}</button>
+          <button type="button" className="production-save-button" onClick={saveProductionStage} disabled={busy || !stageHasUnsavedChanges}>{busy ? "جاري حفظ التحديث..." : !stageDecision && manufacturingNotesChanged ? "حفظ الملاحظات" : "حفظ تحديث المرحلة"}</button>
+          {!stageDecision && manufacturingNotesChanged && <small className="production-notes-only-help">يمكن حفظ الملاحظات وحدها دون اختيار تمت أو لم تتم.</small>}
           <small className="production-last-update">{latestProductionUpdate?.createdAt ? `آخر تحديث محفوظ: ${new Date(latestProductionUpdate.createdAt).toLocaleString("ar-EG")}` : "لم يُحفظ تحديث لهذه المرحلة بعد"}</small>
         </aside>
       </section> : <div className="production-all-complete"><HiOutlineCheckCircle /><div><h3>اكتملت جميع مراحل الإنتاج</h3><p>تم إنهاء تنفيذ هذه اللوحة بالكامل.</p></div></div>}
@@ -618,7 +619,7 @@ function ExecutionPdfWorkspace() {
         <summary><span><HiOutlineClock /><span><b>سجل تحديثات المراحل</b><small>عرض الحالات والأسباب والملاحظات التي تم حفظها</small></span></span><span className="production-history-count">{productionHistory.length} تحديث <IoChevronDown /></span></summary>
         <div className="production-history-list">{productionHistory.length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...productionHistory].reverse().map((item, index) => <article key={`${item.createdAt}-${index}`}>
           <span className={`production-history-mark ${item.action}`} />
-          <div><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><small>{productionStageTitle(item.stageKey)}</small>{(item.reason || item.details) && <p>{item.reason === "أخرى" ? item.details : item.reason || item.details}</p>}</div>
+          <div><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><small>{productionStageTitle(item.stageKey)}</small>{(item.reason || item.details) && <p>{item.reason === "أخرى" ? item.details : item.reason || item.details}</p>}{item.notes && <p className="production-history-notes">ملاحظات: {item.notes}</p>}</div>
           <div className="production-history-meta"><span>{item.actorName || "مستخدم النظام"}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>
         </article>)}</div>
       </details>

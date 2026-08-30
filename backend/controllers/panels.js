@@ -66,15 +66,18 @@ const publicPanel = (panel, useMarketingDraft = false) => {
     const manufacturingStatus = object.status === "manufacturingFilesPending" ? "awaitingFiles" : ["manufacturingFilesReady", "pendingLaserDownload"].includes(object.status) ? "filesReady" : ["laser", "manufacturing", "painting", "assembly", "completed"].includes(object.status) ? "downloadedToLaser" : "notStarted";
     const stageRows = (object.manufacturing?.stages || []).map((stage) => ({ ...stage, key: stage.key === "pendingLaserDownload" ? "awaitingLaserDownload" : stage.key }));
     const activeStage = stageRows.find((stage) => stage.status === "active");
-    const productionHistory = (object.statusHistory || []).filter((entry) => entry.action === "productionNotesUpdated" || String(entry.action || "").startsWith("stage:")).map((entry) => ({
-        action: entry.action === "productionNotesUpdated" ? "notes" : String(entry.action).split(":")[1],
+    const productionHistory = (object.statusHistory || []).filter((entry) => entry.action === "productionNotesUpdated" || String(entry.action || "").startsWith("stage:")).map((entry) => {
+        const action = entry.action === "productionNotesUpdated" ? "notes" : String(entry.action).split(":")[1];
+        return {
+        action,
         stageKey: (entry.stageKey || entry.from) === "pendingLaserDownload" ? "awaitingLaserDownload" : (entry.stageKey || entry.from),
-        reason: entry.reason || entry.note || "",
+        reason: entry.reason || (action === "delayed" ? entry.note : ""),
         details: entry.details || "",
+        notes: action === "notes" ? (entry.details || entry.note || "") : (entry.note || ""),
         actorName: entry.actorName || "",
         actorRole: entry.actorRole || "",
         createdAt: entry.createdAt
-    }));
+    }; });
     const pricingCopper = object.pricing?.copper || {};
     const marketerCopper = object.marketerData?.copperDetails || {};
     const copper = Object.keys(pricingCopper).length ? pricingCopper : {
@@ -377,8 +380,9 @@ const updateStage = async (req, res, next) => { try {
     else if (req.body.action === "completed") { const index = stages.indexOf(current.key); current.status = "completed"; current.completedAt = new Date(); current.completedBy = req.user._id; const nextStage = panel.manufacturing.stages[index + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); } }
     else return res.status(400).json({ status: "error", message: "اختر تمت أو لم تتم." });
     const active = panel.manufacturing.stages.find((stage) => stage.status === "active"); const nextStatus = active?.key || "completed";
-    const stageHistory = { ...history(req, panel.status, nextStatus, `stage:${req.body.action}`), stageKey: current.key, reason: String(req.body.reason || "").trim(), details: String(req.body.details || "").trim() };
-    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.productionNotes": notes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: stageHistory } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
+    const stageHistory = { ...history(req, panel.status, nextStatus, `stage:${req.body.action}`, notes), stageKey: current.key, reason: String(req.body.reason || "").trim(), details: String(req.body.details || "").trim() };
+    const nextProductionNotes = req.body.action === "completed" ? "" : notes;
+    const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.productionNotes": nextProductionNotes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: stageHistory } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
     await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
     res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };

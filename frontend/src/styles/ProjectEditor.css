@@ -886,6 +886,7 @@
 .production-active-stage-side .production-save-button { min-height: 48px; margin-top: auto; border: 0; border-radius: 10px; background: #246f9c; color: #fff; font: inherit; font-size: .92rem; font-weight: 900; cursor: pointer; }
 .production-active-stage-side .production-save-button:disabled { background: #a9b8c1; cursor: not-allowed; }
 .production-last-update { color: #77858f; font-size: .72rem; font-weight: 700; text-align: center; }
+.production-notes-only-help { color: #3b718f; font-size: .72rem; font-weight: 800; text-align: center; }
 .production-all-complete { display: flex; align-items: center; justify-content: center; gap: 13px; padding: 25px; border: 1px solid #bce0ca; border-radius: 14px; background: #effaf3; color: #187348; text-align: right; }
 .production-all-complete > svg { font-size: 38px; }
 .production-all-complete h3 { margin: 0; }
@@ -913,6 +914,7 @@
 .production-history-list article b { color: #2b4759; font-size: .86rem; }
 .production-history-list article small { margin-top: 2px; color: #71808b; font-size: .72rem; font-weight: 800; }
 .production-history-list article p { margin: 5px 0 0; color: #73511d; font-size: .78rem; }
+.production-history-list article .production-history-notes { color: #526b7a; }
 .production-history-meta { text-align: left; }
 .production-history-meta span, .production-history-meta time { display: block; color: #7a8791; font-size: .7rem; font-weight: 700; }
 .production-history-meta time { margin-top: 3px; direction: ltr; }
