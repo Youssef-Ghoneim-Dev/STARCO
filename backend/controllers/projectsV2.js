@@ -54,7 +54,7 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const pricingCopper = value.pricing?.copper || {};
         const marketerCopper = value.marketerData?.copperDetails || {};
         const copper = Object.keys(pricingCopper).length ? pricingCopper : { enabled: Boolean(value.marketerData?.hasCopper), main: { optionKey: marketerCopper.mainKey || "" }, branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) })) };
-        const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
+        const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: viewerOwnsPanelDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
         if (viewer?.role !== "ProductionManager") return withEngineer;
         const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
@@ -201,12 +201,12 @@ const submitProject = async (req, res, next) => { try {
     res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, notificationErrors: failedDeliveryRows.map(whatsappFailureReason), project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
 const regeneratePreview = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
     if (!project || (!isOwner(req.user) && !isEngineer(req.user))) return res.status(403).json({ status: "error", message: "لا تملك صلاحية استخراج عرض السعر." });
     const list = await panels.find({ projectId: project._id, isDeleted: false });
     const allowed = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
     if (!list.length || list.some((panel) => !allowed.includes(panel.status))) return res.status(409).json({ status: "error", message: "يجب إتمام تسعير جميع اللوحات المطلوبة أولًا." });
-    const token = crypto.randomBytes(32).toString("hex");
+    const token = project.clientPreviewToken || crypto.randomBytes(32).toString("hex");
     const saved = await projects.update({ _id: project._id }, { clientPreviewToken: token, previewVersion: Number(project.previewVersion || 0) + 1, previewGeneratedAt: new Date(), status: "inProgress" });
     await createInternalNotifications({
         userIds: [project.marketingId],

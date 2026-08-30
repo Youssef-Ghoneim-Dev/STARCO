@@ -35,6 +35,7 @@ module.exports = new mongoose.Schema({
         openedAt: { type: Date, default: null },
         previousStatus: { type: String, default: "" }
     },
+    lastMarketingEdit: { type: mongoose.Schema.Types.Mixed, default: null },
     marketingId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null, index: true }, engineerId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null, index: true }, assignedAt: { type: Date, default: null },
     lock: { userId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null }, role: { type: String, default: "" }, acquiredAt: { type: Date, default: null }, expiresAt: { type: Date, default: null } },
     marketerData: { panelType: { type: String, default: "" }, panelTypeKey: { type: String, default: "" }, thickness: [{ type: Number }], hasCopper: { type: Boolean, default: null }, controlInstallation: { type: String, default: "" }, additionalDetails: { type: String, default: "" }, copperDetails: { type: mongoose.Schema.Types.Mixed, default: {} } },

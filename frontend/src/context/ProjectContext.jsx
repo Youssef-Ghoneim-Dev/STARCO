@@ -134,7 +134,12 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
   const basePanel = createPanel(index + 1, systemConfig);
   const incomingPanel = panel || {};
   const incomingPrices = incomingPanel.prices || {};
-  const effectiveThickness = Array.isArray(incomingPanel.pricing?.thickness)
+  const draftThickness = incomingPanel.marketingEditSession?.active && Array.isArray(incomingPanel.marketerData?.thickness)
+    ? incomingPanel.marketerData.thickness
+    : null;
+  const effectiveThickness = draftThickness?.length
+    ? draftThickness
+    : Array.isArray(incomingPanel.pricing?.thickness)
     && incomingPanel.pricing.thickness.length
     ? incomingPanel.pricing.thickness
     : Array.isArray(incomingPanel.thickness) && incomingPanel.thickness.length

@@ -55,6 +55,36 @@ const validateMarketerData = (data = {}) => {
     }
     return errors;
 };
+const normalizedComparable = (value) => {
+    if (Array.isArray(value)) return value.map(normalizedComparable).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, normalizedComparable(value[key])]));
+    return value ?? null;
+};
+const valuesMatch = (first, second) => JSON.stringify(normalizedComparable(first)) === JSON.stringify(normalizedComparable(second));
+const summarizeCopper = (value = {}) => {
+    const branches = (Array.isArray(value.branchGroups) ? value.branchGroups : []).map((group) => `${group.optionKey || "-"} × ${Math.max(1, Number(group.count || group.quantity) || 1)}`);
+    return [`المفاتيح: ${value.switches || "-"}`, `الرئيسي: ${value.mainKey || "-"}`, branches.length ? `الفرعيات: ${branches.join("، ")}` : "الفرعيات: لا يوجد"].join(" | ");
+};
+const displayEditValue = (field, value) => {
+    if (field === "hasCopper") return value === true ? "نعم" : value === false ? "لا" : "غير محدد";
+    if (field === "thickness") return Array.isArray(value) && value.length ? value.map(Number).sort((a, b) => a - b).map((item) => `${item} مم`).join("، ") : "لا يوجد";
+    if (field === "copperDetails") return summarizeCopper(value || {});
+    return String(value ?? "").trim() || "لا يوجد";
+};
+const buildMarketingEditChanges = (panel, draft = {}) => {
+    const before = panel.marketerData?.toObject?.() || panel.marketerData || {};
+    const after = draft.marketerData || before;
+    const definitions = [
+        ["panelName", "اسم اللوحة", panel.panelName, draft.panelName ?? panel.panelName],
+        ["panelTypeKey", "نوع اللوحة", before.panelType || before.panelTypeKey, after.panelType || after.panelTypeKey],
+        ["thickness", "سمك الصاج المطلوب", before.thickness || [], after.thickness || []],
+        ["hasCopper", "وجود النحاس", before.hasCopper, after.hasCopper],
+        ["controlInstallation", "تركيب لوحة الكنترول", before.controlInstallation, after.controlInstallation],
+        ["additionalDetails", "التفاصيل الإضافية", before.additionalDetails, after.additionalDetails],
+        ["copperDetails", "بيانات النحاس", before.copperDetails || {}, after.copperDetails || {}],
+    ];
+    return definitions.filter(([, , oldValue, newValue]) => !valuesMatch(oldValue, newValue)).map(([field, label, oldValue, newValue]) => ({ field, label, before: displayEditValue(field, oldValue), after: displayEditValue(field, newValue) }));
+};
 const publicPanel = (panel, useMarketingDraft = false) => {
     const stored = panel.toObject ? panel.toObject() : panel;
     const object = useMarketingDraft && stored.marketingDraft ? { ...stored, ...stored.marketingDraft } : stored;
@@ -86,7 +116,7 @@ const publicPanel = (panel, useMarketingDraft = false) => {
         main: { optionKey: marketerCopper.mainKey || "" },
         branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) }))
     };
-    return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
+    return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: useMarketingDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
 };
 const refreshProjectCompletion = async (projectId) => {
     const list = await panels.find({ projectId, isDeleted: false });
@@ -248,10 +278,25 @@ const submitEdits = async (req, res, next) => { try {
     const marketerData = draft.marketerData || panel.marketerData.toObject();
     const fields = validateMarketerData(marketerData);
     if (Object.keys(fields).length) return res.status(400).json({ status: "error", code: "PANEL_VALIDATION_ERROR", message: "أكمل بيانات اللوحة الإلزامية قبل إنهاء التعديلات.", fields });
-    const saved = await panels.update({ _id: panel._id }, { ...(draft.panelName != null ? { panelName: draft.panelName } : {}), marketerData, marketerSaved: true, marketingDraft: null, marketingDraftDeleted: false, marketingEditSession: { active: false, openedBy: null, openedAt: null, previousStatus: "" }, status: "pendingPricing", engineerId: null, assignedAt: null, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null }, executionPdf: { files: [], steelThickness: null, design: {}, requestedAt: null, requestedBy: null, readyAt: null, readyBy: null, confirmedAt: null, confirmedBy: null, skipped: false }, manufacturing: { files: [], notes: "", engineerNotes: "", productionNotes: "", stages: [], lastReminderAt: null }, $push: { statusHistory: history(req, panel.status, "pendingPricing", "panelMarketingEditsSubmitted") } });
-    await projects.update({ _id: project._id }, { status: "inProgress", previewGeneratedAt: null });
-    await createInternalNotifications({ roles: ["Engineer", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelPricingUpdated", title: "تعديلات لوحة جديدة في انتظار التسعير", body: `${saved.panelName} — ${project.client?.name || project.projectCode}`, actor: req.user });
-    res.json({ status: "ok", message: "تم حفظ تعديلات اللوحة وإرسالها للتسعير.", panel: publicPanel(saved), project: await projectResponse(project) });
+    const changes = buildMarketingEditChanges(panel, draft);
+    const onlyThicknessChanged = changes.length > 0 && changes.every((change) => change.field === "thickness");
+    const previousStatus = panel.marketingEditSession?.previousStatus || panel.status;
+    const selectedThicknesses = (marketerData.thickness || []).map(Number).filter(Number.isFinite);
+    const executionThickness = Number(panel.executionPdf?.steelThickness);
+    const executionThicknessStillValid = !Number.isFinite(executionThickness) || selectedThicknesses.some((value) => Math.abs(value - executionThickness) < 0.0001);
+    const executionNeedsReset = onlyThicknessChanged && ["executionPdfRequested", "executionPdfReady"].includes(previousStatus) && !executionThicknessStillValid;
+    const returnsWithoutRepricing = changes.length === 0 || onlyThicknessChanged;
+    const nextStatus = returnsWithoutRepricing ? (executionNeedsReset ? "quoteCompleted" : previousStatus) : "pendingPricing";
+    const editSummary = { changes, onlyThicknessChanged, requiresEngineer: !returnsWithoutRepricing, previousStatus, nextStatus, editedAt: new Date(), editedBy: req.user._id, editedByName: req.user.name || "" };
+    const commonUpdate = { ...(draft.panelName != null ? { panelName: draft.panelName } : {}), marketerData, marketerSaved: true, marketingDraft: null, marketingDraftDeleted: false, marketingEditSession: { active: false, openedBy: null, openedAt: null, previousStatus: "" }, lastMarketingEdit: editSummary, status: nextStatus, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null }, $push: { statusHistory: history(req, panel.status, nextStatus, changes.length === 0 ? "marketingEditClosedNoChanges" : onlyThicknessChanged ? "marketingThicknessAutoApplied" : "panelMarketingEditsSubmitted", changes.map((change) => change.label).join("، ")) } };
+    const saved = returnsWithoutRepricing
+        ? await panels.update({ _id: panel._id }, { ...commonUpdate, "pricing.thickness": selectedThicknesses, ...(executionNeedsReset ? { executionPdf: { files: [], steelThickness: null, design: {}, requestedAt: null, requestedBy: null, readyAt: null, readyBy: null, confirmedAt: null, confirmedBy: null, skipped: false } } : {}) })
+        : await panels.update({ _id: panel._id }, { ...commonUpdate, engineerId: null, assignedAt: null, executionPdf: { files: [], steelThickness: null, design: {}, requestedAt: null, requestedBy: null, readyAt: null, readyBy: null, confirmedAt: null, confirmedBy: null, skipped: false }, manufacturing: { files: [], notes: "", engineerNotes: "", productionNotes: "", stages: [], lastReminderAt: null } });
+    await projects.update({ _id: project._id }, returnsWithoutRepricing ? { status: "inProgress" } : { status: "inProgress", previewGeneratedAt: null });
+    if (!returnsWithoutRepricing) await createInternalNotifications({ roles: ["Engineer", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelPricingUpdated", title: "تعديلات لوحة جديدة في انتظار التسعير", body: `${saved.panelName} — ${changes.map((change) => change.label).join("، ")}`, actor: req.user });
+    else if (changes.length && panel.engineerId) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelThicknessUpdated", title: "تم تحديث سماكات اللوحة تلقائيًا", body: `${saved.panelName} — لا تحتاج إعادة تسعير يدوي`, actor: req.user });
+    const message = changes.length === 0 ? "تم إنهاء التعديل دون تغييرات." : onlyThicknessChanged ? (executionNeedsReset ? "تم تحديث السماكات تلقائيًا. أُلغي PDF التنفيذ السابق لأن السمك المؤكد لم يعد ضمن الاختيارات." : "تم تحديث السماكات وعرض السعر تلقائيًا دون إعادة اللوحة للمهندس.") : "تم حفظ تعديلات اللوحة وإرسالها للتسعير.";
+    res.json({ status: "ok", message, changes, requiresEngineer: !returnsWithoutRepricing, panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
 const deletePanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });

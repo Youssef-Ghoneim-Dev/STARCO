@@ -14,6 +14,7 @@ import { claimPanel } from "../services/projectsAPI";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
 import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
+import PanelEditSummary from "../components/projects/PanelEditSummary";
 import { panelMarketingEditableStatuses } from "../utils/panelEditing";
 import "../styles/ProjectEditor.css";
 
@@ -59,6 +60,7 @@ function QuoteEditor({
               </button>
             </div>
           </div>
+          <PanelEditSummary panel={panel} />
           {activePanelReadOnly && !readOnly && (
             <div className="project-read-only-notice">
               هذه اللوحة للعرض فقط؛ التعديل مفتوح للوحة المحددة وحدها.
@@ -186,6 +188,7 @@ function CompletedMarketingProject({ message, showExecution }) {
               </button>
             </div>
           </div>
+          <PanelEditSummary panel={panel} />
           <WhatsappProjectData />
         </div>
       )}
@@ -279,6 +282,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
             showMarketer={user.role === "MarketingManager"}
           />
           <ProjectPreviewLink />
+          <PanelEditSummary panel={activePanel} />
           {user.role === "MarketingManager" && <ExecutionPdfWorkspace />}
           <PanelsTabs readOnly />
           <WhatsappProjectData />
@@ -300,6 +304,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
           showEngineer={user?.role === "OwnerManager"}
         />
         <ProjectPreviewLink />
+        <PanelEditSummary panel={activePanel} />
         {(user?.role === "OwnerManager" ||
           (user?.role === "Engineer" && project?.source === "manual")) && (
           <ExecutionPdfWorkspace />
@@ -342,6 +347,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       <>
         <ProjectPreviewLink />
         <ExecutionPdfWorkspace />
+        <PanelEditSummary panel={activePanel} />
         <details className="quote-reference-details">
           <summary>
             {isWhatsappProject
