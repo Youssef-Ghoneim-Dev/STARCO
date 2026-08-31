@@ -319,6 +319,35 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     };
   }, [projectId]);
 
+  // The project and system configuration are fetched independently. On a
+  // slow connection the project may arrive first, so populate the configured
+  // product parts as soon as panel types become available instead of waiting
+  // for the engineer to touch a dimension input.
+  useEffect(() => {
+    if (!systemConfig || loadingProject) return;
+    setProject((current) => ({
+      ...current,
+      panels: (current.panels || []).map((panel) => {
+        const normalizedName = String(panel.panelType || "").trim();
+        const selectedType = (systemConfig.panelTypes || []).find((type) =>
+          type.key === panel.panelTypeKey
+          || String(type.name || "").trim() === normalizedName,
+        );
+        if (!selectedType) return panel;
+        const needsConfiguredParts = !Array.isArray(panel.parts)
+          || panel.parts.length === 0
+          || containsOnlyLegacyDefaultParts(panel.parts);
+        if (!needsConfiguredParts) return panel;
+        return {
+          ...panel,
+          panelTypeKey: selectedType.key,
+          panelType: selectedType.name,
+          parts: buildTypeParts(selectedType, panel.dimensions),
+        };
+      }),
+    }));
+  }, [loadingProject, systemConfig]);
+
   useEffect(() => {
     if (loadingProject || preventAutoSave || readOnly) return;
     const editablePanel = project.panels?.[activePanel];
@@ -752,7 +781,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       setPreventAutoSave(false);
       return { success: true, notification: data.notification };
     } catch (error) {
-      return { success: false, message: getSaveErrorMessage(error) };
+      return { success: false, code: error?.response?.data?.code || "", message: getSaveErrorMessage(error) };
     }
   }, [projectId, systemConfig]);
   const submitMarketingProject = useCallback(async () => {

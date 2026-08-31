@@ -845,9 +845,10 @@
     height: auto;
     min-height: 0;
     overflow: hidden;
+    background-color: #07182f;
     background-repeat: no-repeat;
     background-size: cover;
-    background-position: left center;
+    background-position: left bottom 30px;
     background-attachment: scroll;
 }
 
@@ -911,7 +912,7 @@
         background-image: url("../assets/images/login-bg.png");
         background-repeat: no-repeat;
         background-size: cover;
-        background-position: center;
+        background-position: center top;
     }
 
     .auth-card,

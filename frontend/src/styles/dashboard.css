@@ -91,6 +91,14 @@
 
     overflow-y: auto;
 
+    overscroll-behavior: contain;
+
+    scrollbar-width: none;
+
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none;
 }
 
 .dashboard-layout.sidebar-is-open .dashboard-main {
@@ -360,6 +368,14 @@
 =========================== */
 
 .topbar {
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 950;
+
+    flex: 0 0 80px;
 
     height: 80px;
 
@@ -778,7 +794,9 @@
 
     .dashboard-content {
 
-        padding-bottom: 92px;
+        padding-bottom: calc(120px + env(safe-area-inset-bottom));
+
+        scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
 
     }
 
@@ -799,6 +817,8 @@
         justify-content: space-around;
 
         min-height: 68px;
+
+        height: calc(68px + env(safe-area-inset-bottom));
 
         padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
 
