@@ -17,6 +17,7 @@ function MarketingProjectEditor() {
     updatePanel,
     deletePanel,
     submitMarketingProject,
+    cancelMarketingEdits,
     savingProject,
     systemConfig,
   } = useProject();
@@ -156,6 +157,13 @@ function MarketingProjectEditor() {
       setValidationErrors(result.fields);
       window.requestAnimationFrame(() => document.querySelector(".marketing-project-editor .form-field-error")?.scrollIntoView({ behavior: "smooth", block: "center" }));
     } else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
+  };
+  const cancelEditing = async () => {
+    if (!window.confirm("إنهاء التعديلات دون حفظ؟ سيتم تجاهل أي تغييرات وإرجاع بيانات اللوحة الأصلية.")) return;
+    const result = await cancelMarketingEdits();
+    if (!result.success) return toast.error(result.message || "تعذر إنهاء التعديل دون حفظ.");
+    toast.success(result.message || "تم إنهاء التعديل دون حفظ.");
+    navigate(`/projects/${project._id}`);
   };
   return (
     <section className="marketing-project-editor" dir="rtl">
@@ -412,6 +420,7 @@ function MarketingProjectEditor() {
       </div>
       {canEditActivePanel && (
         <div className="marketing-save-actions">
+          {editingExistingPanel && <button type="button" className="cancel-edit-btn" onClick={cancelEditing} disabled={savingProject}>إنهاء التعديل دون حفظ</button>}
           <button
             type="button"
             className="primary-btn"

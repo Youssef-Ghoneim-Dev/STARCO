@@ -58,6 +58,7 @@ export const deletePanelRecord = (projectId, panelId) => api.delete(`/projects/$
 export const claimPanel = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/claim`);
 export const completePanelQuote = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/complete-quote`);
 export const submitPanelEdits = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/submit-edits`);
+export const cancelPanelEdits = (projectId, panelId) => api.post(`/projects/${projectId}/panels/${panelId}/cancel-edits`);
 export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
 export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 

@@ -8,6 +8,7 @@ router.use(auth, check);
 router.get("/", controller.listPanels);
 router.post("/", controller.createPanel);
 router.post("/:panelId/submit-edits", controller.submitEdits);
+router.post("/:panelId/cancel-edits", controller.cancelEdits);
 router.get("/:panelId", controller.getPanel);
 router.put("/:panelId", controller.updatePanel);
 router.delete("/:panelId", controller.deletePanel);

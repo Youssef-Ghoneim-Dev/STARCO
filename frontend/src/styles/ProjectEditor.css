@@ -1538,7 +1538,11 @@
 .media-delete-actions { display: flex; gap: 10px; margin-top: 18px; }
 .media-delete-actions button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: #eef2f6; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .media-delete-actions .media-delete-confirm { background: #dc2626; color: #fff; }
-.marketing-save-actions { display: flex; justify-content: flex-start; padding-top: 4px; }
+.marketing-save-actions { display: flex; justify-content: flex-start; gap: 12px; padding-top: 4px; }
+.marketing-save-actions .cancel-edit-btn { min-height: 48px; border: 1px solid #cbd9df; border-radius: 12px; padding: 10px 18px; color: #6c3740; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.marketing-save-actions .cancel-edit-btn:hover { border-color: #d9aeb5; background: #fff6f7; }
+.marketing-save-actions button:disabled { cursor: not-allowed; opacity: .65; }
+@media (max-width: 600px) { .marketing-save-actions { flex-direction: column-reverse; } .marketing-save-actions > button { width: 100%; } }
 .marketing-project-editor .form-field-error { display: block; margin-top: 2px; color: #c52632; font-size: 13px; font-weight: 800; line-height: 1.55; }
 .marketing-project-editor .marketing-branches-error { flex: 1 0 100%; width: 100%; }
 .project-media-item { position: relative; }

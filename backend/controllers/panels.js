@@ -77,7 +77,7 @@ const buildMarketingEditChanges = (panel, draft = {}) => {
     const definitions = [
         ["panelName", "اسم اللوحة", panel.panelName, draft.panelName ?? panel.panelName],
         ["panelTypeKey", "نوع اللوحة", before.panelType || before.panelTypeKey, after.panelType || after.panelTypeKey],
-        ["thickness", "سمك الصاج المطلوب", before.thickness || [], after.thickness || []],
+        ["thickness", "سمك الصاج المطلوب", (before.thickness || []).map(Number).filter(Number.isFinite).sort((a, b) => a - b), (after.thickness || []).map(Number).filter(Number.isFinite).sort((a, b) => a - b)],
         ["hasCopper", "وجود النحاس", before.hasCopper, after.hasCopper],
         ["controlInstallation", "تركيب لوحة الكنترول", before.controlInstallation, after.controlInstallation],
         ["additionalDetails", "التفاصيل الإضافية", before.additionalDetails, after.additionalDetails],
@@ -279,6 +279,7 @@ const submitEdits = async (req, res, next) => { try {
     const fields = validateMarketerData(marketerData);
     if (Object.keys(fields).length) return res.status(400).json({ status: "error", code: "PANEL_VALIDATION_ERROR", message: "أكمل بيانات اللوحة الإلزامية قبل إنهاء التعديلات.", fields });
     const changes = buildMarketingEditChanges(panel, draft);
+    if (changes.length === 0) return res.status(409).json({ status: "error", code: "NO_PANEL_CHANGES", message: "لم تُجرِ أي تعديل على اللوحة. يمكنك إنهاء جلسة التعديل دون حفظ." });
     const onlyThicknessChanged = changes.length > 0 && changes.every((change) => change.field === "thickness");
     const previousStatus = panel.marketingEditSession?.previousStatus || panel.status;
     const selectedThicknesses = (marketerData.thickness || []).map(Number).filter(Number.isFinite);
@@ -297,6 +298,15 @@ const submitEdits = async (req, res, next) => { try {
     else if (changes.length && panel.engineerId) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelThicknessUpdated", title: "تم تحديث سماكات اللوحة تلقائيًا", body: `${saved.panelName} — لا تحتاج إعادة تسعير يدوي`, actor: req.user });
     const message = changes.length === 0 ? "تم إنهاء التعديل دون تغييرات." : onlyThicknessChanged ? (executionNeedsReset ? "تم تحديث السماكات تلقائيًا. أُلغي PDF التنفيذ السابق لأن السمك المؤكد لم يعد ضمن الاختيارات." : "تم تحديث السماكات وعرض السعر تلقائيًا دون إعادة اللوحة للمهندس.") : "تم حفظ تعديلات اللوحة وإرسالها للتسعير.";
     res.json({ status: "ok", message, changes, requiresEngineer: !returnsWithoutRepricing, panel: publicPanel(saved), project: await projectResponse(project) });
+} catch (error) { next(error); } };
+const cancelEdits = async (req, res, next) => { try {
+    const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId);
+    if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    if (!panel.marketingEditSession?.active || (!isOwner(req.user) && !sameId(panel.marketingEditSession.openedBy, req.user._id))) return res.status(403).json({ status: "error", message: "لا توجد جلسة تعديل مفتوحة لهذه اللوحة." });
+    const saved = await panels.update({ _id: panel._id }, { marketingDraft: null, marketingDraftDeleted: false, marketingEditSession: { active: false, openedBy: null, openedAt: null, previousStatus: "" }, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null } });
+    const engineerWasWorking = panel.engineerId && ["pricing", "editing"].includes(panel.marketingEditSession?.previousStatus || panel.status);
+    if (engineerWasWorking) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelMarketingEditCancelled", title: "تم إلغاء تعديل المندوب", body: `${saved.panelName} — يمكنك استكمال العمل على اللوحة.`, actor: req.user });
+    res.json({ status: "ok", message: "تم إنهاء جلسة التعديل دون حفظ أي تغييرات.", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
 const deletePanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
@@ -413,17 +423,18 @@ const finishExecutionPdf = async (req, res, next) => { try {
 } catch (error) { next(error); } };
 const skipExecutionPdf = (req, res, next) => transition(req, res, next, { from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "executionPdf.skipped": true, "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id }, internalNotification: (project, savedPanel) => ({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], type: "executionPdfReady", title: "تم تخطي PDF التنفيذ واللوحة جاهزة للمراجعة", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
 const requestExecutionPdfChanges = (req, res, next) => openEditing(req, res, next);
-const confirmExecution = (req, res, next) => transition(req, res, next, { from: ["executionPdfReady", "executionPdfRequested"], to: "manufacturingFilesPending", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": req.user._id }, notify: (project, panel) => notifyPanelPeople(panel, [], (recipient) => sendExecutionConfirmed(recipient.phoneNumber, project, panel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["ProductionManager", "OwnerManager"], type: "executionConfirmed", title: "تم تأكيد تنفيذ اللوحة", body: `${savedPanel.panelName} — برجاء تجهيز ملفات التصنيع` }) });
+const confirmExecution = (req, res, next) => transition(req, res, next, { from: ["executionPdfReady"], to: "manufacturingFilesPending", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": req.user._id }, notify: (project, panel) => notifyPanelPeople(panel, [], (recipient) => sendExecutionConfirmed(recipient.phoneNumber, project, panel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["ProductionManager", "OwnerManager"], type: "executionConfirmed", title: "تم تأكيد تنفيذ اللوحة", body: `${savedPanel.panelName} — برجاء تجهيز ملفات التصنيع` }) });
 const requestDeliverySchedule = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId);
     if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     const allowed = isOwner(req.user) || req.user.role === "MarketingManager" || marketerOwns(req, project, panel);
     if (!allowed) return res.status(403).json({ status: "error", message: "تحديد موعد التسليم متاح للمندوب وإدارة التسويق." });
-    if (["completed"].includes(panel.status)) return res.status(409).json({ status: "error", message: "اكتمل تنفيذ هذه اللوحة بالفعل." });
+    const deliveryScheduleStatuses = ["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+    if (!deliveryScheduleStatuses.includes(panel.status)) return res.status(409).json({ status: "error", message: panel.status === "completed" ? "اكتمل تنفيذ هذه اللوحة بالفعل." : "يمكن تحديد موعد انتهاء اللوحة بعد تأكيد التنفيذ فقط." });
     const value = String(req.body?.requestedDate || "").trim();
     const requestedDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date("");
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    if (Number.isNaN(requestedDate.getTime()) || requestedDate < today) return res.status(400).json({ status: "error", message: "اختر موعدًا صحيحًا من اليوم أو بعده." });
+    const minimumDate = new Date(); minimumDate.setHours(0, 0, 0, 0); minimumDate.setDate(minimumDate.getDate() + 5);
+    if (Number.isNaN(requestedDate.getTime()) || requestedDate < minimumDate) return res.status(400).json({ status: "error", message: "يجب أن يكون موعد انتهاء اللوحة بعد خمسة أيام على الأقل من تاريخ الطلب." });
     const saved = await panels.update({ _id: panel._id }, { deliverySchedule: { requestedDate, status: "pending", requestedBy: req.user._id, requestedAt: new Date(), respondedBy: null, respondedAt: null, responseNote: "" }, $push: { statusHistory: history(req, panel.status, panel.status, "deliveryScheduleRequested", value) } });
     await createInternalNotifications({ roles: ["ProductionManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "deliveryScheduleRequested", title: "طلب اعتماد موعد انتهاء لوحة", body: `${saved.panelName} — الموعد المطلوب ${requestedDate.toLocaleDateString("ar-EG")}`, actor: req.user });
     res.json({ status: "ok", message: "تم إرسال الموعد لمدير التنفيذ.", panel: publicPanel(saved), project: await projectResponse(project) });
@@ -467,4 +478,4 @@ const updateStage = async (req, res, next) => { try {
 
 const downloadManufacturingArchive = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); const files = panel.manufacturing?.files || []; if (!files.length) return res.status(404).json({ status: "error", message: "لا توجد ملفات تصنيع لتنزيلها." }); const entries = await Promise.all(files.map(async (file, index) => ({ name: `${index + 1}-${file.fileName}`, buffer: (await downloadStoredFile(file.storageFileId)).buffer, date: file.uploadedAt || new Date() }))); const archive = createZipArchive(entries); res.setHeader("Content-Type", "application/zip"); res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${panel.panelName || "panel"}-files.zip`)}`); res.send(archive); } catch (error) { next(error); } };
 
-module.exports = { listAllPanels, listPanels, getPanel, createPanel, updatePanel, claimPanel, completeQuote, openEditing, submitEdits, deletePanel, requestExecutionPdf, saveExecutionPdfDesign, uploadExecutionPdf: uploadTo("executionPdf"), downloadExecutionPdf: downloadFile("executionPdf"), deleteExecutionPdf: deleteFile("executionPdf"), finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, requestDeliverySchedule, respondDeliverySchedule, uploadManufacturing: uploadTo("manufacturing"), downloadManufacturing: downloadFile("manufacturing"), downloadManufacturingArchive, deleteManufacturing: deleteFile("manufacturing"), finishManufacturing, updateStage };
+module.exports = { listAllPanels, listPanels, getPanel, createPanel, updatePanel, claimPanel, completeQuote, openEditing, submitEdits, cancelEdits, deletePanel, requestExecutionPdf, saveExecutionPdfDesign, uploadExecutionPdf: uploadTo("executionPdf"), downloadExecutionPdf: downloadFile("executionPdf"), deleteExecutionPdf: deleteFile("executionPdf"), finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, requestDeliverySchedule, respondDeliverySchedule, uploadManufacturing: uploadTo("manufacturing"), downloadManufacturing: downloadFile("manufacturing"), downloadManufacturingArchive, deleteManufacturing: deleteFile("manufacturing"), finishManufacturing, updateStage };

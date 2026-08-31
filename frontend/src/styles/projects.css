@@ -521,7 +521,7 @@
 
     .projects-header-actions {
         display: grid;
-        grid-template-columns: 48px minmax(0, 1fr) minmax(132px, 42%);
+        grid-template-columns: 48px minmax(0, 1fr);
         gap: 9px;
 
     }
@@ -544,6 +544,8 @@
     }
 
     .projects-search {
+        grid-column: 1 / -1;
+        grid-row: 1;
         width: 100%;
         min-width: 0;
 
@@ -552,6 +554,8 @@
     }
 
     .projects-filter {
+        grid-column: 2;
+        grid-row: 2;
         width: 100%;
         min-width: 0;
         padding-inline: 10px;
@@ -564,8 +568,8 @@
 
     }
 
-    .projects-filter > svg { display: none; }
-    .projects-refresh-btn { width: 48px; min-width: 48px; padding: 0; }
+    .projects-filter > svg { display: block; flex: 0 0 auto; }
+    .projects-refresh-btn { grid-column: 1; grid-row: 2; width: 48px; min-width: 48px; padding: 0; }
     .projects-refresh-btn span { display: none; }
     .projects-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 

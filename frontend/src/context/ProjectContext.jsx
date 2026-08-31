@@ -7,7 +7,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, submitPanelEdits, updatePanelRecord } from "../services/projectsAPI";
+import { cancelPanelEdits, completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, submitPanelEdits, updatePanelRecord } from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
 
 const ProjectContext = createContext();
@@ -806,6 +806,25 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       setSavingProject(false);
     }
   }, [activePanel, project, projectId, readOnly]);
+  const cancelMarketingEdits = useCallback(async () => {
+    const active = project.panels?.[activePanel];
+    if (!active?._id || !active.marketingEditSession?.active) return { success: false, message: "لا توجد جلسة تعديل مفتوحة لهذه اللوحة." };
+    setPreventAutoSave(true);
+    setSavingProject(true);
+    setSaveProjectError(null);
+    try {
+      const { data } = await cancelPanelEdits(projectId, active._id);
+      setPreventAutoSave(true);
+      return { success: true, message: data.message || "تم إنهاء التعديل دون حفظ." };
+    } catch (error) {
+      setPreventAutoSave(false);
+      const message = getSaveErrorMessage(error);
+      setSaveProjectError(message);
+      return { success: false, message };
+    } finally {
+      setSavingProject(false);
+    }
+  }, [activePanel, project.panels, projectId]);
   const canDeletePart = (part, parts) => {
     const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
     const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
@@ -890,6 +909,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         saveProject,
         saveDraftNow,
         submitMarketingProject,
+        cancelMarketingEdits,
         beginEditing,
         canDeletePart,
         deletePart,

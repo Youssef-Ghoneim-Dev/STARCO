@@ -106,6 +106,12 @@ const dateInputValue = (value) => {
   if (Number.isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
+const minimumDeliveryDateValue = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 5);
+  return dateInputValue(date);
+};
 
 function ExecutionStatusCard({ tone = "info", icon, title, description }) {
   return <div className={`execution-status-card ${tone}`} role="status">
@@ -195,8 +201,10 @@ function ExecutionPdfWorkspace() {
   const canPrepareManufacturing = ["Engineer", "OwnerManager"].includes(user?.role);
   const canDownloadManufacturing = ["Engineer", "OwnerManager", "ProductionManager"].includes(user?.role);
   const canManageProductionStages = ["OwnerManager", "ProductionManager"].includes(user?.role);
-  const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && panel?.status !== "completed";
-  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role);
+  const deliveryScheduleStatuses = new Set(["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"]);
+  const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
+  const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
+  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
     marketingRepresentative: project.marketingRepresentative || nextProject.marketingRepresentative,
@@ -446,6 +454,7 @@ function ExecutionPdfWorkspace() {
 
   const requestDeliveryDate = async () => {
     if (!requestedDeliveryDate) return toast.error("اختر موعد انتهاء اللوحة أولًا.");
+    if (requestedDeliveryDate < minimumDeliveryDateValue()) return toast.error("يجب أن يكون الموعد بعد خمسة أيام على الأقل من تاريخ الطلب.");
     setBusy(true);
     try {
       const { data } = await requestPanelDeliverySchedule(project._id, panel.panelId, requestedDeliveryDate);
@@ -563,6 +572,7 @@ function ExecutionPdfWorkspace() {
 
   const deliveryStatusLabels = { none: "لم يُحدد موعد", pending: "بانتظار قرار مدير التنفيذ", accepted: "تم اعتماد الموعد", rejected: "الموعد غير مناسب" };
   const renderDeliverySchedule = () => {
+    if (!deliveryScheduleAvailable) return null;
     if (!canRequestDeliverySchedule && !canRespondDeliverySchedule && deliverySchedule.status === "none") return null;
     return <section className={`panel-delivery-schedule ${deliverySchedule.status || "none"}`}>
       <header>
@@ -572,7 +582,7 @@ function ExecutionPdfWorkspace() {
       </header>
       <div className="panel-delivery-schedule-body">
         <div className="panel-delivery-date-summary"><small>الموعد المطلوب</small><strong>{deliverySchedule.requestedDate ? formatProjectDate(deliverySchedule.requestedDate) : "لم يتم تحديده"}</strong>{deliverySchedule.respondedAt && <span>آخر قرار: {formatProjectDate(deliverySchedule.respondedAt, true)}</span>}</div>
-        {canRequestDeliverySchedule && <div className="panel-delivery-request"><label>اختر الموعد<input type="date" min={dateInputValue(new Date())} value={requestedDeliveryDate} onChange={(event) => setRequestedDeliveryDate(event.target.value)} /></label><button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}>{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button></div>}
+        {canRequestDeliverySchedule && <div className="panel-delivery-request"><label>اختر الموعد <small>(بعد 5 أيام على الأقل)</small><input type="date" min={minimumDeliveryDateValue()} value={requestedDeliveryDate} onChange={(event) => setRequestedDeliveryDate(event.target.value)} /></label><button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}>{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button></div>}
         {canRespondDeliverySchedule && deliverySchedule.status === "pending" && <div className="panel-delivery-response"><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، يمكن التنفيذ</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy}><HiOutlineX /> لا، الموعد غير مناسب</button></div></div>}
         {deliverySchedule.responseNote && deliverySchedule.status !== "pending" && <aside><b>ملاحظة مدير التنفيذ</b><p>{deliverySchedule.responseNote}</p></aside>}
       </div>
