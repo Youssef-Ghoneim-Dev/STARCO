@@ -93,7 +93,8 @@ const buildSimilarityReview = async (client) => {
 };
 const getProjects = async (req, res, next) => { try {
     const condition = { isDeleted: false };
-    if (isMarketer(req.user)) condition.marketingId = req.user._id; else condition.status = { $ne: "draft" };
+    if (isMarketer(req.user)) condition.marketingId = req.user._id;
+    else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
     let result = await projects.find(condition);
     if (req.user.role === "ProductionManager") {
         const executionPanels = await panels.find({ isDeleted: false, status: { $in: ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"] } });
@@ -109,14 +110,14 @@ const getProject = async (req, res, next) => { try {
     res.json(await hydrate(project, false, req.user));
 } catch (error) { next(error); } };
 const createProject = async (req, res, next) => { try {
-    if (!isMarketer(req.user) && !isOwner(req.user) && !isEngineer(req.user)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية إنشاء مشروع." });
+    if (!isMarketer(req.user) && !isOwner(req.user)) return res.status(403).json({ status: "error", message: "إنشاء المشاريع متاح للمندوب وOwner Manager فقط." });
     const client = { id: req.body?.client?.id || null, name: String(req.body?.client?.name || "").trim(), type: req.body?.client?.type || "", profitPercentage: req.body?.client?.profitPercentage ?? null };
-    if (isMarketer(req.user) && !client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
+    if (!client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
     // The source is derived from the authenticated workflow, never from a
     // client-controlled request field. WhatsApp creates its own projects in
     // the webhook controller.
-    const source = isMarketer(req.user) ? "marketing" : "manual";
-    const project = await projects.create({ projectCode: await nextProjectCode(), marketingId: isMarketer(req.user) ? req.user._id : req.body?.marketingId || null, client, clientNameReview: await buildSimilarityReview(client), source, status: source === "manual" ? "inProgress" : "draft" });
+    const source = "marketing";
+    const project = await projects.create({ projectCode: await nextProjectCode(), marketingId: req.user._id, client, clientNameReview: await buildSimilarityReview(client), source, status: "draft" });
     res.status(201).json({ status: "ok", project: await hydrate(project, false, req.user) });
 } catch (error) { next(error); } };
 const updateProject = async (req, res, next) => { try {

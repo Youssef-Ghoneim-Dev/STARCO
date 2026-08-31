@@ -4,11 +4,9 @@ import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { createProject } from "../services/projectsAPI";
 import { searchClients } from "../services/clientsAPI";
-import { useAuth } from "../context/AuthContext";
 
 function NewProject() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [name, setName] = useState("");
   const [selectedClient, setSelectedClient] = useState(null);
   const [results, setResults] = useState([]);
@@ -35,7 +33,7 @@ function NewProject() {
     setSaving(true);
     try {
       const client = selectedClient && selectedClient.name === name.trim() ? { id: selectedClient._id, name: selectedClient.name, type: selectedClient.type, profitPercentage: selectedClient.profitPercentage } : { name: name.trim() };
-      const { data } = await createProject({ client, source: user?.role === "Marketer" ? "marketing" : "manual" }); navigate(`/projects/${data.project._id}`, { replace: true });
+      const { data } = await createProject({ client }); navigate(`/projects/${data.project._id}`, { replace: true });
     } catch (error) {
       if (error.response?.status === 400) {
         setNameError(error.response?.data?.message || "تحقق من اسم العميل.");

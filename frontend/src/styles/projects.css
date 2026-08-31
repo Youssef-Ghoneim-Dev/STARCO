@@ -1955,3 +1955,15 @@ textarea[aria-invalid="true"] {
 .project-delete-dialog > div { display: flex; flex-direction: row; gap: 10px; direction: rtl; }
 .project-delete-dialog button { flex: 1; min-height: 46px; border: 1px solid #d8e2e8; border-radius: 11px; background: #fff; color: #324f62; font: inherit; font-weight: 900; cursor: pointer; }
 .project-delete-dialog button.danger { border-color: #c92d3b; background: #c92d3b; color: #fff; }
+
+@media (max-width: 600px) {
+    .project-delete-modal-backdrop { padding: 12px; }
+    .project-delete-dialog {
+        max-height: calc(100dvh - 24px);
+        overflow-y: auto;
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+    .project-delete-dialog > div { flex-direction: column; }
+    .project-delete-dialog button { width: 100%; }
+}

@@ -240,7 +240,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
     </section>
     <section className="owner-tables-grid">
       <DataTable title="آخر المشاريع المضافة" icon={<HiOutlineFolder />} columns={["#", "اسم المشروع", "المهندس", "تاريخ الإنشاء"]} rows={latestRows} linkLabel="عرض جميع المشاريع" />
-      <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" to="/panels" />
+      <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" to="/panels?view=delayed&delayed=true" />
       <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" to="/users" />
       <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" to="/users" />
     </section>

@@ -8,6 +8,14 @@
 
     min-height: 100vh;
 
+    height: 100vh;
+
+    height: 100dvh;
+
+    max-height: 100dvh;
+
+    overflow: hidden;
+
     background: var(--background);
 
 }
@@ -34,9 +42,17 @@
 
     flex: 1;
 
+    min-width: 0;
+
+    min-height: 0;
+
     padding: 30px;
 
+    overflow-x: hidden;
+
     overflow-y: auto;
+
+    overscroll-behavior: contain;
 
 }
 
@@ -167,9 +183,9 @@
 
     .dashboard-content {
 
-        padding: 16px;
+        padding: 14px clamp(10px, 3.5vw, 16px);
 
-        padding-bottom: 92px;
+        padding-bottom: calc(92px + env(safe-area-inset-bottom));
 
     }
 

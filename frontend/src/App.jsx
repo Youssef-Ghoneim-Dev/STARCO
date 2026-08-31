@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Clients from "./pages/Clients";
 import DeletedProjects from "./pages/DeletedProjects";
 import ClientProjectPreview from "./pages/ClientProjectPreview";
+import RoleRoute from "./routes/RoleRoute";
 
 function App() {
   return (
@@ -29,7 +30,8 @@ function App() {
           duration: 3000,
 
           style: {
-            minWidth: "30%",
+            width: "min(520px, calc(100vw - 24px))",
+            maxWidth: "calc(100vw - 24px)",
             borderRadius: "12px",
             padding: "14px 18px",
             fontSize: "15px",
@@ -68,7 +70,7 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/projects" element={<Projects />} />
-          <Route path="/new-project" element={<NewProject />} />
+          <Route path="/new-project" element={<RoleRoute allowedRoles={["OwnerManager", "Marketer"]}><NewProject /></RoleRoute>} />
           <Route path="/projects/:id" element={<ProjectFolder />} />
           <Route path="/projects/:id/panels/:panelId" element={<EditProject />} />
           <Route path="/panels" element={<Panels />} />

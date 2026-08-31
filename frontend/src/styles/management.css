@@ -308,6 +308,15 @@
 
 @media (max-width: 600px) {
 
+    .management-page {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .management-heading h1 {
+        font-size: clamp(25px, 8vw, 32px);
+    }
+
     .management-heading-actions,
     .management-row {
         align-items: stretch;
@@ -336,5 +345,17 @@
     .client-name-review-card button,
     .client-name-review-actions button {
         width: 100%;
+    }
+
+    .management-modal-backdrop,
+    .management-confirmation-backdrop {
+        padding: 12px;
+    }
+
+    .management-modal,
+    .management-confirmation {
+        width: 100%;
+        max-height: calc(100dvh - 24px);
+        overflow-y: auto;
     }
 }
