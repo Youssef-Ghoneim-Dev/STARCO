@@ -1596,7 +1596,7 @@
 .execution-file-open small { color: #7b8792; }
 .execution-file-delete { position: absolute; top: 9px; left: 9px; display: grid; place-items: center; width: 31px; height: 31px; padding: 0; border: 1px solid #ffd1d1; border-radius: 50%; background: #fff5f5; color: #d92d20; cursor: pointer; }
 .execution-file-delete svg { font-size: 19px; }
-.execution-pdf-actions { display: grid; grid-template-columns: minmax(150px, .55fr) minmax(240px, 1fr); gap: 12px; }
+.execution-pdf-actions { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(190px, .85fr) minmax(260px, 1.25fr); gap: 12px; }
 .execution-review-actions, .manufacturing-ready-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
 .execution-review-actions button, .manufacturing-ready-actions button { flex: 1 1 220px; min-height: 48px; padding: 0 20px; border-radius: 11px; border: 1px solid var(--border); font: inherit; font-weight: 800; cursor: pointer; }
 .request-changes-btn { color: var(--primary); background: #fff; border-color: #c8dce6 !important; box-shadow: none; }
@@ -1806,7 +1806,12 @@
     .production-footer-controls > div:not(.production-history-list) { flex-direction: column; }
     .production-footer-controls button { width: 100%; }
 }
-.skip-execution-btn { min-height: 48px; border: 1px solid #d7a64a; border-radius: 11px; background: #fff9ec; color: #8a5a00; font: inherit; font-weight: 800; cursor: pointer; }
+.skip-execution-btn { min-height: 48px; border: 1px solid #cbd9e1; border-radius: 13px; background: linear-gradient(180deg, #fff, #f4f8fa); color: #526b7a; box-shadow: 0 5px 14px rgb(34 73 94 / 6%); font: inherit; font-weight: 800; cursor: pointer; transition: .2s ease; }
+.skip-execution-btn:hover { border-color: #9db5c2; color: #294f65; transform: translateY(-1px); }
+.preview-execution-pdf-btn { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 9px; border: 1px solid #8fb6c9; border-radius: 13px; background: #edf7fb; color: var(--primary); box-shadow: 0 5px 14px rgb(34 73 94 / 7%); font: inherit; font-weight: 800; cursor: pointer; transition: .2s ease; }
+.preview-execution-pdf-btn svg { flex: 0 0 auto; font-size: 21px; }
+.preview-execution-pdf-btn:hover { border-color: var(--primary); background: #e4f2f8; transform: translateY(-1px); }
+.execution-pdf-actions .finish-execution-pdf-btn { border-radius: 13px; box-shadow: 0 8px 18px rgb(41 94 122 / 18%); }
 .execution-pdf-actions button:disabled, .execution-order-card button:disabled { opacity: .55; cursor: not-allowed; }
 .execution-status-card { --status-accent: #397895; --status-soft: #e8f3f8; --status-border: #c4dae5; position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr) 70px; align-items: center; gap: 15px; overflow: hidden; padding: 16px 18px; border: 1px solid var(--status-border); border-radius: 16px; color: #173f55; background: linear-gradient(135deg, #fff 0%, #f7fbfd 58%, var(--status-soft) 100%); box-shadow: 0 8px 24px rgb(31 79 105 / 7%); text-align: right; animation: execution-status-enter .42s cubic-bezier(.2,.8,.2,1) both; }
 .execution-status-card.success { --status-accent: #269b5d; --status-soft: #e7f7ee; --status-border: #b8ddca; color: #164b34; }

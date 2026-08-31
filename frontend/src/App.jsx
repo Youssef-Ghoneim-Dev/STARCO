@@ -79,7 +79,7 @@ function App() {
           <Route path="/pending-users" element={<PendingUsers />} />
           <Route path="/configuration" element={<Configuration />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/clients" element={<Clients />} />
+          <Route path="/clients" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "MarketingManager", "ProductionManager"]}><Clients /></RoleRoute>} />
           <Route path="/deleted-projects" element={<DeletedProjects />} />
         </Route>
 

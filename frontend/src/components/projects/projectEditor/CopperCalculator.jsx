@@ -3,6 +3,7 @@ import { IoChevronDown } from "react-icons/io5";
 import { useProject } from "../../../context/ProjectContext";
 import { getCopperCalculation } from "../../../utils/priceCalculator";
 import { resolveCopperConfiguration } from "../../../utils/copperDefaults";
+import { convertAllCopperBranchDirections, convertCopperBranchDirection } from "../../../utils/copperBranches";
 
 const branchId = () => `branch-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -59,21 +60,25 @@ function CopperCalculator() {
       : (current.branches || []),
   }));
   const updateBranch = (index, field, value) => updateCopper((current) => {
-    const groupId = current.branches?.[index]?.branchGroupId;
+    if (field === "direction") return {
+      ...current,
+      enabled: true,
+      branches: convertCopperBranchDirection(current.branches || [], index, value),
+    };
     return {
       ...current,
       enabled: true,
       branches: (current.branches || []).map((branch, currentIndex) =>
-        currentIndex === index || (field === "direction" && groupId && branch.branchGroupId === groupId)
-          ? { ...branch, [field]: value }
-          : branch
+        currentIndex === index ? { ...branch, [field]: value } : branch
       )
     };
   });
   const updateAllBranches = (field, value) => updateCopper((current) => ({
     ...current,
     enabled: true,
-    branches: (current.branches || []).map((branch) => ({ ...branch, [field]: value })),
+    branches: field === "direction"
+      ? convertAllCopperBranchDirections(current.branches || [], value)
+      : (current.branches || []).map((branch) => ({ ...branch, [field]: value })),
   }));
   const addBranch = () => updateCopper((current) => {
       const previousBranch = current.branches?.[current.branches.length - 1];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HiOutlineArrowLeft, HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
+import { HiOutlineArrowLeft, HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineEye, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
 import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthContext";
@@ -164,6 +164,7 @@ function ExecutionPdfWorkspace() {
   const [busy, setBusy] = useState(false);
   const [uploadingExecution, setUploadingExecution] = useState(false);
   const [generatingExecution, setGeneratingExecution] = useState(false);
+  const [previewingExecution, setPreviewingExecution] = useState(false);
   const [uploadingManufacturing, setUploadingManufacturing] = useState(false);
   const [finishingManufacturing, setFinishingManufacturing] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -390,12 +391,8 @@ function ExecutionPdfWorkspace() {
   };
 
   const generateAndFinish = async () => {
-    const { assignments } = executionDesign;
-    if (!assignments.page2 || !assignments.page3 || !assignments.page4) return toast.error("اختر صورة لكل صفحة من الصفحات الثانية والثالثة والرابعة.");
-    if ((assignments.gallery || []).length !== 3) return toast.error("اختر ثلاث صور لصفحة الصور.");
-    if (!executionDesign.page3Text.trim()) return toast.error("اكتب محتوى الصفحة الثالثة أولًا.");
-    if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return toast.error("أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.");
-    if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return toast.error("أضف بيانات الصفحة الرابعة أولًا.");
+    const validationError = validateExecutionDesign();
+    if (validationError) return toast.error(validationError);
     setGeneratingExecution(true);
     try {
       await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
@@ -410,6 +407,35 @@ function ExecutionPdfWorkspace() {
       toast.error(error.response?.data?.message || error.message || "تعذر إنشاء PDF التنفيذ.");
     } finally {
       setGeneratingExecution(false);
+    }
+  };
+
+  function validateExecutionDesign() {
+    const { assignments } = executionDesign;
+    if (!assignments.page2 || !assignments.page3 || !assignments.page4) return "اختر صورة لكل صفحة من الصفحات الثانية والثالثة والرابعة.";
+    if ((assignments.gallery || []).length !== 3) return "اختر ثلاث صور لصفحة الصور.";
+    if (!executionDesign.page3Text.trim()) return "اكتب محتوى الصفحة الثالثة أولًا.";
+    if (!executionDesign.panelSize.trim() || !String(executionDesign.steelThickness).trim() || !executionDesign.paint.trim()) return "أكمل مقاس اللوحة والسمك ونوع الدهان أولًا.";
+    if (!(executionDesign.page4Lines || []).filter((line) => line.trim()).length) return "أضف بيانات الصفحة الرابعة أولًا.";
+    return "";
+  }
+
+  const previewExecutionPdf = async () => {
+    const validationError = validateExecutionDesign();
+    if (validationError) return toast.error(validationError);
+    const previewWindow = window.open("", "_blank");
+    setPreviewingExecution(true);
+    try {
+      const pdf = await buildExecutionPdf(executionDesign);
+      const url = URL.createObjectURL(pdf);
+      if (previewWindow) previewWindow.location.href = url;
+      else window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      previewWindow?.close();
+      toast.error(error.response?.data?.message || error.message || "تعذر معاينة PDF التنفيذ.");
+    } finally {
+      setPreviewingExecution(false);
     }
   };
 
@@ -756,8 +782,9 @@ function ExecutionPdfWorkspace() {
         </section>
       </div>}
       <div className="execution-pdf-actions">
-        <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy}>تخطي هذه المرحلة</button>
-        <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={generatingExecution}>{generatingExecution ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>
+        <button type="button" className="skip-execution-btn" onClick={skip} disabled={busy || generatingExecution || previewingExecution}>تخطي هذه المرحلة</button>
+        <button type="button" className="preview-execution-pdf-btn" onClick={previewExecutionPdf} disabled={generatingExecution || previewingExecution}><HiOutlineEye /> {previewingExecution ? "جاري تجهيز المعاينة..." : "معاينة PDF التنفيذ"}</button>
+        <button type="button" className="finish-execution-pdf-btn" onClick={generateAndFinish} disabled={generatingExecution || previewingExecution}>{generatingExecution ? "جاري إنشاء الملف..." : "إنشاء PDF التنفيذ وإرساله للمراجعة"}</button>
       </div>
     </>}
 
