@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getDashboardStatistics } from "../../services/dashboardAPI";
 import StyledSelect from "../common/StyledSelect";
+import DashboardName from "./DashboardName";
+import { daysLate, formatAverage, isDelayed, itemName, realDelayReasons, statusMeta as panelStatusMeta, workflowAverages } from "../../utils/dashboardData";
 import {
   HiOutlineCalendar,
   HiOutlineChartBar,
@@ -24,21 +26,16 @@ const statusMeta = [
   { key: "completed", label: "مكتملة", color: "#29a965" },
 ];
 
-const productionStages = [
-  { title: "تجميع", value: 10, delayed: 1 },
-  { title: "رش", value: 12, delayed: 0 },
-  { title: "تصنيع", value: 16, delayed: 1 },
-  { title: "ليزر", value: 18, delayed: 2 },
-];
-
-const performanceCards = [
-  { title: "أداء الإنتاج (اليوم)", value: 2, unit: "مدراء إنتاج", tone: "purple", items: [["تجميع", 10], ["رش", 12], ["تصنيع", 16], ["ليزر", 18]] },
-  { title: "أداء التسويق (اليوم)", value: 3, unit: "مسوقين نشطين", tone: "orange", items: [["تكليفات تنفيذ", 7], ["أوامر تنفيذ", 8], ["مشاريع مسجلة", 17]] },
-  { title: "أداء المهندسين (اليوم)", value: 6, unit: "مهندسين نشطين", tone: "green", items: [["طلبات تصنيع", 15], ["PDF تنفيذ", 10], ["تسعير", 25]] },
-  { title: "أداء المندوبين (اليوم)", value: 5, unit: "مندوبين نشطين", tone: "blue", items: [["تأكيد تنفيذ", 14], ["أمر تنفيذ", 12], ["مشروع جديد", 17]] },
-];
-
-const demoPeople = ["أحمد محمود", "محمد إبراهيم", "كريم علي", "سارة محمد", "محمود حسين"];
+const projectGroup = (project, panels) => {
+  const related = panels.filter((panel) => String(panel?.project?._id || panel?.projectId || "") === String(project?._id || ""));
+  if (!related.length) return "pricing";
+  const groups = related.map((panel) => panelStatusMeta(panel).group);
+  if (groups.every((group) => group === "completed")) return "completed";
+  if (groups.some((group) => group === "editing")) return "editing";
+  if (groups.some((group) => ["production", "manufacturing", "execution"].includes(group))) return "production";
+  if (groups.some((group) => ["pdf", "quote"].includes(group))) return "approval";
+  return "pricing";
+};
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 const endOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
@@ -74,8 +71,8 @@ function StatusOverview({ counts, total }) {
   return <section className="owner-dashboard-card status-overview-card">
     <h2>المشاريع حسب الحالة</h2>
     <div className="status-overview-content">
-      <div className="status-donut" style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي المشاريع</span></div></div>
-      <div className="status-legend">{segments.map((item) => <div key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{item.value}</strong><small>{total ? `${Math.round((item.value / total) * 100)}%` : "0%"}</small></div>)}</div>
+      <div className="status-donut" title={`إجمالي المشاريع: ${total}`} style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي المشاريع</span></div></div>
+      <div className="status-legend">{segments.map((item) => <div className="dashboard-status-row" data-tooltip={`${item.label}: ${item.value} مشروع`} title={`${item.label}: ${item.value} مشروع`} key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{item.value}</strong><small>{total ? `${Math.round((item.value / total) * 100)}%` : "0%"}</small></div>)}</div>
     </div>
     <Link className="owner-card-link" to="/projects">عرض جميع المشاريع <HiOutlineExternalLink /></Link>
   </section>;
@@ -110,11 +107,11 @@ function WeeklyChart({ projects, endDate, statistics = [] }) {
   </section>;
 }
 
-function ProductionOverview() {
+function ProductionOverview({ stages, averages }) {
   return <section className="owner-dashboard-card production-overview-card">
     <h2>نظرة عامة على مراحل التنفيذ</h2>
-    <div className="production-stage-grid">{productionStages.map((stage, index) => <div className="production-stage" key={stage.title}><span>{stage.title}</span><strong>{stage.value}</strong><small>مشروع</small><em>{stage.delayed} متأخرة</em>{index < productionStages.length - 1 && <b>‹</b>}</div>)}</div>
-    <div className="production-average"><strong>متوسط مدة إنجاز اللوحة: 3.6 يوم</strong><span>المدة المستهدفة: 4 أيام</span></div>
+    <div className="production-stage-grid">{stages.map((stage, index) => <div className="production-stage" key={stage.title}><span>{stage.title}</span><strong>{stage.value}</strong><small>لوحة</small><em>{stage.delayed} متأخرة</em>{index < stages.length - 1 && <b>‹</b>}</div>)}</div>
+    <div className="production-average"><strong>متوسطات المراحل من السجل الفعلي</strong><span>ليزر {formatAverage(averages.stage("laser"))} · تصنيع {formatAverage(averages.stage("manufacturing"))}</span></div>
   </section>;
 }
 
@@ -122,19 +119,19 @@ function PerformanceCard({ data }) {
   return <article className={`performance-card ${data.tone}`}>
     <div className="performance-heading"><div className="performance-icon"><HiOutlineChartBar /></div><div><h3>{data.title}</h3><strong>{data.value}</strong><span>{data.unit}</span></div></div>
     <div className="performance-values">{data.items.map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
-    <button type="button">عرض التقرير <HiOutlineExternalLink /></button>
+    <Link to={data.to || "/projects"}>عرض التقرير <HiOutlineExternalLink /></Link>
   </article>;
 }
 
-function DataTable({ title, icon, columns, rows, linkLabel = "عرض الكل" }) {
+function DataTable({ title, icon, columns, rows, linkLabel = "عرض الكل", to = "/projects" }) {
   return <section className="owner-dashboard-card owner-table-card">
     <h2>{icon}{title}</h2>
     <div className="owner-table-scroll"><table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${title}-${index}`}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>
-    <Link className="owner-card-link" to="/projects">{linkLabel} <HiOutlineExternalLink /></Link>
+    <Link className="owner-card-link" to={to}>{linkLabel} <HiOutlineExternalLink /></Link>
   </section>;
 }
 
-function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefresh }) {
+function OwnerManagerDashboard({ name, projects, panels = [], users = [], clientsCount, loading, onRefresh }) {
   const today = new Date();
   const dateInputRef = useRef(null);
   const minDashboardDate = new Date(today);
@@ -153,7 +150,6 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
     if (value === "today") setSelectedDateValue(dateInputValue(today));
     if (value === "yesterday") setSelectedDateValue(dateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)));
   };
-  const productionStatuses = ["inProgress", "production", "executing"];
   const loadStoredStatistics = useCallback(async () => {
     try {
       const response = await getDashboardStatistics(selectedDateValue);
@@ -167,28 +163,23 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
   const projectsForPreviousDate = projects.filter((project) => new Date(project.createdAt || 0) <= endOfDay(previousDate));
   const createdForDate = projects.filter((project) => sameDay(project.createdAt, selectedDate)).length;
   const createdForPreviousDate = projects.filter((project) => sameDay(project.createdAt, previousDate)).length;
-  const completedForDate = projects.filter((project) => project.status === "completed" && sameDay(project.updatedAt, selectedDate)).length;
-  const completedForPreviousDate = projects.filter((project) => project.status === "completed" && sameDay(project.updatedAt, previousDate)).length;
-  const inProgressForDate = projects.filter((project) => productionStatuses.includes(project.status) && sameDay(project.updatedAt || project.createdAt, selectedDate)).length;
-  const inProgressForPreviousDate = projects.filter((project) => productionStatuses.includes(project.status) && sameDay(project.updatedAt || project.createdAt, previousDate)).length;
+  const completedForDate = projects.filter((project) => projectGroup(project, panels) === "completed" && sameDay(project.updatedAt, selectedDate)).length;
+  const completedForPreviousDate = projects.filter((project) => projectGroup(project, panels) === "completed" && sameDay(project.updatedAt, previousDate)).length;
+  const inProgressForDate = projects.filter((project) => projectGroup(project, panels) === "production" && sameDay(project.updatedAt || project.createdAt, selectedDate)).length;
+  const inProgressForPreviousDate = projects.filter((project) => projectGroup(project, panels) === "production" && sameDay(project.updatedAt || project.createdAt, previousDate)).length;
   const statusCounts = projectsForSelectedDate.reduce((counts, project) => {
-    const status = String(project.status || "");
-    let bucket = "pricing";
-    if (status === "completed") bucket = "completed";
-    else if (status.startsWith("editing")) bucket = "editing";
-    else if (productionStatuses.includes(status)) bucket = "production";
-    else if (["awaitingExecution", "approved", "readyForExecution"].includes(status)) bucket = "approval";
+    const bucket = projectGroup(project, panels);
     counts[bucket] += 1;
     return counts;
   }, { pricing: 0, approval: 0, production: 0, editing: 0, completed: 0 });
   const completedThisMonth = projects.filter((project) => {
-    if (project.status !== "completed") return false;
+    if (projectGroup(project, panels) !== "completed") return false;
     const date = projectDate(project);
     return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   }).length;
   const selectedMetrics = storedStatistics?.selected?.metrics;
   const previousMetrics = storedStatistics?.previous?.metrics;
-  const displayedStatusCounts = storedStatistics?.selected?.statusCounts || statusCounts;
+  const displayedStatusCounts = statusCounts;
   const metricValue = (key, fallback) => selectedMetrics?.[key] ?? fallback;
   const previousMetricValue = (key, fallback) => previousMetrics?.[key] ?? fallback;
   const refreshAll = () => Promise.allSettled([onRefresh?.(), loadStoredStatistics()]);
@@ -203,9 +194,34 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
     }
   };
   const latestProjects = [...projectsForSelectedDate].sort((a, b) => projectDate(b) - projectDate(a)).slice(0, 5);
-  const latestRows = latestProjects.length ? latestProjects.map((project, index) => [index + 1, project.client?.name || "عميل غير محدد", demoPeople[index] || "—", formatDate(projectDate(project))]) : [["—", "لا توجد مشاريع بعد", "—", "—"]];
-  const delayedRows = latestProjects.slice(0, 5).map((project, index) => [index + 1, project.client?.name || `مشروع ${index + 1}`, productionStages[index % productionStages.length].title, <span className="delay-value" key={project._id || index}>{index % 2 ? "يوم" : "يومان"}</span>]);
-  const peopleRows = demoPeople.map((person, index) => [index + 1, person, 6 - index, 4 - Math.floor(index / 2), 3 - Math.floor(index / 2)]);
+  const userMap = new Map(users.map((person) => [String(person._id), person.name]));
+  const projectPanels = (project) => panels.filter((panel) => String(panel?.project?._id || panel?.projectId || "") === String(project?._id || ""));
+  const latestRows = latestProjects.length ? latestProjects.map((project, index) => {
+    const engineerIds = [...new Set(projectPanels(project).map((panel) => String(panel.engineerId?._id || panel.engineerId || "")).filter(Boolean))];
+    return [index + 1, <DashboardName key={project._id}>{project.client?.name || "عميل غير محدد"}</DashboardName>, engineerIds.map((id) => userMap.get(id)).filter(Boolean).join("، ") || "غير مسند", formatDate(projectDate(project))];
+  }) : [["—", "لا توجد مشاريع بعد", "—", "—"]];
+  const delayedPanels = panels.filter((panel) => isDelayed(panel, today)).sort((a, b) => daysLate(b, today) - daysLate(a, today));
+  const delayedRows = delayedPanels.slice(0, 5).map((panel, index) => [index + 1, <DashboardName key={panel._id}>{itemName(panel)}</DashboardName>, panelStatusMeta(panel).label, <span className="delay-value" key={panel._id}>{daysLate(panel, today) ? `${daysLate(panel, today)} يوم` : "سبب مسجل"}</span>]);
+  const engineers = users.filter((person) => person.role === "Engineer");
+  const marketers = users.filter((person) => person.role === "Marketer");
+  const engineerRows = engineers.map((person, index) => {
+    const owned = panels.filter((panel) => String(panel.engineerId?._id || panel.engineerId || "") === String(person._id));
+    return [index + 1, person.name, owned.filter((panel) => ["pendingPricing", "pricing", "quoteCompleted"].includes(panel.status)).length, owned.filter((panel) => panel.executionPdf?.readyAt).length, owned.filter((panel) => (panel.manufacturing?.files || []).length).length];
+  });
+  const marketerRows = marketers.map((person, index) => {
+    const owned = projects.filter((project) => String(project.marketingId?._id || project.marketingId || project.createdBy?._id || project.createdBy || "") === String(person._id));
+    return [index + 1, person.name, owned.filter((project) => sameDay(project.createdAt, selectedDate)).length, owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.requestedAt)).length, owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.confirmedAt)).length];
+  });
+  const averages = workflowAverages(panels);
+  const stageDefinitions = [["تجميع", "assembly"], ["رش", "painting"], ["تصنيع", "manufacturing"], ["ليزر", "laser"]];
+  const stages = stageDefinitions.map(([title, key]) => ({ title, value: panels.filter((panel) => panel.status === key).length, delayed: delayedPanels.filter((panel) => panel.status === key).length }));
+  const delayReasons = realDelayReasons(panels);
+  const performanceCards = [
+    { title: "أداء الإنتاج", value: users.filter((person) => person.role === "ProductionManager").length, unit: "مدراء إنتاج", tone: "purple", to: "/panels", items: stages.map((stage) => [stage.title, stage.value]) },
+    { title: "أداء التسويق", value: marketers.length, unit: "مسوقين", tone: "orange", to: "/projects", items: [["مشاريع اليوم", createdForDate], ["أوامر تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.requestedAt, selectedDate)).length], ["مكتملة", completedForDate]] },
+    { title: "أداء المهندسين", value: engineers.length, unit: "مهندسين", tone: "green", to: "/panels", items: [["ملفات تصنيع", panels.filter((panel) => sameDay(panel.manufacturing?.files?.[0]?.uploadedAt, selectedDate)).length], ["PDF تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.readyAt, selectedDate)).length], ["تسعير", panels.filter((panel) => sameDay(panel.quoteCompletedAt, selectedDate)).length]] },
+    { title: "أداء المندوبين", value: marketers.length, unit: "مندوبين", tone: "blue", to: "/projects", items: [["تأكيد تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.confirmedAt, selectedDate)).length], ["أمر تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.requestedAt, selectedDate)).length], ["مشروع جديد", createdForDate]] },
+  ];
 
   return <div className="owner-dashboard" dir="rtl">
     <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث البيانات"}</button><label className="dashboard-date-input" onClick={openDatePicker}><HiOutlineCalendar aria-hidden="true" /><input ref={dateInputRef} aria-label="اختيار تاريخ الإحصائيات" type="date" inputMode="none" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onDrop={(event) => event.preventDefault()} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><div className="dashboard-period-select"><StyledSelect value={datePreset} onChange={changeDatePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(datePreset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
@@ -218,8 +234,8 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
       <MetricCard tone="violet" icon={<HiOutlineUsers />} title="إجمالي العملاء" value={loading ? "—" : metricValue("totalClients", clientsCount)} />
     </section>
     <section className="owner-insights-grid">
-      <ProductionOverview />
-      <StatusOverview counts={displayedStatusCounts} total={metricValue("totalProjects", projectsForSelectedDate.length)} />
+      <ProductionOverview stages={stages} averages={averages} />
+      <StatusOverview counts={displayedStatusCounts} total={projectsForSelectedDate.length} />
       <WeeklyChart projects={projects} endDate={selectedDate} statistics={storedStatistics?.history} />
       <PerformanceCard data={performanceCards[0]} />
       <PerformanceCard data={performanceCards[1]} />
@@ -228,11 +244,11 @@ function OwnerManagerDashboard({ name, projects, clientsCount, loading, onRefres
     </section>
     <section className="owner-tables-grid">
       <DataTable title="آخر المشاريع المضافة" icon={<HiOutlineFolder />} columns={["#", "اسم المشروع", "المهندس", "تاريخ الإنشاء"]} rows={latestRows} linkLabel="عرض جميع المشاريع" />
-      <DataTable title="أكثر المشاريع تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم المشروع", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد بيانات", "—", "—"]]} linkLabel="عرض المشاريع المتأخرة" />
-      <DataTable title="أفضل المهندسين (اليوم)" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={peopleRows} linkLabel="عرض جميع المهندسين" />
-      <DataTable title="أفضل المندوبين (اليوم)" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={peopleRows} linkLabel="عرض جميع المندوبين" />
+      <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" to="/panels" />
+      <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" to="/users" />
+      <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" to="/users" />
     </section>
-    <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر مرحلة تأخير</span><strong>ليزر</strong></div><div><HiOutlineCalendar /><span>متوسط وقت التنفيذ</span><strong>3.6 يوم</strong></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><strong>1.8 يوم</strong></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
+    <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر سبب تأخير</span><strong>{delayReasons[0]?.[0] || "لا يوجد"}</strong></div><div><HiOutlineCalendar /><span>متوسط تجهيز PDF التنفيذ</span><strong>{formatAverage(averages.executionPdf)}</strong></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><strong>{formatAverage(averages.quote)}</strong></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
   </div>;
 }
 

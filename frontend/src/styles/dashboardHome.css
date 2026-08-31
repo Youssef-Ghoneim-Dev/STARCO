@@ -274,7 +274,7 @@
 .performance-heading { display: flex; align-items: center; gap: 11px; }.performance-heading > div:last-child { display: grid; grid-template-columns: auto auto; align-items: end; column-gap: 7px; }.performance-heading h3 { grid-column: 1 / -1; margin: 0 0 4px; color: var(--text); font-size: 15px; }.performance-heading strong { color: var(--text); font-size: 23px; }.performance-heading span { padding-bottom: 2px; color: var(--text-light); font-size: 10px; }
 .performance-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: var(--performance-color); background: var(--performance-bg); font-size: 22px; }
 .performance-values { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 13px; }.performance-values > div { display: grid; place-items: center; gap: 2px; min-height: 52px; border: 1px solid #e2e9ef; border-radius: 9px; background: #fcfdfe; }.performance-values strong { color: var(--text); font-size: 15px; }.performance-values span { color: var(--text-light); font-size: 9px; text-align: center; }
-.performance-card button { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 12px auto 0; border: 0; color: var(--performance-color); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.performance-card button, .performance-card > a { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 12px auto 0; border: 0; color: var(--performance-color); background: transparent; font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer; }
 
 .owner-tables-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
 .owner-table-card { padding-bottom: 14px; }.owner-table-card > h2 svg { color: var(--primary); }.owner-table-scroll { width: 100%; overflow-x: auto; }.owner-table-card table { width: 100%; min-width: 470px; border-collapse: collapse; font-size: 10px; text-align: right; }.owner-table-card th { padding: 8px; color: #667383; background: #f7f9fb; }.owner-table-card td { padding: 9px 8px; border-bottom: 1px solid #edf1f4; color: #475467; }.owner-table-card tbody tr:last-child td { border-bottom: 0; }.delay-value { color: #df4656; }
@@ -345,7 +345,7 @@
 .performance-values > div { min-height: 68px; padding: 5px; }
 .performance-values strong { font-size: 19px; }
 .performance-values span { font-size: 12px; line-height: 1.35; }
-.performance-card button { margin-top: 16px; font-size: 14px; }
+.performance-card button, .performance-card > a { margin-top: 16px; font-size: 14px; }
 .owner-table-card table { font-size: 13px; }
 .owner-table-card th, .owner-table-card td { padding: 12px 10px; }
 .owner-kpi-strip > div { grid-template-columns: minmax(0, 1fr) 38px; grid-template-rows: auto auto; align-content: center; column-gap: 7px; row-gap: 3px; min-height: 96px; padding: 14px 16px; }
@@ -682,6 +682,56 @@
     flex-direction: column;
 }
 .engineer-execution-card .engineer-more-link, .engineer-status-card .engineer-more-link, .engineer-project-list-card .engineer-more-link, .engineer-priority-card .engineer-more-link, .engineer-recent-card .engineer-more-link, .engineer-deadlines .engineer-more-link { margin-top: auto; }
+
+/* Shared dashboard truth/interaction layer. */
+.dashboard-status-row { position: relative; cursor: help; }
+.dashboard-status-row::after {
+    position: absolute;
+    z-index: 80;
+    inset-inline-end: 0;
+    bottom: calc(100% + 8px);
+    min-width: max-content;
+    max-width: 240px;
+    padding: 8px 11px;
+    border-radius: 9px;
+    color: #fff;
+    background: #18364c;
+    box-shadow: 0 8px 24px rgba(18, 42, 59, .18);
+    content: attr(data-tooltip);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity .16s ease, transform .16s ease;
+}
+.dashboard-status-row:hover::after, .dashboard-status-row:focus-within::after { opacity: 1; transform: translateY(0); }
+.dashboard-task-state { white-space: nowrap; }
+.dashboard-task-state.success { color: #167e49 !important; background: #e9f8ef !important; }
+.dashboard-task-state.pending { color: #9a6810 !important; background: #fff6df !important; }
+.dashboard-task-state.refused { color: #bb3343 !important; background: #fff0f1 !important; }
+.engineer-status-card .engineer-more-link,
+.marketing-status .marketing-card-link,
+.marketer-status .marketer-link,
+.production-stage-status .production-card-link { margin-top: 24px; }
+.engineer-metric, .marketing-metric, .marketer-metric, .production-manager-metric { direction: rtl; }
+.engineer-metric-icon, .marketing-metric-icon, .marketer-metric > div:first-child, .production-manager-metric > div:first-child { order: -1; }
+.engineer-recent-card bdi, .engineer-project-list bdi, .engineer-execution-card bdi,
+.engineer-priority-card bdi, .engineer-deadlines bdi { unicode-bidi: isolate; }
+
+.engineer-notes form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
+.engineer-notes form input { min-width: 0; min-height: 44px; border: 1px solid #d8e2ea; border-radius: 10px; padding: 0 13px; outline: 0; color: var(--text); background: #fbfdfe; font: inherit; }
+.engineer-notes form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45, 105, 137, .1); }
+.engineer-notes form button { min-height: 44px; border: 0; border-radius: 10px; padding: 0 18px; color: #fff; background: var(--primary); font: inherit; font-weight: 800; cursor: pointer; }
+.engineer-notes > div { display: grid; gap: 8px; margin-top: 14px; }
+.engineer-notes > div > p:not(.engineer-empty) { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; border: 1px solid #e3eaf0; border-radius: 10px; padding: 10px 12px; background: #fbfcfd; }
+.engineer-notes > div > p button { display: grid; flex: 0 0 auto; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 8px; color: #c83e4c; background: #fff0f1; font-size: 18px; cursor: pointer; }
+
+@media (max-width: 600px) {
+    .dashboard-status-row::after { display: none; }
+    .engineer-notes form { grid-template-columns: 1fr; }
+}
 
 /* Marketing Manager dashboard */
 .marketing-dashboard { display: grid; gap: 24px; min-width: 0; color: var(--text); }

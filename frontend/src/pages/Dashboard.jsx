@@ -12,6 +12,7 @@ import MarketerDashboard from "../components/dashboard/MarketerDashboard";
 import { useAuth } from "../context/AuthContext";
 import { getAllPanels, getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
+import { getUsers } from "../services/usersAPI";
 import toast from "react-hot-toast";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiRefreshCw } from "react-icons/fi";
@@ -22,6 +23,7 @@ function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [panels, setPanels] = useState([]);
   const [clientsCount, setClientsCount] = useState(0);
+  const [users, setUsers] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const canManageClients = ["OwnerManager", "Engineer", "Marketer", "MarketingManager", "ProductionManager"].includes(user?.role);
 
@@ -31,11 +33,13 @@ function Dashboard() {
       return;
     }
     setDashboardLoading(true);
-    const requests = [getProjects(), getAllPanels(), canManageClients ? getAllClients() : Promise.resolve(null)];
-    return Promise.all(requests).then(([projectsResponse, panelsResponse, clientsResponse]) => {
+    const canLoadTeam = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
+    const requests = [getProjects(), getAllPanels(), canManageClients ? getAllClients() : Promise.resolve(null), canLoadTeam ? getUsers() : Promise.resolve(null)];
+    return Promise.all(requests).then(([projectsResponse, panelsResponse, clientsResponse, usersResponse]) => {
       setProjects(Array.isArray(projectsResponse.data) ? projectsResponse.data : []);
       setPanels(Array.isArray(panelsResponse.data) ? panelsResponse.data : []);
       setClientsCount(clientsResponse?.data?.clients?.length || 0);
+      setUsers(Array.isArray(usersResponse?.data) ? usersResponse.data : Array.isArray(usersResponse?.data?.users) ? usersResponse.data.users : []);
     }).catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل ملخص لوحة التحكم.")).finally(() => setDashboardLoading(false));
   }, [loading, user, canManageClients, accountStatus]);
 
@@ -119,19 +123,19 @@ function Dashboard() {
   }
 
   if (user?.role === "OwnerManager") {
-    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} panels={panels} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "Engineer") {
-    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "MarketingManager") {
-    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "ProductionManager") {
-    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "Marketer") {
