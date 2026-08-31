@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { getDashboardStatistics } from "../../services/dashboardAPI";
 import StyledSelect from "../common/StyledSelect";
 import DashboardName from "./DashboardName";
+import DashboardDonut from "./DashboardDonut";
+import DashboardAverage from "./DashboardAverage";
 import { daysLate, formatAverage, isDelayed, itemName, realDelayReasons, statusMeta as panelStatusMeta, workflowAverages } from "../../utils/dashboardData";
 import {
   HiOutlineCalendar,
@@ -62,17 +64,11 @@ function MetricCard({ icon, title, value, note, tone }) {
 
 function StatusOverview({ counts, total }) {
   const segments = statusMeta.map((item) => ({ ...item, value: counts[item.key] || 0 }));
-  let cursor = 0;
-  const gradient = segments.map((item) => {
-    const start = cursor;
-    cursor += total ? (item.value / total) * 100 : 0;
-    return `${item.color} ${start}% ${cursor}%`;
-  }).join(", ");
   return <section className="owner-dashboard-card status-overview-card">
     <h2>المشاريع حسب الحالة</h2>
     <div className="status-overview-content">
-      <div className="status-donut" title={`إجمالي المشاريع: ${total}`} style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي المشاريع</span></div></div>
-      <div className="status-legend">{segments.map((item) => <div className="dashboard-status-row" data-tooltip={`${item.label}: ${item.value} مشروع`} title={`${item.label}: ${item.value} مشروع`} key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{item.value}</strong><small>{total ? `${Math.round((item.value / total) * 100)}%` : "0%"}</small></div>)}</div>
+      <DashboardDonut className="status-donut" segments={segments} total={total} totalLabel="إجمالي المشاريع" />
+      <div className="status-legend">{segments.map((item) => <div key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{item.value}</strong><small>{total ? `${Math.round((item.value / total) * 100)}%` : "0%"}</small></div>)}</div>
     </div>
     <Link className="owner-card-link" to="/projects">عرض جميع المشاريع <HiOutlineExternalLink /></Link>
   </section>;
@@ -248,7 +244,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
       <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" to="/users" />
       <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" to="/users" />
     </section>
-    <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر سبب تأخير</span><strong>{delayReasons[0]?.[0] || "لا يوجد"}</strong></div><div><HiOutlineCalendar /><span>متوسط تجهيز PDF التنفيذ</span><strong>{formatAverage(averages.executionPdf)}</strong></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><strong>{formatAverage(averages.quote)}</strong></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
+    <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر سبب تأخير</span><strong>{delayReasons[0]?.[0] || "لا يوجد"}</strong></div><div><HiOutlineCalendar /><span>متوسط تجهيز PDF التنفيذ</span><DashboardAverage result={averages.executionPdf} /></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><DashboardAverage result={averages.quote} /></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
   </div>;
 }
 

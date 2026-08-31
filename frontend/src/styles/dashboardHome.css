@@ -733,6 +733,81 @@
     .engineer-notes form { grid-template-columns: 1fr; }
 }
 
+/* The colored donut sectors themselves are interactive. */
+.dashboard-interactive-donut {
+    position: relative;
+    display: grid !important;
+    place-items: center;
+    flex: 0 0 auto;
+    overflow: visible;
+    border-radius: 50%;
+    background: transparent !important;
+    transform: none !important;
+}
+.dashboard-interactive-donut > svg { display: block; width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
+.dashboard-donut-track, .dashboard-donut-segment { fill: none; stroke-width: 16; }
+.dashboard-donut-track { stroke: #edf2f6; }
+.dashboard-donut-segment { cursor: pointer; outline: none; transition: stroke-width .18s ease, filter .18s ease, opacity .18s ease; }
+.dashboard-donut-segment:hover, .dashboard-donut-segment:focus, .dashboard-donut-segment.active { stroke-width: 20; filter: drop-shadow(0 3px 4px rgba(31, 73, 97, .18)); }
+.dashboard-donut-center,
+.dashboard-interactive-donut > .dashboard-donut-center {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: 61% !important;
+    height: 61% !important;
+    box-sizing: border-box;
+    border-radius: 50%;
+    padding: 6px;
+    background: #fff;
+    text-align: center;
+    transform: translate(-50%, -50%) !important;
+    transition: background .18s ease, box-shadow .18s ease;
+    pointer-events: none;
+}
+.dashboard-donut-center.showing-segment { background: #f7fbfd; box-shadow: inset 0 0 0 1px #dbe8ef; }
+.dashboard-donut-center strong { color: var(--text); font-size: clamp(20px, 2vw, 31px); line-height: 1; }
+.dashboard-donut-center span { margin-top: 5px; color: var(--text-light); font-size: 11px; font-weight: 700; line-height: 1.25; }
+
+/* Incomplete averages show an explanation beneath a neutral placeholder. */
+.dashboard-average-pending { display: grid; align-content: center; gap: 2px; min-width: 0; }
+.dashboard-average-pending > strong { font-size: 19px !important; line-height: 1; }
+.dashboard-average-pending > small { color: #798795; font-size: 10px; font-weight: 700; line-height: 1.35; }
+
+/* KPI icon sits on the right of the value in RTL layouts. */
+.engineer-kpi-strip > div, .owner-kpi-strip > div, .production-manager-kpis > div { direction: rtl; }
+.engineer-kpi-strip > div { grid-template-columns: 34px minmax(0, 1fr); }
+.engineer-kpi-strip span { grid-column: 1 / -1; }
+.engineer-kpi-strip svg { grid-column: 1; grid-row: 2; }
+.engineer-kpi-strip > div > strong, .engineer-kpi-strip .dashboard-average-pending { grid-column: 2; grid-row: 2; }
+.owner-kpi-strip > div { grid-template-columns: 38px minmax(0, 1fr); }
+.owner-kpi-strip span { grid-column: 1 / -1; }
+.owner-kpi-strip svg { grid-column: 1; grid-row: 2; }
+.owner-kpi-strip > div > strong, .owner-kpi-strip .dashboard-average-pending { grid-column: 2; grid-row: 2; }
+.production-manager-kpis > div { grid-template-columns: 43px minmax(0, 1fr); }
+.production-manager-kpis svg { grid-column: 1; grid-row: 1 / 3; }
+.production-manager-kpis > div > span, .production-manager-kpis > div > strong, .production-manager-kpis .dashboard-average-pending { grid-column: 2; }
+
+/* Clearer daily-performance card. */
+.engineer-performance-card { overflow: hidden; background: linear-gradient(145deg, #ffffff 0%, #f5fafc 100%); }
+.engineer-performance-card > div { gap: 11px; }
+.engineer-performance-card > div span { min-height: 82px; border: 0; border-radius: 13px; padding: 10px; box-shadow: inset 0 0 0 1px rgba(46, 91, 119, .08); }
+.engineer-performance-card > div span:nth-child(1) { color: #356b9f; background: #edf5ff; }
+.engineer-performance-card > div span:nth-child(2) { color: #26845a; background: #ebf9f1; }
+.engineer-performance-card > div span:nth-child(3) { color: #7252ad; background: #f4efff; }
+.engineer-performance-card > div span:nth-child(4) { color: #a46d19; background: #fff7e7; }
+.engineer-performance-card > div strong { color: currentColor; }
+.engineer-performance-card > p { border-top: 1px solid #e5edf2; padding-top: 13px; color: #68808f; }
+
+@media (max-width: 600px) {
+    .dashboard-donut-segment { stroke-width: 18; }
+    .dashboard-donut-segment:hover, .dashboard-donut-segment:focus, .dashboard-donut-segment.active { stroke-width: 21; }
+    .dashboard-average-pending > small { font-size: 9px; }
+}
+
 /* Marketing Manager dashboard */
 .marketing-dashboard { display: grid; gap: 24px; min-width: 0; color: var(--text); }
 .marketing-dashboard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }

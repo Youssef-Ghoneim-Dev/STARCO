@@ -18,6 +18,7 @@ import {
 import StyledSelect from "../common/StyledSelect";
 import { useNotifications } from "../../context/NotificationContext";
 import DashboardName from "./DashboardName";
+import DashboardDonut from "./DashboardDonut";
 import { daysLate, isDelayed, statusMeta } from "../../utils/dashboardData";
 
 const toDateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -57,9 +58,8 @@ function MarketerMetric({ icon, title, value, note, tone }) {
 }
 
 function MarketerStatus({ counts, total }) {
-  let cursor = 0;
-  const gradient = statuses.map((status) => { const start = cursor; cursor += total ? (counts[status.key] / total) * 100 : 0; return `${status.color} ${start}% ${cursor}%`; }).join(", ");
-  return <section className="marketer-panel marketer-status"><h2>المشاريع حسب المرحلة</h2><div><div className="marketer-donut" title={`إجمالي المشاريع: ${total}`} style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي المشاريع</span></div></div><section>{statuses.map((status) => <p className="dashboard-status-row" data-tooltip={`${status.label}: ${counts[status.key]} مشروع`} title={`${status.label}: ${counts[status.key]} مشروع`} key={status.key}><i style={{ background: status.color }} /><span>{status.label}</span><strong>{counts[status.key]}</strong><small>{total ? `${Math.round((counts[status.key] / total) * 100)}%` : "0%"}</small></p>)}</section></div><Link to="/projects" className="marketer-link">عرض جميع المشاريع <HiOutlineExternalLink /></Link></section>;
+  const segments = statuses.map((status) => ({ ...status, value: counts[status.key] || 0 }));
+  return <section className="marketer-panel marketer-status"><h2>المشاريع حسب المرحلة</h2><div><DashboardDonut className="marketer-donut" segments={segments} total={total} totalLabel="إجمالي المشاريع" /><section>{statuses.map((status) => <p key={status.key}><i style={{ background: status.color }} /><span>{status.label}</span><strong>{counts[status.key]}</strong><small>{total ? `${Math.round((counts[status.key] / total) * 100)}%` : "0%"}</small></p>)}</section></div><Link to="/projects" className="marketer-link">عرض جميع المشاريع <HiOutlineExternalLink /></Link></section>;
 }
 
 function MarketerDashboard({ name, projects, panels = [], loading, onRefresh }) {

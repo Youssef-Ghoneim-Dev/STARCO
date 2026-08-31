@@ -15,6 +15,7 @@ import {
 } from "react-icons/hi";
 import StyledSelect from "../common/StyledSelect";
 import DashboardName from "./DashboardName";
+import DashboardDonut from "./DashboardDonut";
 import { isDelayed, realDelayReasons, statusMeta } from "../../utils/dashboardData";
 
 const toDateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -46,9 +47,8 @@ function MarketingMetric({ icon, title, value, note, tone }) {
 }
 
 function MarketingStatus({ counts, total }) {
-  let cursor = 0;
-  const gradient = statusDefinitions.map((item) => { const start = cursor; cursor += total ? (counts[item.key] / total) * 100 : 0; return `${item.color} ${start}% ${cursor}%`; }).join(", ");
-  return <section className="marketing-panel marketing-status"><h2>المشاريع حسب الحالة</h2><div className="marketing-status-body"><div className="marketing-donut" title={`إجمالي المشاريع: ${total}`} style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي المشاريع</span></div></div><div>{statusDefinitions.map((item) => <p className="dashboard-status-row" data-tooltip={`${item.label}: ${counts[item.key]} مشروع`} title={`${item.label}: ${counts[item.key]} مشروع`} key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{counts[item.key]}</strong><small>{total ? `${Math.round((counts[item.key] / total) * 100)}%` : "0%"}</small></p>)}</div></div><Link to="/projects" className="marketing-card-link">عرض جميع المشاريع <HiOutlineExternalLink /></Link></section>;
+  const segments = statusDefinitions.map((item) => ({ ...item, value: counts[item.key] || 0 }));
+  return <section className="marketing-panel marketing-status"><h2>المشاريع حسب الحالة</h2><div className="marketing-status-body"><DashboardDonut className="marketing-donut" segments={segments} total={total} totalLabel="إجمالي المشاريع" /><div>{statusDefinitions.map((item) => <p key={item.key}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{counts[item.key]}</strong><small>{total ? `${Math.round((counts[item.key] / total) * 100)}%` : "0%"}</small></p>)}</div></div><Link to="/projects" className="marketing-card-link">عرض جميع المشاريع <HiOutlineExternalLink /></Link></section>;
 }
 
 function MarketingTrend({ projects, selectedDate }) {

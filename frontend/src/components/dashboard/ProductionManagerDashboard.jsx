@@ -14,7 +14,9 @@ import {
 } from "react-icons/hi";
 import StyledSelect from "../common/StyledSelect";
 import DashboardName from "./DashboardName";
-import { currentAction, daysLate, formatAverage, isDelayed, itemName, realDelayReasons, statusLabel, workflowAverages } from "../../utils/dashboardData";
+import DashboardDonut from "./DashboardDonut";
+import DashboardAverage from "./DashboardAverage";
+import { currentAction, daysLate, isDelayed, itemName, realDelayReasons, statusLabel, workflowAverages } from "../../utils/dashboardData";
 
 const dateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const fromDateValue = (value) => { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); };
@@ -55,9 +57,8 @@ function ProductionMetric({ icon, title, value, note, tone }) {
 }
 
 function StageDonut({ counts, total }) {
-  let cursor = 0;
-  const gradient = stages.map((stage) => { const start = cursor; cursor += total ? (counts[stage.key] / total) * 100 : 0; return `${stage.color} ${start}% ${cursor}%`; }).join(", ");
-  return <section className="production-manager-card production-stage-status"><h2>اللوحات حسب المرحلة</h2><div className="production-stage-status-body"><div className="production-stage-donut" title={`إجمالي اللوحات: ${total}`} style={{ background: total ? `conic-gradient(${gradient})` : "#edf2f6" }}><div><strong>{total}</strong><span>إجمالي اللوحات</span></div></div><div>{stages.map((stage) => <p className="dashboard-status-row" data-tooltip={`${stage.label}: ${counts[stage.key]} لوحة`} title={`${stage.label}: ${counts[stage.key]} لوحة`} key={stage.key}><i style={{ background: stage.color }} /><span>{stage.label}</span><strong>{counts[stage.key]}</strong><small>{total ? `${Math.round((counts[stage.key] / total) * 100)}%` : "0%"}</small></p>)}</div></div><Link to="/panels" className="production-card-link">عرض جميع اللوحات <HiOutlineExternalLink /></Link></section>;
+  const segments = stages.map((stage) => ({ ...stage, value: counts[stage.key] || 0 }));
+  return <section className="production-manager-card production-stage-status"><h2>اللوحات حسب المرحلة</h2><div className="production-stage-status-body"><DashboardDonut className="production-stage-donut" segments={segments} total={total} /><div>{stages.map((stage) => <p key={stage.key}><i style={{ background: stage.color }} /><span>{stage.label}</span><strong>{counts[stage.key]}</strong><small>{total ? `${Math.round((counts[stage.key] / total) * 100)}%` : "0%"}</small></p>)}</div></div><Link to="/panels" className="production-card-link">عرض جميع اللوحات <HiOutlineExternalLink /></Link></section>;
 }
 
 function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
@@ -114,7 +115,7 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
       <section className="production-manager-card production-new-orders"><h2>أوامر التنفيذ الجديدة ({label})</h2><div className="production-table-scroll"><table><thead><tr><th>الوقت</th><th>رقم المشروع</th><th>اسم المشروع</th><th>PDF</th></tr></thead><tbody>{newOrders.map((project, index) => <tr key={project._id || index}><td>{updatedAt(project).toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" })}</td><td>{projectCode(project)}</td><td>{projectName(project)}</td><td><HiOutlineDocumentText /></td></tr>)}</tbody></table></div><Link to="/projects" className="production-card-link">عرض جميع أوامر التنفيذ <HiOutlineExternalLink /></Link></section>
     </section>
 
-    <section className="production-manager-kpis"><div><HiOutlineExclamation /><span>اللوحات المتأخرة</span><strong>{delayedCount} لوحة</strong></div><div><HiOutlineViewGrid /><span>متوسط وقت مرحلة التجميع</span><strong>{formatAverage(averages.stage("assembly"))}</strong></div><div><HiOutlineTrendingUp /><span>متوسط وقت مرحلة الرش</span><strong>{formatAverage(averages.stage("painting"))}</strong></div><div><HiOutlineClock /><span>متوسط وقت مرحلة التصنيع</span><strong>{formatAverage(averages.stage("manufacturing"))}</strong></div><div><HiOutlineCheckCircle /><span>متوسط وقت مرحلة الليزر</span><strong>{formatAverage(averages.stage("laser"))}</strong></div></section>
+    <section className="production-manager-kpis"><div><HiOutlineExclamation /><span>اللوحات المتأخرة</span><strong>{delayedCount} لوحة</strong></div><div><HiOutlineViewGrid /><span>متوسط وقت مرحلة التجميع</span><DashboardAverage result={averages.stage("assembly")} /></div><div><HiOutlineTrendingUp /><span>متوسط وقت مرحلة الرش</span><DashboardAverage result={averages.stage("painting")} /></div><div><HiOutlineClock /><span>متوسط وقت مرحلة التصنيع</span><DashboardAverage result={averages.stage("manufacturing")} /></div><div><HiOutlineCheckCircle /><span>متوسط وقت مرحلة الليزر</span><DashboardAverage result={averages.stage("laser")} /></div></section>
   </div>;
 }
 
