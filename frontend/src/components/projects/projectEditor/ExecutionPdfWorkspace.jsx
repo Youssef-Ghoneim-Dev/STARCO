@@ -329,6 +329,9 @@ function ExecutionPdfWorkspace() {
   const manufacturingNotesChanged = manufacturingNotes !== String(manufacturing.productionNotes || "");
   const productionHistory = useMemo(() => manufacturing.productionHistory || [], [manufacturing.productionHistory]);
   const latestProductionUpdate = productionHistory[productionHistory.length - 1];
+  const assignedEngineer = panel.assignedEngineer || project.assignedEngineer || null;
+  const lastProductionUpdater = latestProductionUpdate?.actorName || assignedEngineer?.name || "غير محدد";
+  const lastProductionUpdateAt = latestProductionUpdate?.createdAt || panel.updatedAt || project.updatedAt;
   const stageHasUnsavedChanges = Boolean(stageDecision || manufacturingNotesChanged || delayReason || delayDetails.trim());
   const panelReferenceCode = panel?.panelCode || project?.projectCode || "—";
   const productionStageTitle = (key) => productionStageDefinitions.find((stage) => stage.key === key)?.title || "مرحلة الإنتاج";
@@ -733,12 +736,12 @@ function ExecutionPdfWorkspace() {
         <div>
           <h2><bdi dir={getPanelNameDirection(panel.panelName)}>{panel.panelName}</bdi> - مشروع {project.client?.name || "غير محدد"}</h2>
           <button type="button" onClick={copyId} className="production-code-copy" title="نسخ رقم اللوحة"><HiOutlineClipboardCopy /><bdi dir="ltr">{panelReferenceCode}</bdi></button>
-          <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {project.assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
+          <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
         </div>
       </div>
       <div className={`production-project-facts ${canManageProductionStages ? "" : "compact"}`}>
-        <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{project.lastUpdatedByName || project.assignedEngineer?.name || "غير محدد"}</b></div>
-        <div><span><HiOutlineClock /> تاريخ آخر تحديث</span><b>{formatProjectDate(project.updatedAt, true)}</b></div>
+        <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{lastProductionUpdater}</b></div>
+        <div><span><HiOutlineClock /> تاريخ آخر تحديث</span><b>{formatProjectDate(lastProductionUpdateAt, true)}</b></div>
         {canManageProductionStages && <><div><span><HiOutlinePuzzle /> مرحلة المشروع</span><b className="production-phase-badge">{activeProductionStage?.title || "مكتمل"}</b></div>
         <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div></>}
       </div>

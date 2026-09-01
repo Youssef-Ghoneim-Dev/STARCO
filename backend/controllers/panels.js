@@ -149,7 +149,23 @@ const notifyProjectMarketer = async (project, roles, sender) => {
 const projectResponse = async (project) => {
     const freshProject = await projects.findOne({ _id: project._id, isDeleted: false }).select("+clientPreviewToken");
     const object = freshProject?.toObject?.() || freshProject || project;
-    return { ...object, quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : "", panels: (await panels.find({ projectId: project._id, isDeleted: false })).map(publicPanel) };
+    const projectPanels = await panels.find({ projectId: project._id, isDeleted: false });
+    const engineerRows = await users.selectall({
+        _id: { $in: projectPanels.map((panel) => panel.engineerId).filter(Boolean) },
+        isDeleted: false
+    });
+    const engineerMap = new Map(engineerRows.map((engineer) => [
+        String(engineer._id),
+        { _id: engineer._id, name: engineer.name }
+    ]));
+    return {
+        ...object,
+        quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : "",
+        panels: projectPanels.map((panel) => ({
+            ...publicPanel(panel),
+            assignedEngineer: engineerMap.get(String(panel.engineerId)) || null
+        }))
+    };
 };
 
 const listAllPanels = async (req, res, next) => { try {
