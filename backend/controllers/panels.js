@@ -5,6 +5,7 @@ const { sendExecutionPdfRequested, sendExecutionPdfCompleted, sendExecutionConfi
 const users = require("../models/users");
 const createZipArchive = require("../utils/createZipArchive");
 const { createInternalNotifications } = require("../services/internalNotifications");
+const { addEgyptWorkingDays, isEgyptNonWorkingDate } = require("../utils/egyptWorkingDays");
 
 const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
@@ -318,7 +319,7 @@ const submitEdits = async (req, res, next) => { try {
     else if (onlyThicknessChanged && panel.engineerId) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelThicknessUpdated", title: "تم تحديث سماكات اللوحة تلقائيًا", body: `${saved.panelName} — لا تحتاج إعادة تسعير يدوي`, actor: req.user });
     const message = onlyControlInstallationChanged
         ? executionPdfNeedsRegeneration
-            ? "تم حفظ تعديل تركيب لوحة الكنترول. لم يتغير السعر، وأُلغي PDF التنفيذ السابق لبدء نسخة جديدة."
+            ? "تم حفظ تركيب لوحة الكنترول دون تغيير السعر، وسيُجهز ملف التنفيذ من جديد."
             : "تم حفظ تعديل تركيب لوحة الكنترول. لم يتغير السعر ولا تحتاج اللوحة إلى إعادة تسعير."
         : onlyThicknessChanged
             ? executionNeedsReset ? "تم تحديث السماكات تلقائيًا. أُلغي PDF التنفيذ السابق لأن السمك المؤكد لم يعد ضمن الاختيارات." : "تم تحديث السماكات وعرض السعر تلقائيًا دون إعادة اللوحة للمهندس."
@@ -459,8 +460,9 @@ const requestDeliverySchedule = async (req, res, next) => { try {
     if (!deliveryScheduleStatuses.includes(panel.status)) return res.status(409).json({ status: "error", message: panel.status === "completed" ? "اكتمل تنفيذ هذه اللوحة بالفعل." : "يمكن تحديد موعد انتهاء اللوحة بعد تأكيد التنفيذ فقط." });
     const value = String(req.body?.requestedDate || "").trim();
     const requestedDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date("");
-    const minimumDate = new Date(); minimumDate.setHours(0, 0, 0, 0); minimumDate.setDate(minimumDate.getDate() + 5);
-    if (Number.isNaN(requestedDate.getTime()) || requestedDate < minimumDate) return res.status(400).json({ status: "error", message: "يجب أن يكون موعد انتهاء اللوحة بعد خمسة أيام على الأقل من تاريخ الطلب." });
+    const minimumDate = addEgyptWorkingDays(new Date(), 5);
+    if (Number.isNaN(requestedDate.getTime()) || requestedDate < minimumDate) return res.status(400).json({ status: "error", message: "يجب أن يكون موعد انتهاء اللوحة بعد خمسة أيام عمل على الأقل من تاريخ الطلب، دون احتساب الجمعة والعطلات الرسمية." });
+    if (isEgyptNonWorkingDate(requestedDate)) return res.status(400).json({ status: "error", message: "لا يمكن اختيار يوم الجمعة أو عطلة رسمية موعدًا للتسليم." });
     const saved = await panels.update({ _id: panel._id }, { deliverySchedule: { requestedDate, status: "pending", requestedBy: req.user._id, requestedAt: new Date(), respondedBy: null, respondedAt: null, responseNote: "" }, $push: { statusHistory: history(req, panel.status, panel.status, "deliveryScheduleRequested", value) } });
     await createInternalNotifications({ roles: ["ProductionManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "deliveryScheduleRequested", title: "طلب اعتماد موعد انتهاء لوحة", body: `${saved.panelName} — الموعد المطلوب ${requestedDate.toLocaleDateString("ar-EG")}`, actor: req.user });
     res.json({ status: "ok", message: "تم إرسال الموعد لمدير التنفيذ.", panel: publicPanel(saved), project: await projectResponse(project) });

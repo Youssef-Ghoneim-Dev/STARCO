@@ -26,33 +26,36 @@ function App() {
     <>
       <Toaster
         position="top-center"
+        containerClassName="starco-toast-container"
         toastOptions={{
           duration: 3000,
-
+          className: "starco-toast",
           style: {
-            width: "min(520px, calc(100vw - 24px))",
+            width: "min(560px, calc(100vw - 24px))",
             maxWidth: "calc(100vw - 24px)",
-            borderRadius: "12px",
-            padding: "14px 18px",
+            borderRadius: "14px",
+            padding: "15px 18px",
             fontSize: "15px",
-            textAlign: "left",
-            direction: "ltr",
-            justifyContent: "left",
+            lineHeight: 1.7,
+            fontFamily: "Tajawal, sans-serif",
+            fontWeight: 700,
+            textAlign: "right",
+            direction: "rtl",
+            justifyContent: "flex-start",
+            overflowWrap: "anywhere",
           },
-
           success: {
             style: {
               border: "1px solid #22c55e",
-              textAlign: "left",
-              justifyContent: "left",
+              textAlign: "right",
+              direction: "rtl",
             },
           },
-
           error: {
             style: {
               border: "1px solid #ef4444",
-              textAlign: "left",
-              justifyContent: "left",
+              textAlign: "right",
+              direction: "rtl",
             },
           },
         }}

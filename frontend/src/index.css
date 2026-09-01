@@ -63,6 +63,22 @@ body {
     overflow-x: hidden;
 }
 
+.starco-toast {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.starco-toast > div:last-child {
+    min-width: 0;
+    direction: rtl;
+    unicode-bidi: plaintext;
+    text-align: right;
+}
+
+.starco-toast svg {
+    flex: 0 0 auto;
+}
+
 img,
 video,
 canvas {

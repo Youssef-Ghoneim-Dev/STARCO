@@ -7,6 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
 import PanelEditAction from "../PanelEditAction";
 import { getPanelNameDirection } from "../../../utils/panelNameDirection";
+import { addEgyptWorkingDays, egyptDateValue, isEgyptNonWorkingDate } from "../../../utils/egyptWorkingDays";
 import {
   finishExecutionPdf,
   deleteExecutionPdfFile,
@@ -108,10 +109,13 @@ const dateInputValue = (value) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 const minimumDeliveryDateValue = () => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 5);
-  return dateInputValue(date);
+  return egyptDateValue(addEgyptWorkingDays(new Date(), 5));
+};
+const formatDeliveryPickerDate = (value) => {
+  if (!value) return "اختر الموعد";
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "اختر الموعد";
+  return date.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 };
 
 function ExecutionStatusCard({ tone = "info", icon, title, description }) {
@@ -190,7 +194,7 @@ function ExecutionPdfWorkspace() {
   const [delayReason, setDelayReason] = useState("");
   const [delayDetails, setDelayDetails] = useState("");
   const [stageSavedFeedback, setStageSavedFeedback] = useState(null);
-  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(() => dateInputValue(deliverySchedule.requestedDate));
+  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(() => dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
   const [deliveryResponseNote, setDeliveryResponseNote] = useState("");
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
@@ -232,7 +236,7 @@ function ExecutionPdfWorkspace() {
   }, [panel?.panelId, manufacturing.engineerNotes, manufacturing.notes, manufacturing.productionNotes, manufacturing.currentStage]);
 
   useEffect(() => {
-    setRequestedDeliveryDate(dateInputValue(deliverySchedule.requestedDate));
+    setRequestedDeliveryDate(dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
     setDeliveryResponseNote(deliverySchedule.responseNote || "");
   }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.responseNote]);
 
@@ -555,7 +559,8 @@ function ExecutionPdfWorkspace() {
 
   const requestDeliveryDate = async () => {
     if (!requestedDeliveryDate) return toast.error("اختر موعد انتهاء اللوحة أولًا.");
-    if (requestedDeliveryDate < minimumDeliveryDateValue()) return toast.error("يجب أن يكون الموعد بعد خمسة أيام على الأقل من تاريخ الطلب.");
+    if (requestedDeliveryDate < minimumDeliveryDateValue()) return toast.error("يجب أن يكون الموعد بعد خمسة أيام عمل على الأقل من تاريخ الطلب.");
+    if (isEgyptNonWorkingDate(requestedDeliveryDate)) return toast.error("لا يمكن اختيار يوم الجمعة أو عطلة رسمية موعدًا للتسليم.");
     setBusy(true);
     try {
       const { data } = await requestPanelDeliverySchedule(project._id, panel.panelId, requestedDeliveryDate);
@@ -683,7 +688,32 @@ function ExecutionPdfWorkspace() {
       </header>
       <div className="panel-delivery-schedule-body">
         <div className="panel-delivery-date-summary"><small>الموعد المطلوب</small><strong>{deliverySchedule.requestedDate ? formatProjectDate(deliverySchedule.requestedDate) : "لم يتم تحديده"}</strong>{deliverySchedule.respondedAt && <span>آخر قرار: {formatProjectDate(deliverySchedule.respondedAt, true)}</span>}</div>
-        {canRequestDeliverySchedule && <div className="panel-delivery-request"><label>اختر الموعد <small>(بعد 5 أيام على الأقل)</small><input type="date" min={minimumDeliveryDateValue()} value={requestedDeliveryDate} onChange={(event) => setRequestedDeliveryDate(event.target.value)} /></label><button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}>{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button></div>}
+        {canRequestDeliverySchedule && <div className="panel-delivery-request">
+          <label className="panel-delivery-date-picker">
+            <span className="panel-delivery-date-icon"><HiOutlineCalendar /></span>
+            <span><small>موعد التسليم المقترح</small><strong>{formatDeliveryPickerDate(requestedDeliveryDate)}</strong></span>
+            <em>متاح من {formatDeliveryPickerDate(minimumDeliveryDateValue())}</em>
+            <input
+              aria-label="اختيار موعد انتهاء اللوحة"
+              type="date"
+              inputMode="none"
+              min={minimumDeliveryDateValue()}
+              value={requestedDeliveryDate}
+              onKeyDown={(event) => event.preventDefault()}
+              onBeforeInput={(event) => event.preventDefault()}
+              onPaste={(event) => event.preventDefault()}
+              onDrop={(event) => event.preventDefault()}
+              onChange={(event) => {
+                if (isEgyptNonWorkingDate(event.target.value)) {
+                  toast.error("الجمعة والعطلات الرسمية غير متاحة لاختيار موعد التسليم.");
+                  return;
+                }
+                setRequestedDeliveryDate(event.target.value);
+              }}
+            />
+          </label>
+          <button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}><HiOutlineCalendar />{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button>
+        </div>}
         {canRespondDeliverySchedule && deliverySchedule.status === "pending" && <div className="panel-delivery-response"><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، يمكن التنفيذ</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy}><HiOutlineX /> لا، الموعد غير مناسب</button></div></div>}
         {deliverySchedule.responseNote && deliverySchedule.status !== "pending" && <aside><b>ملاحظة مدير التنفيذ</b><p>{deliverySchedule.responseNote}</p></aside>}
       </div>

@@ -1848,11 +1848,21 @@
 .panel-delivery-date-summary { display: grid; align-content: center; gap: 5px; padding: 13px 15px; border: 1px solid #dae5eb; border-radius: 13px; background: #fafcfd; }
 .panel-delivery-date-summary small, .panel-delivery-date-summary span { color: #73838e; font-size: .75rem; }
 .panel-delivery-date-summary strong { color: #244f66; font-size: 1rem; }
-.panel-delivery-request { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 10px; }
+.panel-delivery-request { display: grid; grid-template-columns: minmax(300px, 1fr) auto; align-items: stretch; gap: 12px; }
 .panel-delivery-request label, .panel-delivery-response label { display: grid; gap: 7px; color: #334f60; font-size: .84rem; font-weight: 800; }
-.panel-delivery-request input, .panel-delivery-response textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbdbe4; border-radius: 11px; padding: 11px 12px; color: #193d52; background: #fff; font: inherit; }
-.panel-delivery-request input { min-height: 44px; direction: ltr; }
-.panel-delivery-request button, .panel-delivery-response button { min-height: 44px; border: 0; border-radius: 11px; padding: 0 17px; color: #fff; background: var(--primary); font: inherit; font-weight: 800; cursor: pointer; }
+.panel-delivery-response textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbdbe4; border-radius: 11px; padding: 11px 12px; color: #193d52; background: #fff; font: inherit; }
+.panel-delivery-date-picker { position: relative; display: grid !important; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px !important; min-height: 72px; padding: 10px 12px; overflow: hidden; border: 1px solid #d4e2e9; border-radius: 14px; background: linear-gradient(135deg, #fff, #f4f9fc); cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+.panel-delivery-date-picker:hover, .panel-delivery-date-picker:focus-within { border-color: #7aabc1; box-shadow: 0 9px 24px rgb(43 103 132 / 12%); transform: translateY(-1px); }
+.panel-delivery-date-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: #fff; background: linear-gradient(145deg, #2d6682, #4288a6); box-shadow: 0 8px 18px rgb(45 102 130 / 20%); }
+.panel-delivery-date-icon svg { font-size: 24px; }
+.panel-delivery-date-picker > span:nth-child(2) { display: grid; gap: 3px; min-width: 0; }
+.panel-delivery-date-picker small { color: #788994; font-size: .72rem; }
+.panel-delivery-date-picker strong { overflow: hidden; color: #173e55; font-size: .96rem; text-overflow: ellipsis; white-space: nowrap; }
+.panel-delivery-date-picker em { padding: 6px 9px; border-radius: 999px; color: #32657e; background: #e5f1f6; font-size: .68rem; font-style: normal; white-space: nowrap; }
+.panel-delivery-date-picker input { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; cursor: pointer; }
+.panel-delivery-date-picker input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.panel-delivery-request button, .panel-delivery-response button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 0; border-radius: 12px; padding: 0 19px; color: #fff; background: var(--primary); font: inherit; font-weight: 800; cursor: pointer; }
+.panel-delivery-request button svg { flex: 0 0 auto; font-size: 19px; }
 .panel-delivery-response { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px, 1fr) auto; align-items: end; gap: 13px; padding-top: 2px; }
 .panel-delivery-response textarea { min-height: 70px; resize: vertical; }
 .panel-delivery-response > div { display: flex; gap: 9px; }
@@ -1889,6 +1899,8 @@
     .panel-delivery-schedule > header { grid-template-columns: 42px minmax(0, 1fr); padding: 13px; }
     .panel-delivery-schedule > header > b { grid-column: 1 / -1; justify-self: start; }
     .panel-delivery-schedule-body, .panel-delivery-request, .panel-delivery-response { grid-template-columns: 1fr; }
+    .panel-delivery-date-picker { grid-template-columns: 46px minmax(0, 1fr); }
+    .panel-delivery-date-picker em { grid-column: 1 / -1; justify-self: start; }
     .panel-delivery-response > div { flex-direction: column; }
     .manufacturing-delay-form { grid-template-columns: 1fr; }
     .production-project-details-body { grid-template-columns: 1fr; }
