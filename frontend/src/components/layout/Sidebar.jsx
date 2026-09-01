@@ -27,7 +27,7 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const canUseRecycleBin = Boolean(role);
   const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
   const canManageClients = ["OwnerManager", "Engineer", "MarketingManager"].includes(role);
-  const canManageConfiguration = ["OwnerManager", "Engineer", "ProductionManager", "MarketingManager"].includes(role);
+  const canManageConfiguration = ["OwnerManager", "Engineer", "MarketingManager"].includes(role);
   const canViewProjects = true;
 
   const logout = () => {

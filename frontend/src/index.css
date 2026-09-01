@@ -61,6 +61,17 @@ body,
 
 body {
     overflow-x: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+input,
+textarea,
+select,
+option,
+[contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .starco-toast {

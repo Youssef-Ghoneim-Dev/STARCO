@@ -68,7 +68,7 @@ function PanelTypesEditor({ panelTypes, onChange, canEditFormulas, onSave, savin
   const updateType = (index, updater) => onChange(panelTypes.map((type, current) => current === index ? updater(type) : type));
   const addType = () => onChange([...panelTypes, { key: `type-${Date.now()}`, name: "نوع جديد", whatsappType: "", prices: { manufacturing: 0, locks: 0, hinges: 0, transport: 0, screws: 0, stretch: 0, carton: 0 }, parts: [], additionalParts: [] }]);
   return <section className="panel-types-editor">
-    <div className="configuration-heading configuration-subheading"><h2>{canEditFormulas ? "أنواع الألواح والمعادلات" : "إعدادات تسعير الألواح"}</h2><p>{canEditFormulas ? "المعادلات تستخدم: Length للطول، Width للعرض، Depth للعمق. مثال: Length - 50" : "يمكنك تعديل أسعار التصنيع والأجزاء الأساسية والإضافية. المعادلات يديرها Owner Manager أو Production Manager."}</p></div>
+    <div className="configuration-heading configuration-subheading"><h2>{canEditFormulas ? "أنواع الألواح والمعادلات" : "إعدادات تسعير الألواح"}</h2><p>{canEditFormulas ? "المعادلات تستخدم: Length للطول، Width للعرض، Depth للعمق. مثال: Length - 50" : "يمكنك تعديل أسعار التصنيع والأجزاء الأساسية والإضافية. المعادلات يديرها Owner Manager فقط."}</p></div>
     {panelTypes.map((type, typeIndex) => <details className="panel-type-settings" key={type.key || typeIndex}>
       <summary><IoChevronDown className="configuration-collapse-icon" aria-hidden="true" /><strong>{type.name || "نوع لوحة"}</strong><span>اضغط لعرض الإعدادات</span><div className="panel-type-summary-actions"><button type="button" className="configuration-secondary configuration-type-save" disabled={saving} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSave(); }}>{saving ? "جاري الحفظ..." : "حفظ"}</button>{canEditFormulas && <button type="button" className="configuration-delete configuration-type-delete" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onChange(panelTypes.filter((_, index) => index !== typeIndex)); }}>حذف اللوحة</button>}</div></summary>
       <div className="panel-type-settings-body">
@@ -162,9 +162,9 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
 
 function Configuration() {
   const { user } = useAuth();
-  const canManagePricing = ["OwnerManager", "Engineer", "ProductionManager"].includes(user?.role);
-  const canEditFormulas = ["OwnerManager", "ProductionManager"].includes(user?.role);
-  const canManageCopper = ["OwnerManager", "ProductionManager"].includes(user?.role);
+  const canManagePricing = ["OwnerManager", "Engineer"].includes(user?.role);
+  const canEditFormulas = user?.role === "OwnerManager";
+  const canManageCopper = user?.role === "OwnerManager";
   const canManageTemplates = ["OwnerManager", "MarketingManager"].includes(user?.role);
   const isOwner = user?.role === "OwnerManager";
   const canAccessConfiguration = canManagePricing || canManageTemplates;

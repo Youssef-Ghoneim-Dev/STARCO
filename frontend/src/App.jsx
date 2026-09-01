@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login";
@@ -22,6 +23,29 @@ import ClientProjectPreview from "./pages/ClientProjectPreview";
 import RoleRoute from "./routes/RoleRoute";
 
 function App() {
+  useEffect(() => {
+    const isNumberInput = (target) => target?.tagName === "INPUT" && target.type === "number";
+    const blockScientificNotation = (event) => {
+      if (isNumberInput(event.target) && ["e", "E", "+", "-"].includes(event.key)) event.preventDefault();
+    };
+    const blockScientificPaste = (event) => {
+      if (!isNumberInput(event.target)) return;
+      const pasted = event.clipboardData?.getData("text") || "";
+      if (/[eE+-]/.test(pasted)) event.preventDefault();
+    };
+    const blockScientificBeforeInput = (event) => {
+      if (isNumberInput(event.target) && /[eE+-]/.test(event.data || "")) event.preventDefault();
+    };
+    document.addEventListener("keydown", blockScientificNotation, true);
+    document.addEventListener("paste", blockScientificPaste, true);
+    document.addEventListener("beforeinput", blockScientificBeforeInput, true);
+    return () => {
+      document.removeEventListener("keydown", blockScientificNotation, true);
+      document.removeEventListener("paste", blockScientificPaste, true);
+      document.removeEventListener("beforeinput", blockScientificBeforeInput, true);
+    };
+  }, []);
+
   return (
     <>
       <Toaster
@@ -80,7 +104,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
           <Route path="/pending-users" element={<PendingUsers />} />
-          <Route path="/configuration" element={<Configuration />} />
+          <Route path="/configuration" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "MarketingManager"]}><Configuration /></RoleRoute>} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/clients" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "MarketingManager"]}><Clients /></RoleRoute>} />
           <Route path="/deleted-projects" element={<DeletedProjects />} />

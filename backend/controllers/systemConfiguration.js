@@ -6,8 +6,7 @@ const googleDrive = require("../services/googleDrive");
 // CheckUserToken refreshes req.user from MongoDB. Using the JWT role here made
 // permissions stale after a user's role was edited by Owner Manager.
 const isOwnerManager = (req) => req.user?.role === "OwnerManager";
-const isProductionManager = (req) => req.user?.role === "ProductionManager";
-const canManagePricing = (req) => ["OwnerManager", "Engineer", "ProductionManager"].includes(req.user?.role);
+const canManagePricing = (req) => ["OwnerManager", "Engineer"].includes(req.user?.role);
 const canManageWhatsappTemplates = (req) => ["OwnerManager", "MarketingManager"].includes(req.user?.role);
 
 const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {
@@ -75,7 +74,7 @@ const update = async (req, res, next) => {
         const updateData = { ...req.body };
         // المهندس يعدّل الأسعار والأجزاء، لكن المعادلات وتعريف نوع اللوحة
         // يبقيان محفوظين كما حددهما Owner Manager.
-        if (!isOwnerManager(req) && !isProductionManager(req)) {
+        if (!isOwnerManager(req)) {
             const currentConfig = await models.get();
             updateData.panelTypes = sanitizeEngineerPanelTypes(currentConfig?.panelTypes || [], updateData.panelTypes || []);
             updateData.copperConfiguration = currentConfig?.copperConfiguration;
