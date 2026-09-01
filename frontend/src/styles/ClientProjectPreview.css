@@ -102,6 +102,25 @@
   user-select: none;
 }
 
+.client-additional-offers { position: relative; width: min(1180px, 92%); box-sizing: border-box; margin: 2px auto 42px; overflow: hidden; border: 1px solid #c9dde7; border-radius: 24px; background: linear-gradient(145deg, #fff, #f1f8fb); box-shadow: 0 18px 45px rgb(25 73 98 / 10%); }
+.client-additional-offers::before { content: ""; position: absolute; inset: -130px -100px auto auto; width: 270px; height: 270px; border-radius: 50%; background: radial-gradient(circle, rgb(53 126 158 / 18%), transparent 68%); pointer-events: none; }
+.client-additional-offers > header { position: relative; padding: 27px 28px 20px; }
+.client-additional-offers > header span { display: inline-flex; margin-bottom: 8px; padding: 5px 11px; border-radius: 999px; color: #24617f; background: #e3f2f7; font-size: 12px; font-weight: 900; }
+.client-additional-offers h2 { margin: 0; color: #153b54; font-size: clamp(22px, 2.3vw, 30px); }
+.client-additional-offers header p { margin: 7px 0 0; color: #657b8a; font-weight: 600; }
+.client-additional-offers > div { position: relative; display: grid; gap: 14px; padding: 0 22px 22px; }
+.client-additional-offers article { overflow: hidden; border: 1px solid #d8e5eb; border-radius: 18px; background: rgb(255 255 255 / 90%); }
+.client-additional-offers article > div:first-child { display: grid; gap: 3px; padding: 16px 18px; border-bottom: 1px solid #e3ebef; color: #173e58; }
+.client-additional-offers article > div:first-child strong { font-size: 17px; }
+.client-additional-offers article > div:first-child small { color: #748692; }
+.client-offer-table { overflow-x: auto; }
+.client-offer-table table { width: 100%; min-width: 520px; border-collapse: collapse; text-align: right; }
+.client-offer-table th, .client-offer-table td { padding: 14px 18px; border-bottom: 1px solid #edf1f3; }
+.client-offer-table th { color: #6c7e8b; background: #f8fbfc; font-size: 12px; }
+.client-offer-table td { color: #263f50; font-weight: 700; }
+.client-offer-table td strong { color: #246986; }
+.client-additional-offers footer { padding: 14px 24px; color: #687c89; background: #eaf4f8; font-size: 12px; font-weight: 700; text-align: center; }
+
 .client-preview-state {
   display: grid;
   place-items: center;
@@ -132,6 +151,10 @@
   .client-execution-panel-track > button { flex-basis: 82%; }
   .client-preview-pdf { width: 89%; padding: 14px 0; gap: 12px; }
   .client-preview-pdf canvas { border-radius: 6px; }
+  .client-additional-offers { width: 89%; border-radius: 19px; }
+  .client-additional-offers > header { padding: 21px 18px 16px; }
+  .client-additional-offers > div { padding: 0 12px 12px; }
+  .client-additional-offers h2 { font-size: 21px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

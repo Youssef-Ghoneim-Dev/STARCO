@@ -43,4 +43,15 @@ const addEgyptWorkingDays = (value, workingDays) => {
     return date;
 };
 
-module.exports = { addEgyptWorkingDays, egyptDateValue, isEgyptNonWorkingDate };
+const subtractEgyptWorkingDays = (value, workingDays) => {
+    const date = value instanceof Date ? new Date(value) : new Date(value);
+    date.setHours(12, 0, 0, 0);
+    let remaining = Math.max(0, Number(workingDays) || 0);
+    while (remaining > 0) {
+        date.setDate(date.getDate() - 1);
+        if (!isEgyptNonWorkingDate(date)) remaining -= 1;
+    }
+    return date;
+};
+
+module.exports = { addEgyptWorkingDays, subtractEgyptWorkingDays, egyptDateValue, isEgyptNonWorkingDate };

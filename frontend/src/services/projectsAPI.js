@@ -88,9 +88,9 @@ export const requestPanelDeliverySchedule = (projectId, panelId, requestedDate) 
     { requestedDate },
 );
 
-export const respondPanelDeliverySchedule = (projectId, panelId, decision, responseNote = "") => api.post(
+export const respondPanelDeliverySchedule = (projectId, panelId, decision, responseNote = "", replacementDate = "") => api.post(
     `/projects/${projectId}/panels/${panelId}/delivery-schedule/respond`,
-    { decision, responseNote },
+    { decision, responseNote, replacementDate },
 );
 
 export const getExecutionPdfFile = (projectId, panelId, fileId) => api.get(

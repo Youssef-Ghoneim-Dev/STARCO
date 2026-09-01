@@ -5,7 +5,7 @@ const { sendExecutionPdfRequested, sendExecutionPdfCompleted, sendExecutionConfi
 const users = require("../models/users");
 const createZipArchive = require("../utils/createZipArchive");
 const { createInternalNotifications } = require("../services/internalNotifications");
-const { addEgyptWorkingDays, isEgyptNonWorkingDate } = require("../utils/egyptWorkingDays");
+const { addEgyptWorkingDays, subtractEgyptWorkingDays, isEgyptNonWorkingDate } = require("../utils/egyptWorkingDays");
 
 const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
@@ -15,7 +15,16 @@ const executionStatuses = ["executionPdfRequested", "executionPdfReady", "execut
 const marketingEditableStatuses = ["pendingPricing", "pricing", "quoteCompleted", "editing", "executionPdfRequested", "executionPdfReady"];
 const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
 const executionPdfPurposes = ["page2", "page3", "page4", "gallery"];
+const thicknessOptions = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
 const history = (req, from, to, action, note = "") => ({ from, to, action, note, actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role, createdAt: new Date() });
+const buildProductionDeadlines = (approvedDate) => ({
+    manufacturingFilesDueAt: subtractEgyptWorkingDays(approvedDate, 5),
+    pendingLaserDownload: subtractEgyptWorkingDays(approvedDate, 4),
+    laser: subtractEgyptWorkingDays(approvedDate, 3),
+    manufacturing: subtractEgyptWorkingDays(approvedDate, 2),
+    painting: subtractEgyptWorkingDays(approvedDate, 1),
+    assembly: new Date(approvedDate)
+});
 const loadProject = (projectId) => projects.findOne({ _id: projectId, isDeleted: false });
 const loadPanel = (projectId, panelId) => panels.findOne({ _id: panelId, projectId, isDeleted: false });
 const nextPanelCode = (project, sequence) => `${project.projectCode}-P${String(sequence).padStart(2, "0")}`;
@@ -374,9 +383,11 @@ const requestExecutionPdf = async (req, res, next) => { try {
     const panel = await loadPanel(req.params.projectId, req.params.panelId);
     const selectedThickness = Number(req.body?.steelThickness);
     const quotedThicknesses = (panel?.pricing?.thickness || panel?.marketerData?.thickness || []).map(Number);
+    const highestQuotedThickness = quotedThicknesses.length ? Math.max(...quotedThicknesses) : 0;
+    const availableThicknesses = [...quotedThicknesses, ...thicknessOptions.filter((value) => value > highestQuotedThickness)];
     if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
-    if (!Number.isFinite(selectedThickness) || !quotedThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
-        return res.status(400).json({ status: "error", message: "اختر سمك الصاج الذي أكده العميل من الخيارات الموجودة في عرض السعر." });
+    if (!Number.isFinite(selectedThickness) || !availableThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
+        return res.status(400).json({ status: "error", message: "اختر سمكًا من عرض السعر أو من بدائل السماكات الأعلى المعروضة للعميل." });
     }
     return transition(req, res, next, { from: ["quoteCompleted"], to: "executionPdfRequested", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.steelThickness": selectedThickness, "executionPdf.requestedAt": new Date(), "executionPdf.requestedBy": req.user._id }, notify: (project, savedPanel) => notifyPanelPeople(savedPanel, ["OwnerManager", "ProductionManager"], (recipient) => sendExecutionPdfRequested(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["OwnerManager", "ProductionManager"], type: "executionPdfRequested", title: "في انتظار PDF التنفيذ", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
 } catch (error) { next(error); } };
@@ -474,12 +485,13 @@ const requestDeliverySchedule = async (req, res, next) => { try {
     if (!allowed) return res.status(403).json({ status: "error", message: "تحديد موعد التسليم متاح للمندوب وإدارة التسويق." });
     const deliveryScheduleStatuses = ["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
     if (!deliveryScheduleStatuses.includes(panel.status)) return res.status(409).json({ status: "error", message: panel.status === "completed" ? "اكتمل تنفيذ هذه اللوحة بالفعل." : "يمكن تحديد موعد انتهاء اللوحة بعد تأكيد التنفيذ فقط." });
+    if (panel.deliverySchedule?.status === "accepted") return res.status(409).json({ status: "error", message: "تم اعتماد موعد اللوحة نهائيًا ولا يمكن للمندوب تغييره." });
     const value = String(req.body?.requestedDate || "").trim();
     const requestedDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date("");
-    const minimumDate = addEgyptWorkingDays(new Date(), 5);
-    if (Number.isNaN(requestedDate.getTime()) || requestedDate < minimumDate) return res.status(400).json({ status: "error", message: "يجب أن يكون موعد انتهاء اللوحة بعد خمسة أيام عمل على الأقل من تاريخ الطلب، دون احتساب الجمعة والعطلات الرسمية." });
+    const minimumDate = addEgyptWorkingDays(new Date(), 7);
+    if (Number.isNaN(requestedDate.getTime()) || requestedDate < minimumDate) return res.status(400).json({ status: "error", message: "يجب أن يكون موعد انتهاء اللوحة بعد سبعة أيام عمل على الأقل من تاريخ الطلب، دون احتساب الجمعة والعطلات الرسمية." });
     if (isEgyptNonWorkingDate(requestedDate)) return res.status(400).json({ status: "error", message: "لا يمكن اختيار يوم الجمعة أو عطلة رسمية موعدًا للتسليم." });
-    const saved = await panels.update({ _id: panel._id }, { deliverySchedule: { requestedDate, status: "pending", requestedBy: req.user._id, requestedAt: new Date(), respondedBy: null, respondedAt: null, responseNote: "" }, $push: { statusHistory: history(req, panel.status, panel.status, "deliveryScheduleRequested", value) } });
+    const saved = await panels.update({ _id: panel._id }, { deliverySchedule: { requestedDate, approvedDate: null, wasAdjusted: false, deadlines: {}, status: "pending", requestedBy: req.user._id, requestedAt: new Date(), respondedBy: null, respondedAt: null, responseNote: "" }, $push: { statusHistory: history(req, panel.status, panel.status, "deliveryScheduleRequested", value) } });
     await createInternalNotifications({ roles: ["ProductionManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "deliveryScheduleRequested", title: "طلب اعتماد موعد انتهاء لوحة", body: `${saved.panelName} — الموعد المطلوب ${requestedDate.toLocaleDateString("ar-EG")}`, actor: req.user });
     res.json({ status: "ok", message: "تم إرسال الموعد لمدير التنفيذ.", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
@@ -487,14 +499,19 @@ const respondDeliverySchedule = async (req, res, next) => { try {
     if (!["ProductionManager", "OwnerManager"].includes(req.user.role)) return res.status(403).json({ status: "error", message: "اعتماد الموعد متاح لمدير التنفيذ." });
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId);
     if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
-    if (panel.deliverySchedule?.status !== "pending" || !panel.deliverySchedule?.requestedDate) return res.status(409).json({ status: "error", message: "لا يوجد موعد جديد بانتظار القرار." });
+    if (!["pending", "rejected"].includes(panel.deliverySchedule?.status) || !panel.deliverySchedule?.requestedDate) return res.status(409).json({ status: "error", message: "لا يوجد موعد جديد بانتظار القرار." });
     const decision = String(req.body?.decision || "");
     if (!['accepted', 'rejected'].includes(decision)) return res.status(400).json({ status: "error", message: "اختر قبول الموعد أو رفضه." });
     const responseNote = String(req.body?.responseNote || "").trim().slice(0, 500);
-    const saved = await panels.update({ _id: panel._id }, { "deliverySchedule.status": decision, "deliverySchedule.respondedBy": req.user._id, "deliverySchedule.respondedAt": new Date(), "deliverySchedule.responseNote": responseNote, $push: { statusHistory: history(req, panel.status, panel.status, decision === "accepted" ? "deliveryScheduleAccepted" : "deliveryScheduleRejected", responseNote) } });
-    const accepted = decision === "accepted";
-    await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: accepted ? "deliveryScheduleAccepted" : "deliveryScheduleRejected", title: accepted ? "تم اعتماد موعد انتهاء اللوحة" : "تعذر اعتماد موعد انتهاء اللوحة", body: `${saved.panelName} — ${accepted ? "سيتم التنفيذ خلال الموعد المطلوب" : (responseNote || "يرجى اختيار موعد آخر")}`, actor: req.user });
-    res.json({ status: "ok", message: accepted ? "تم اعتماد موعد انتهاء اللوحة." : "تم رفض الموعد وإبلاغ المندوب.", panel: publicPanel(saved), project: await projectResponse(project) });
+    const replacementValue = String(req.body?.replacementDate || "").trim();
+    const replacementDate = /^\d{4}-\d{2}-\d{2}$/.test(replacementValue) ? new Date(`${replacementValue}T12:00:00`) : new Date("");
+    const minimumReplacementDate = addEgyptWorkingDays(new Date(), 7);
+    if (decision === "rejected" && (Number.isNaN(replacementDate.getTime()) || replacementDate < minimumReplacementDate || isEgyptNonWorkingDate(replacementDate))) return res.status(400).json({ status: "error", message: "عند رفض الموعد يجب تحديد موعد بديل بعد سبعة أيام عمل على الأقل." });
+    const approvedDate = decision === "accepted" ? new Date(panel.deliverySchedule.requestedDate) : replacementDate;
+    const wasAdjusted = decision === "rejected";
+    const saved = await panels.update({ _id: panel._id }, { "deliverySchedule.status": "accepted", "deliverySchedule.approvedDate": approvedDate, "deliverySchedule.wasAdjusted": wasAdjusted, "deliverySchedule.deadlines": buildProductionDeadlines(approvedDate), "deliverySchedule.respondedBy": req.user._id, "deliverySchedule.respondedAt": new Date(), "deliverySchedule.responseNote": responseNote, $push: { statusHistory: history(req, panel.status, panel.status, wasAdjusted ? "deliveryScheduleAdjusted" : "deliveryScheduleAccepted", wasAdjusted ? replacementValue : responseNote) } });
+    await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: wasAdjusted ? "deliveryScheduleAdjusted" : "deliveryScheduleAccepted", title: wasAdjusted ? "تم تحديد موعد بديل لانتهاء اللوحة" : "تم اعتماد موعد انتهاء اللوحة", body: `${saved.panelName} — الموعد النهائي ${approvedDate.toLocaleDateString("ar-EG")}`, actor: req.user });
+    res.json({ status: "ok", message: wasAdjusted ? "تم رفض الموعد المقترح واعتماد الموعد البديل نهائيًا." : "تم اعتماد موعد انتهاء اللوحة.", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
 const finishManufacturing = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); if (!(panel.manufacturing?.files || []).length) return res.status(400).json({ status: "error", message: "ارفع ملف تصنيع واحدًا على الأقل." }); return transition(req, res, next, { from: ["manufacturingFilesPending"], to: "manufacturingFilesReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "manufacturing.engineerNotes": String(req.body?.notes || "").slice(0, 2000), "manufacturing.stages": stages.map((key, index) => ({ key, status: index === 0 ? "active" : "pending", startedAt: index === 0 ? new Date() : null })) }, notify: (project, savedPanel) => notifyRoles(["ProductionManager", "OwnerManager"], (recipient) => sendPanelFilesReady(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ roles: ["ProductionManager", "OwnerManager"], type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${savedPanel.panelName} — برجاء تنزيل الملفات إلى الليزر` }) }); } catch (error) { next(error); } };
 const updateStage = async (req, res, next) => { try {

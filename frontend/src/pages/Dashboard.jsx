@@ -25,7 +25,7 @@ function Dashboard() {
   const [clientsCount, setClientsCount] = useState(0);
   const [users, setUsers] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
-  const canManageClients = ["OwnerManager", "Engineer", "MarketingManager", "ProductionManager"].includes(user?.role);
+  const canManageClients = ["OwnerManager", "Engineer", "MarketingManager"].includes(user?.role);
 
   const loadDashboard = useCallback(() => {
     if (loading || !user || accountStatus === "pending" || accountStatus === "whatsappPending" || accountStatus === "deleted") {

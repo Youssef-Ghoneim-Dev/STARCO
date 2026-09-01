@@ -2,7 +2,7 @@ const models = require("../models/clients")
 const { compareClientNames } = require("../utils/clientNameSimilarity");
 
 const canManageClients = (req) =>
-    ["OwnerManager", "Engineer", "MarketingManager", "ProductionManager"].includes(req.user?.role);
+    ["OwnerManager", "Engineer", "MarketingManager"].includes(req.user?.role);
 const canSearchClients = (req) =>
     canManageClients(req) || req.user?.role === "Marketer";
 

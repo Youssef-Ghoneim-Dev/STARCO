@@ -3,13 +3,12 @@ const panels = require("../models/panels");
 const users = require("../models/users");
 const { sendProductionStageCheck } = require("./projectWhatsappNotifications");
 
-const TWO_HOURS = 2 * 60 * 60 * 1000;
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 const runProductionWorkflowReminders = async () => {
     const now = new Date();
-    const panelsToCheck = await panels.find({ isDeleted: false, status: { $in: ["manufacturingFilesReady", "pendingLaserDownload", "laser"] } });
-    const recipients = await users.selectall({
+    const panelsToCheck = await panels.find({ isDeleted: false, status: { $in: ["manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"] } });
+    const productionRecipients = await users.selectall({
         role: { $in: ["OwnerManager", "ProductionManager"] },
         approved: true,
         isDeleted: false,
@@ -21,22 +20,28 @@ const runProductionWorkflowReminders = async () => {
     for (const panel of panelsToCheck) {
             const project = await projects.select_one({ _id: panel.projectId, isDeleted: false }); if (!project) continue;
             const workflow = panel.manufacturing || {};
+            const waitingForEngineer = panel.status === "manufacturingFilesPending";
             const activeStage = (workflow.stages || []).find((stage) => stage.status === "active");
-            if (!activeStage || !["pendingLaserDownload", "laser"].includes(activeStage.key)) continue;
-            const isWaitingForLaserDownload = activeStage.key === "pendingLaserDownload";
-            const dueAt = activeStage.startedAt;
-            if (!dueAt || (isWaitingForLaserDownload && now.getTime() - new Date(dueAt).getTime() < TWO_HOURS) || (!isWaitingForLaserDownload && now < new Date(new Date(dueAt).setHours(24, 0, 0, 0)))) continue;
-            const lastReminder = workflow.lastReminderAt ? new Date(workflow.lastReminderAt).getTime() : 0;
-            if (now.getTime() - lastReminder < TWO_HOURS) continue;
+            const deadlineKey = waitingForEngineer ? "manufacturingFilesDueAt" : activeStage?.key;
+            const dueAt = panel.deliverySchedule?.deadlines?.[deadlineKey];
+            if (!dueAt || now < new Date(dueAt)) continue;
+            const lastReminderValue = waitingForEngineer ? workflow.engineerReminderAt : workflow.lastReminderAt;
+            const lastReminder = lastReminderValue ? new Date(lastReminderValue).getTime() : 0;
+            if (now.getTime() - lastReminder < ONE_DAY) continue;
 
-            const stageName = isWaitingForLaserDownload ? "تنزيل الملفات إلى الليزر" : "مرحلة الليزر";
+            const stageNames = { pendingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
+            const stageName = waitingForEngineer ? "رفع ملفات التصنيع" : stageNames[activeStage?.key];
+            if (!stageName) continue;
+            const recipients = waitingForEngineer
+                ? await users.selectall({ _id: panel.engineerId, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } })
+                : productionRecipients;
             const results = await Promise.allSettled(
                 recipients.map((recipient) => sendProductionStageCheck(recipient.phoneNumber, project, panel, stageName))
             );
             remindersSent += results.filter((result) => result.status === "fulfilled").length;
-            const update = { "manufacturing.lastReminderAt": now };
-            if (isWaitingForLaserDownload && now.getTime() - new Date(dueAt).getTime() >= ONE_DAY && !activeStage.delayedAt) {
-                activeStage.delayReason = "عدم تنزيل الملفات إلى الليزر";
+            const update = { [waitingForEngineer ? "manufacturing.engineerReminderAt" : "manufacturing.lastReminderAt"]: now };
+            if (!waitingForEngineer && now.getTime() - new Date(dueAt).getTime() >= ONE_DAY && !activeStage.delayedAt) {
+                activeStage.delayReason = `تجاوز الموعد المحدد لـ${stageName}`;
                 activeStage.delayedAt = now;
                 update["manufacturing.stages"] = workflow.stages;
                 delaysRecorded += 1;

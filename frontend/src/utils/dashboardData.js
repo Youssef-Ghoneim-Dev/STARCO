@@ -64,7 +64,16 @@ export const workflowAverages = (panels = []) => ({
 
 export const manufacturingFilesUploadedOn = (panels, date) => panels.reduce((count, panel) => count + (panel.manufacturing?.files || []).filter((file) => sameDay(file.uploadedAt, date)).length, 0);
 
-export const deliveryDate = (panel) => validDate(panel?.deliverySchedule?.requestedDate) ? new Date(panel.deliverySchedule.requestedDate) : null;
+export const deliveryDate = (panel) => {
+  if (panel?.deliverySchedule?.status !== "accepted") return null;
+  const value = panel.deliverySchedule.approvedDate || panel.deliverySchedule.requestedDate;
+  return validDate(value) ? new Date(value) : null;
+};
+export const engineerDeadline = (panel) => {
+  if (panel?.status !== "manufacturingFilesPending") return null;
+  const value = panel?.deliverySchedule?.deadlines?.manufacturingFilesDueAt;
+  return validDate(value) ? new Date(value) : null;
+};
 export const daysLate = (panel, now = new Date()) => {
   const due = deliveryDate(panel);
   if (!due || panel?.status === "completed" || due >= now) return 0;
@@ -81,11 +90,11 @@ export const currentAction = (panel, role) => {
   }
   if (role === "ProductionManager") {
     if (panel?.deliverySchedule?.status === "pending") return "اعتماد موعد الانتهاء";
+    if (panel?.deliverySchedule?.status === "rejected") return "تحديد موعد بديل نهائي";
     if (["manufacturingFilesReady", "pendingLaserDownload"].includes(status)) return "تنزيل الملفات إلى الليزر";
     if (["laser", "manufacturing", "painting", "assembly"].includes(status)) return "تحديث مرحلة الإنتاج";
   }
   if (["Marketer", "MarketingManager"].includes(role)) {
-    if (panel?.deliverySchedule?.status === "rejected") return "اختيار موعد انتهاء جديد";
     if (status === "quoteCompleted") return "مراجعة عرض السعر";
     if (status === "executionPdfReady") return "مراجعة PDF التنفيذ";
   }

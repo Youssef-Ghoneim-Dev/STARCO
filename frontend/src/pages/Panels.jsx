@@ -45,15 +45,20 @@ export default function Panels() {
   };
   const matchesDashboardView = (panel) => {
     if (requestedStatuses.size && !requestedStatuses.has(panel.status)) return false;
-    if (searchParams.get("delayed") === "true" && !isDelayed(panel)) return false;
+    if (searchParams.get("delayed") === "true") {
+      const delayedOnRequestedDate = (panel.manufacturing?.productionStages || []).some((stage) => sameDate(stage.delayedAt))
+        || (panel.manufacturing?.productionHistory || []).some((entry) => entry.action === "delayed" && sameDate(entry.createdAt));
+      if (requestedDate ? !delayedOnRequestedDate : !isDelayed(panel)) return false;
+    }
     if (searchParams.get("production") === "true" && !["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(panel.status)) return false;
     if (view === "engineerTasks" && !currentAction(panel, "Engineer")) return false;
     if (view === "productionTasks" && !currentAction(panel, "ProductionManager")) return false;
     if (requestedDate) {
       const eventValue = view === "executionOrders"
-        ? panel.executionPdf?.requestedAt || panel.updatedAt || panel.createdAt
+        ? panel.executionPdf?.confirmedAt
+        : view === "delayed" ? null
         : panel.updatedAt || panel.createdAt;
-      if (!sameDate(eventValue)) return false;
+      if (view !== "delayed" && !sameDate(eventValue)) return false;
     }
     return true;
   };

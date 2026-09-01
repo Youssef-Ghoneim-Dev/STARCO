@@ -26,6 +26,7 @@ import {
   updateManufacturingStage,
 } from "../../../services/projectsAPI";
 import { createExecutionPdf } from "../../../utils/executionPdf";
+import { THICKNESS_OPTIONS } from "../../../utils/priceCalculator";
 
 const quoteFinishedStatuses = [
   "quoteCompleted",
@@ -109,7 +110,7 @@ const dateInputValue = (value) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 const minimumDeliveryDateValue = () => {
-  return egyptDateValue(addEgyptWorkingDays(new Date(), 5));
+  return egyptDateValue(addEgyptWorkingDays(new Date(), 7));
 };
 const formatDeliveryPickerDate = (value) => {
   if (!value) return "اختر الموعد";
@@ -195,9 +196,15 @@ function ExecutionPdfWorkspace() {
   const [delayDetails, setDelayDetails] = useState("");
   const [stageSavedFeedback, setStageSavedFeedback] = useState(null);
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(() => dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
+  const [replacementDeliveryDate, setReplacementDeliveryDate] = useState(() => minimumDeliveryDateValue());
   const [deliveryResponseNote, setDeliveryResponseNote] = useState("");
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
+  const availableExecutionThicknesses = useMemo(() => {
+    const quoted = (panel?.thickness || []).map(String);
+    const highestQuoted = quoted.length ? Math.max(...quoted.map(Number)) : 0;
+    return [...new Set([...quoted, ...THICKNESS_OPTIONS.filter((value) => Number(value) > highestQuoted)])].sort((a, b) => Number(a) - Number(b));
+  }, [panel?.thickness]);
   const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
   const [executionDesignSaveState, setExecutionDesignSaveState] = useState("idle");
   const [executionDesignRetry, setExecutionDesignRetry] = useState(0);
@@ -215,8 +222,8 @@ function ExecutionPdfWorkspace() {
   const canManageProductionStages = ["OwnerManager", "ProductionManager"].includes(user?.role);
   const deliveryScheduleStatuses = new Set(["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"]);
   const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
-  const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
-  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
+  const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["none", "pending"].includes(deliverySchedule.status || "none");
+  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["pending", "rejected"].includes(deliverySchedule.status);
   const executionDesignStorageKey = project?._id && panel?.panelId
     ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}:${workflow.requestedAt || "initial"}`
     : "";
@@ -237,8 +244,9 @@ function ExecutionPdfWorkspace() {
 
   useEffect(() => {
     setRequestedDeliveryDate(dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
+    setReplacementDeliveryDate(dateInputValue(deliverySchedule.approvedDate) || minimumDeliveryDateValue());
     setDeliveryResponseNote(deliverySchedule.responseNote || "");
-  }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.responseNote]);
+  }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.approvedDate, deliverySchedule.responseNote]);
 
   useEffect(() => () => {
     window.clearTimeout(stageSavedTimerRef.current);
@@ -563,7 +571,7 @@ function ExecutionPdfWorkspace() {
 
   const requestDeliveryDate = async () => {
     if (!requestedDeliveryDate) return toast.error("اختر موعد انتهاء اللوحة أولًا.");
-    if (requestedDeliveryDate < minimumDeliveryDateValue()) return toast.error("يجب أن يكون الموعد بعد خمسة أيام عمل على الأقل من تاريخ الطلب.");
+    if (requestedDeliveryDate < minimumDeliveryDateValue()) return toast.error("يجب أن يكون الموعد بعد سبعة أيام عمل على الأقل من تاريخ الطلب.");
     if (isEgyptNonWorkingDate(requestedDeliveryDate)) return toast.error("لا يمكن اختيار يوم الجمعة أو عطلة رسمية موعدًا للتسليم.");
     setBusy(true);
     try {
@@ -575,9 +583,11 @@ function ExecutionPdfWorkspace() {
   };
 
   const respondToDeliveryDate = async (decision) => {
+    if (decision === "rejected" && !replacementDeliveryDate) return toast.error("حدد الموعد البديل الذي سيتم اعتماده للوحة.");
+    if (decision === "rejected" && isEgyptNonWorkingDate(replacementDeliveryDate)) return toast.error("لا يمكن اعتماد يوم الجمعة أو عطلة رسمية موعدًا بديلًا.");
     setBusy(true);
     try {
-      const { data } = await respondPanelDeliverySchedule(project._id, panel.panelId, decision, deliveryResponseNote);
+      const { data } = await respondPanelDeliverySchedule(project._id, panel.panelId, decision, deliveryResponseNote, decision === "rejected" ? replacementDeliveryDate : "");
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       toast.success(data.message || "تم حفظ قرار الموعد.");
     } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ قرار الموعد."); }
@@ -680,7 +690,7 @@ function ExecutionPdfWorkspace() {
   const isProductionTracking = ["filesReady", "downloadedToLaser"].includes(manufacturing.status)
     || productionTrackingStatuses.has(panel?.status);
 
-  const deliveryStatusLabels = { none: "لم يُحدد موعد", pending: "بانتظار قرار مدير التنفيذ", accepted: "تم اعتماد الموعد", rejected: "الموعد غير مناسب" };
+  const deliveryStatusLabels = { none: "لم يُحدد موعد", pending: "بانتظار قرار مدير التنفيذ", accepted: deliverySchedule.wasAdjusted ? "تم اعتماد موعد بديل" : "تم اعتماد الموعد", rejected: "بانتظار تحديد موعد بديل" };
   const renderDeliverySchedule = () => {
     if (!deliveryScheduleAvailable) return null;
     if (!canRequestDeliverySchedule && !canRespondDeliverySchedule && deliverySchedule.status === "none") return null;
@@ -691,7 +701,7 @@ function ExecutionPdfWorkspace() {
         <b>{deliveryStatusLabels[deliverySchedule.status] || deliveryStatusLabels.none}</b>
       </header>
       <div className="panel-delivery-schedule-body">
-        <div className="panel-delivery-date-summary"><small>الموعد المطلوب</small><strong>{deliverySchedule.requestedDate ? formatProjectDate(deliverySchedule.requestedDate) : "لم يتم تحديده"}</strong>{deliverySchedule.respondedAt && <span>آخر قرار: {formatProjectDate(deliverySchedule.respondedAt, true)}</span>}</div>
+        <div className="panel-delivery-date-summary"><small>{deliverySchedule.status === "accepted" ? "الموعد النهائي المعتمد" : "الموعد المطلوب"}</small><strong>{deliverySchedule.approvedDate || deliverySchedule.requestedDate ? formatProjectDate(deliverySchedule.approvedDate || deliverySchedule.requestedDate) : "لم يتم تحديده"}</strong>{deliverySchedule.wasAdjusted && deliverySchedule.requestedDate && <span>الموعد المقترح سابقًا: {formatProjectDate(deliverySchedule.requestedDate)}</span>}{deliverySchedule.respondedAt && <span>آخر قرار: {formatProjectDate(deliverySchedule.respondedAt, true)}</span>}</div>
         {canRequestDeliverySchedule && <div className="panel-delivery-request">
           <label className="panel-delivery-date-picker">
             <span className="panel-delivery-date-icon"><HiOutlineCalendar /></span>
@@ -718,7 +728,7 @@ function ExecutionPdfWorkspace() {
           </label>
           <button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}><HiOutlineCalendar />{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button>
         </div>}
-        {canRespondDeliverySchedule && deliverySchedule.status === "pending" && <div className="panel-delivery-response"><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، يمكن التنفيذ</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy}><HiOutlineX /> لا، الموعد غير مناسب</button></div></div>}
+        {canRespondDeliverySchedule && <div className="panel-delivery-response"><label className="panel-delivery-date-picker"><span className="panel-delivery-date-icon"><HiOutlineCalendar /></span><span><small>الموعد البديل عند عدم المناسبة</small><strong>{formatDeliveryPickerDate(replacementDeliveryDate)}</strong></span><input aria-label="اختيار الموعد البديل" type="date" inputMode="none" min={minimumDeliveryDateValue()} value={replacementDeliveryDate} onChange={(event) => setReplacementDeliveryDate(event.target.value)} /></label><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، اعتمد الموعد</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy || !replacementDeliveryDate}><HiOutlineX /> غير مناسب، اعتمد البديل</button></div></div>}
         {deliverySchedule.responseNote && deliverySchedule.status !== "pending" && <aside><b>ملاحظة مدير التنفيذ</b><p>{deliverySchedule.responseNote}</p></aside>}
       </div>
     </section>;
@@ -841,7 +851,7 @@ function ExecutionPdfWorkspace() {
       <div><h3>لم يصدر أمر PDF تنفيذ لهذه اللوحة بعد</h3><p>اختر سمك الصاج الذي أكده العميل، ثم أصدر أمر التنفيذ.</p></div>
       {canIssueOrder && <div className="execution-order-controls">
         <label>سمك الصاج المؤكد
-          <ExecutionSelect value={selectedSteelThickness} placeholder="اختر السمك" options={(panel?.thickness || []).map((thickness) => ({ value: thickness, label: `${thickness} mm` }))} onChange={setSelectedSteelThickness} />
+          <ExecutionSelect value={selectedSteelThickness} placeholder="اختر السمك" options={availableExecutionThicknesses.map((thickness) => ({ value: thickness, label: `${thickness} mm` }))} onChange={setSelectedSteelThickness} />
         </label>
         <button type="button" onClick={issueOrder} disabled={busy || savingProject || !selectedSteelThickness}>{busy ? "جاري الإصدار..." : "إصدار أمر PDF تنفيذ"}</button>
       </div>}
