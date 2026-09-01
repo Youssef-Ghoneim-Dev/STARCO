@@ -20,18 +20,17 @@ function AuthLayout({ children }) {
 
     return (
         <div className="auth-page">
-
-            <button
-                type="button"
-                className="auth-theme-toggle"
-                onClick={toggleTheme}
-                aria-label={isDark ? "تفعيل الوضع الفاتح" : "تفعيل الوضع الداكن"}
-                title={isDark ? "الوضع الفاتح" : "الوضع الداكن"}
-            >
-                {isDark ? <HiOutlineSun /> : <HiOutlineMoon />}
-            </button>
-
             <div className="auth-container">
+
+                <button
+                    type="button"
+                    className="auth-theme-toggle"
+                    onClick={toggleTheme}
+                    aria-label={isDark ? "تفعيل الوضع الفاتح" : "تفعيل الوضع الداكن"}
+                    title={isDark ? "الوضع الفاتح" : "الوضع الداكن"}
+                >
+                    {isDark ? <HiOutlineSun /> : <HiOutlineMoon />}
+                </button>
 
                 <section className="auth-visual" aria-label="Starco Panels">
                     <div className="auth-visual-content">

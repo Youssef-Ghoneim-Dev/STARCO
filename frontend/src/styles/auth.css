@@ -7,7 +7,7 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    background: #edf2f7;
+    background: var(--background);
 }
 
 .auth-container {
@@ -66,6 +66,9 @@
     width: 64px;
     height: 64px;
     border-radius: 50%;
+    object-fit: cover;
+    object-position: center 38%;
+    clip-path: circle(50% at 50% 50%);
 }
 
 .auth-card h1 {
@@ -443,8 +446,9 @@
 
     height: 100%;
 
-    background: #ffffff7c;
-    filter: blur();
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(9px);
     display: flex;
 
     flex-direction: column;
@@ -988,8 +992,13 @@
 /* Responsive auth artwork: the bitmap is only a backdrop. All brand content
    is real HTML so it can scale and keep balanced spacing at every height. */
 .auth-container {
+    position: relative;
+    border: 0;
+    outline: 0;
+    border-radius: 38px;
     background-color: var(--surface);
     background-image: none;
+    box-shadow: 0 24px 24px -22px rgba(0, 0, 0, .28);
 }
 
 .auth-visual {
@@ -1032,11 +1041,12 @@
     width: clamp(92px, 9.4vw, 136px);
     aspect-ratio: 1;
     box-sizing: border-box;
-    object-fit: contain;
-    padding: 4px;
-    border-radius: 20px;
-    background: #fff;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+    object-fit: cover;
+    object-position: center 38%;
+    clip-path: circle(50% at 50% 50%);
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: none;
 }
 
 .auth-visual-heading { display: grid; gap: clamp(3px, .7vh, 8px); }
@@ -1104,24 +1114,31 @@
 }
 
 .auth-theme-toggle {
-    position: fixed;
+    position: absolute;
     z-index: 20;
-    top: clamp(18px, 3vw, 32px);
-    right: clamp(18px, 3vw, 32px);
+    top: -1px;
+    right: 0;
     display: grid;
-    width: 42px;
-    height: 42px;
+    width: 52px;
+    height: 52px;
     place-items: center;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    color: var(--primary);
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
-    box-shadow: 0 8px 22px rgba(10, 26, 39, .12);
-    backdrop-filter: blur(8px);
+    border: 0;
+    border-radius: 0 0 0 26px;
+    color: #111;
+    background: var(--background);
+    box-shadow: none;
     font-size: 21px;
     cursor: pointer;
 }
 
+.auth-theme-toggle:focus,
+.auth-theme-toggle:focus-visible { outline: none; }
+
 :root[data-theme="dark"] .auth-theme-toggle {
     color: #f4c95d;
+}
+
+@media (max-width: 850px), (max-width: 1100px) and (orientation: portrait) {
+    .auth-container { border-radius: 26px; }
+    .auth-theme-toggle { width: 48px; height: 48px; border-radius: 0 0 0 23px; }
 }

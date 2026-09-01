@@ -19,21 +19,21 @@
 }
 
 :root[data-theme="dark"] {
-    --primary: #6fa8c7;
-    --primary-hover: #8bbbd4;
-    --secondary: #E6EEF5;
-    --acade: #73a9c1;
-    --success: #4ADE80;
-    --danger: #F87171;
-    --background: #0B121A;
-    --surface: #121D27;
-    --surface-muted: #17232E;
-    --surface-soft: #1D2B37;
-    --text: #E8EEF4;
-    --text-light: #A9B7C3;
-    --border: #2B3B48;
-    --shadow: 0 12px 34px rgba(0, 0, 0, .34);
-    --overlay: rgba(0, 0, 0, .68);
+    --primary: #8FC1D8;
+    --primary-hover: #ADD5E6;
+    --secondary: #F3F8FB;
+    --acade: #73A9C1;
+    --success: #55D68A;
+    --danger: #FF8585;
+    --background: #172A35;
+    --surface: #203A48;
+    --surface-muted: #294856;
+    --surface-soft: #315563;
+    --text: #F7FBFD;
+    --text-light: #CAD9E0;
+    --border: #456878;
+    --shadow: 0 12px 34px rgba(6, 25, 34, .3);
+    --overlay: rgba(8, 28, 38, .72);
 }
 
 @font-face {
@@ -154,6 +154,34 @@ html[data-theme="dark"] .dashboard-content :where(
     color: var(--text-light);
 }
 
+html[data-theme="dark"] .dashboard-content :where(
+    h1, h2, h3, h4, h5, h6,
+    .route-loading,
+    .empty-state,
+    .empty-projects,
+    .users-loading,
+    .management-empty,
+    .configuration-loading
+) {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .dashboard-content :where(
+    [class$="-card"], [class*="-card "],
+    [class$="-panel"], [class*="-panel "]
+) :where(h1, h2, h3, h4, h5, h6, p, label, legend, span, strong, small, b, td, th) {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .dashboard-content :where(
+    .marketer-link,
+    .marketing-card-link,
+    .engineer-more-link,
+    .production-card-link
+) {
+    color: var(--text) !important;
+}
+
 html[data-theme="dark"] :where(input, textarea, select, .app-select-trigger) {
     color: var(--text);
     border-color: var(--border);
@@ -169,6 +197,8 @@ html[data-theme="dark"] .auth-card { background: var(--surface); }
 html[data-theme="dark"] .auth-tabs a { color: var(--text-light); }
 html[data-theme="dark"] .auth-tabs a.active-tab { color: #fff; }
 html[data-theme="dark"] .theme-toggle-btn { color: #F4C95D; background: rgba(244, 201, 93, .1); }
+html[data-theme="dark"] .logout-btn { color: #FF9A9A; }
+html[data-theme="dark"] .logout-btn:hover { color: #FFD0D0; background: rgba(255, 154, 154, .1); }
 
 .theme-toggle-btn { color: var(--primary); }
 
