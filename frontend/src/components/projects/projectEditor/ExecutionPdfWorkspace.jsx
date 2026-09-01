@@ -330,6 +330,7 @@ function ExecutionPdfWorkspace() {
   const productionHistory = useMemo(() => manufacturing.productionHistory || [], [manufacturing.productionHistory]);
   const latestProductionUpdate = productionHistory[productionHistory.length - 1];
   const stageHasUnsavedChanges = Boolean(stageDecision || manufacturingNotesChanged || delayReason || delayDetails.trim());
+  const panelReferenceCode = panel?.panelCode || project?.projectCode || "—";
   const productionStageTitle = (key) => productionStageDefinitions.find((stage) => stage.key === key)?.title || "مرحلة الإنتاج";
   const stageIcon = (key) => ({
     awaitingLaserDownload: <HiOutlineCloudDownload />,
@@ -347,7 +348,7 @@ function ExecutionPdfWorkspace() {
   };
 
   const copyId = async () => {
-    await navigator.clipboard.writeText(project._id);
+    await navigator.clipboard.writeText(panelReferenceCode);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };
@@ -731,7 +732,7 @@ function ExecutionPdfWorkspace() {
         <span className="production-panel-illustration"><HiOutlineViewGrid /></span>
         <div>
           <h2><bdi dir={getPanelNameDirection(panel.panelName)}>{panel.panelName}</bdi> - مشروع {project.client?.name || "غير محدد"}</h2>
-          <button type="button" onClick={copyId} className="production-code-copy"><HiOutlineClipboardCopy /><b dir="ltr">PRJ-{String(project._id || "").slice(-6).toUpperCase()}</b></button>
+          <button type="button" onClick={copyId} className="production-code-copy" title="نسخ رقم اللوحة"><HiOutlineClipboardCopy /><bdi dir="ltr">{panelReferenceCode}</bdi></button>
           <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {project.assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
         </div>
       </div>
@@ -825,9 +826,9 @@ function ExecutionPdfWorkspace() {
         <h2>PDF التنفيذ — <bdi dir={getPanelNameDirection(panel?.panelName)}>{panel?.panelName}</bdi></h2>
         <p>عرض السعر محفوظ، وهذه المساحة مخصصة لملفات اعتماد تنفيذ اللوحة.</p>
       </div>
-      <button type="button" className="project-id-copy" onClick={copyId} title="نسخ ID المشروع">
+      <button type="button" className="project-id-copy" onClick={copyId} title="نسخ رقم اللوحة">
         <HiOutlineClipboardCopy />
-        <span><small>{copied ? "تم النسخ" : "رقم المشروع"}</small><b dir="ltr">{project._id}</b></span>
+        <span><small>{copied ? "تم النسخ" : "رقم اللوحة"}</small><bdi dir="ltr">{panelReferenceCode}</bdi></span>
       </button>
     </header>
 
