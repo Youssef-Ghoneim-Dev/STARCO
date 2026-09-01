@@ -17,7 +17,7 @@
     background-image: url("../assets/images/login-bg.png");
     background-size: cover;
     background-attachment: fixed;
-    background-position: left bottom 50px;
+    background-position: left bottom;
     border-radius: 30px;
     overflow: hidden;
     box-shadow: 0 25px 60px rgba(0, 0, 0, .18);
@@ -848,9 +848,9 @@
     background-color: #07182f;
     background-repeat: no-repeat;
     background-size: cover;
-    /* Restored from the first auth-page commit: keep the artwork anchored
-       exactly as it was designed while the form remains independently scrollable. */
-    background-position: left bottom 50px;
+    /* Anchor the artwork to the real bottom edge. A positive bottom offset
+       moves the image upward on the engineers' 1366x768 laptops. */
+    background-position: left bottom;
     background-attachment: fixed;
 }
 
