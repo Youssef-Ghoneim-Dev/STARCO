@@ -2,12 +2,22 @@ export default function PanelEditSummary({ panel }) {
   const summary = panel?.lastMarketingEdit;
   const changes = Array.isArray(summary?.changes) ? summary.changes : [];
   if (!changes.length) return null;
+  const resultLabel = summary.requiresExecutionPdf
+    ? "لم يتغير السعر - مطلوب PDF تنفيذ جديد"
+    : summary.requiresEngineer
+      ? "تحتاج مراجعة المهندس"
+      : "تم تطبيقها تلقائيًا";
+  const resultClass = summary.requiresExecutionPdf
+    ? "execution-update"
+    : summary.requiresEngineer
+      ? "needs-engineer"
+      : "automatic";
 
   return (
     <details className="panel-edit-summary" dir="rtl">
       <summary>
         <span><strong>تفاصيل آخر تعديل على اللوحة</strong><small>{changes.length} تغيير مسجل</small></span>
-        <b className={summary.requiresEngineer ? "needs-engineer" : "automatic"}>{summary.requiresEngineer ? "تحتاج مراجعة المهندس" : "تم تطبيقها تلقائيًا"}</b>
+        <b className={resultClass}>{resultLabel}</b>
       </summary>
       <div className="panel-edit-summary-list">
         {changes.map((change) => (

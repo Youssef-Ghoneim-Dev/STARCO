@@ -213,7 +213,9 @@ function ExecutionPdfWorkspace() {
   const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
   const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
   const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
-  const executionDesignStorageKey = project?._id && panel?.panelId ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}` : "";
+  const executionDesignStorageKey = project?._id && panel?.panelId
+    ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}:${workflow.requestedAt || "initial"}`
+    : "";
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
     marketingRepresentative: project.marketingRepresentative || nextProject.marketingRepresentative,

@@ -13,21 +13,6 @@ const loadImage = (src) => new Promise((resolve, reject) => {
     image.src = src;
 });
 
-// The exported cover SVG contains a full-page black shadow layer from the design tool.
-// Strip only that layer before rendering so it cannot appear as a dark frame in the PDF.
-const loadCoverTemplate = async (src) => {
-    const response = await fetch(src);
-    if (!response.ok) throw new Error("Could not load the execution PDF cover template.");
-    const source = await response.text();
-    const cleaned = source.replace(/<rect x="-144" width="1728" fill="#000000" y="-80\.999999" height="971\.999992" fill-opacity="0\.2"\/>/, "");
-    const objectUrl = URL.createObjectURL(new Blob([cleaned], { type: "image/svg+xml" }));
-    try {
-        return await loadImage(objectUrl);
-    } finally {
-        URL.revokeObjectURL(objectUrl);
-    }
-};
-
 const createCanvas = (background) => {
     const canvas = document.createElement("canvas");
     canvas.width = PAGE_WIDTH;
@@ -167,7 +152,7 @@ const MAIN_EXECUTION_IMAGE = { x: 850, y: 65, height: 950 };
 export async function createExecutionPdf({ panelSize, steelThickness, paint, page3Text, page4Lines, assignments, transforms, images }) {
     await document.fonts?.ready;
     const [pageOne, contentPage, galleryPage, closingPage] = await Promise.all([
-        loadCoverTemplate(pageOneTemplate), loadImage(contentPageTemplate), loadImage(galleryPageTemplate), loadImage(closingPageTemplate),
+        loadImage(pageOneTemplate), loadImage(contentPageTemplate), loadImage(galleryPageTemplate), loadImage(closingPageTemplate),
     ]);
     const sourceImages = {};
     for (const [fileId, source] of Object.entries(images || {})) sourceImages[fileId] = await loadImage(source);

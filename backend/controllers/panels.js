@@ -281,22 +281,48 @@ const submitEdits = async (req, res, next) => { try {
     const changes = buildMarketingEditChanges(panel, draft);
     if (changes.length === 0) return res.status(409).json({ status: "error", code: "NO_PANEL_CHANGES", message: "لم تُجرِ أي تعديل على اللوحة. يمكنك إنهاء جلسة التعديل دون حفظ." });
     const onlyThicknessChanged = changes.length > 0 && changes.every((change) => change.field === "thickness");
+    const onlyControlInstallationChanged = changes.length > 0 && changes.every((change) => change.field === "controlInstallation");
     const previousStatus = panel.marketingEditSession?.previousStatus || panel.status;
     const selectedThicknesses = (marketerData.thickness || []).map(Number).filter(Number.isFinite);
     const executionThickness = Number(panel.executionPdf?.steelThickness);
     const executionThicknessStillValid = !Number.isFinite(executionThickness) || selectedThicknesses.some((value) => Math.abs(value - executionThickness) < 0.0001);
     const executionNeedsReset = onlyThicknessChanged && ["executionPdfRequested", "executionPdfReady"].includes(previousStatus) && !executionThicknessStillValid;
-    const returnsWithoutRepricing = changes.length === 0 || onlyThicknessChanged;
-    const nextStatus = returnsWithoutRepricing ? (executionNeedsReset ? "quoteCompleted" : previousStatus) : "pendingPricing";
-    const editSummary = { changes, onlyThicknessChanged, requiresEngineer: !returnsWithoutRepricing, previousStatus, nextStatus, editedAt: new Date(), editedBy: req.user._id, editedByName: req.user.name || "" };
+    const executionPdfNeedsRegeneration = onlyControlInstallationChanged && ["executionPdfRequested", "executionPdfReady"].includes(previousStatus);
+    const returnsWithoutRepricing = onlyThicknessChanged || onlyControlInstallationChanged;
+    const nextStatus = returnsWithoutRepricing
+        ? executionPdfNeedsRegeneration ? "executionPdfRequested" : executionNeedsReset ? "quoteCompleted" : previousStatus
+        : "pendingPricing";
+    const editSummary = { changes, onlyThicknessChanged, onlyControlInstallationChanged, requiresEngineer: !returnsWithoutRepricing, requiresExecutionPdf: executionPdfNeedsRegeneration, priceChanged: !returnsWithoutRepricing, previousStatus, nextStatus, editedAt: new Date(), editedBy: req.user._id, editedByName: req.user.name || "" };
     const commonUpdate = { ...(draft.panelName != null ? { panelName: draft.panelName } : {}), marketerData, marketerSaved: true, marketingDraft: null, marketingDraftDeleted: false, marketingEditSession: { active: false, openedBy: null, openedAt: null, previousStatus: "" }, lastMarketingEdit: editSummary, status: nextStatus, lock: { userId: null, role: "", acquiredAt: null, expiresAt: null }, $push: { statusHistory: history(req, panel.status, nextStatus, changes.length === 0 ? "marketingEditClosedNoChanges" : onlyThicknessChanged ? "marketingThicknessAutoApplied" : "panelMarketingEditsSubmitted", changes.map((change) => change.label).join("، ")) } };
+    const resetExecutionPdf = {
+        files: [],
+        steelThickness: executionPdfNeedsRegeneration ? panel.executionPdf?.steelThickness ?? null : null,
+        design: {},
+        requestedAt: executionPdfNeedsRegeneration ? new Date() : null,
+        requestedBy: executionPdfNeedsRegeneration ? req.user._id : null,
+        readyAt: null,
+        readyBy: null,
+        confirmedAt: null,
+        confirmedBy: null,
+        skipped: false
+    };
+    const discardExecutionPdf = executionNeedsReset || executionPdfNeedsRegeneration || !returnsWithoutRepricing;
+    const discardedExecutionFiles = discardExecutionPdf ? [...(panel.executionPdf?.files || [])] : [];
     const saved = returnsWithoutRepricing
-        ? await panels.update({ _id: panel._id }, { ...commonUpdate, "pricing.thickness": selectedThicknesses, ...(executionNeedsReset ? { executionPdf: { files: [], steelThickness: null, design: {}, requestedAt: null, requestedBy: null, readyAt: null, readyBy: null, confirmedAt: null, confirmedBy: null, skipped: false } } : {}) })
-        : await panels.update({ _id: panel._id }, { ...commonUpdate, engineerId: null, assignedAt: null, executionPdf: { files: [], steelThickness: null, design: {}, requestedAt: null, requestedBy: null, readyAt: null, readyBy: null, confirmedAt: null, confirmedBy: null, skipped: false }, manufacturing: { files: [], notes: "", engineerNotes: "", productionNotes: "", stages: [], lastReminderAt: null } });
+        ? await panels.update({ _id: panel._id }, { ...commonUpdate, ...(onlyThicknessChanged ? { "pricing.thickness": selectedThicknesses } : {}), ...(discardExecutionPdf ? { executionPdf: resetExecutionPdf } : {}) })
+        : await panels.update({ _id: panel._id }, { ...commonUpdate, engineerId: null, assignedAt: null, executionPdf: resetExecutionPdf, manufacturing: { files: [], notes: "", engineerNotes: "", productionNotes: "", stages: [], lastReminderAt: null } });
+    if (discardedExecutionFiles.length) await Promise.allSettled(discardedExecutionFiles.map((file) => deleteStoredFile(file.storageFileId)));
     await projects.update({ _id: project._id }, returnsWithoutRepricing ? { status: "inProgress" } : { status: "inProgress", previewGeneratedAt: null });
     if (!returnsWithoutRepricing) await createInternalNotifications({ roles: ["Engineer", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelPricingUpdated", title: "تعديلات لوحة جديدة في انتظار التسعير", body: `${saved.panelName} — ${changes.map((change) => change.label).join("، ")}`, actor: req.user });
-    else if (changes.length && panel.engineerId) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelThicknessUpdated", title: "تم تحديث سماكات اللوحة تلقائيًا", body: `${saved.panelName} — لا تحتاج إعادة تسعير يدوي`, actor: req.user });
-    const message = changes.length === 0 ? "تم إنهاء التعديل دون تغييرات." : onlyThicknessChanged ? (executionNeedsReset ? "تم تحديث السماكات تلقائيًا. أُلغي PDF التنفيذ السابق لأن السمك المؤكد لم يعد ضمن الاختيارات." : "تم تحديث السماكات وعرض السعر تلقائيًا دون إعادة اللوحة للمهندس.") : "تم حفظ تعديلات اللوحة وإرسالها للتسعير.";
+    else if (executionPdfNeedsRegeneration) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "executionPdfRequested", title: "مطلوب PDF تنفيذ جديد بعد تعديل تركيب اللوحة", body: `${saved.panelName} — لم يتغير السعر، وأُلغي PDF التنفيذ السابق لتجهيز نسخة جديدة`, actor: req.user });
+    else if (onlyThicknessChanged && panel.engineerId) await createInternalNotifications({ userIds: [panel.engineerId], roles: ["OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: "panelThicknessUpdated", title: "تم تحديث سماكات اللوحة تلقائيًا", body: `${saved.panelName} — لا تحتاج إعادة تسعير يدوي`, actor: req.user });
+    const message = onlyControlInstallationChanged
+        ? executionPdfNeedsRegeneration
+            ? "تم حفظ تعديل تركيب لوحة الكنترول. لم يتغير السعر، وأُلغي PDF التنفيذ السابق لبدء نسخة جديدة."
+            : "تم حفظ تعديل تركيب لوحة الكنترول. لم يتغير السعر ولا تحتاج اللوحة إلى إعادة تسعير."
+        : onlyThicknessChanged
+            ? executionNeedsReset ? "تم تحديث السماكات تلقائيًا. أُلغي PDF التنفيذ السابق لأن السمك المؤكد لم يعد ضمن الاختيارات." : "تم تحديث السماكات وعرض السعر تلقائيًا دون إعادة اللوحة للمهندس."
+            : "تم حفظ تعديلات اللوحة وإرسالها للتسعير.";
     res.json({ status: "ok", message, changes, requiresEngineer: !returnsWithoutRepricing, panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
 const cancelEdits = async (req, res, next) => { try {
