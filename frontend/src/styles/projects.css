@@ -68,7 +68,7 @@
 
     position: relative;
 
-    background: white;
+    background: var(--surface);
 
     border-radius: 18px;
 
@@ -128,7 +128,7 @@
 
     border-radius: 10px;
 
-    background: white;
+    background: var(--surface);
 
     color: #ef4444;
 
@@ -443,7 +443,7 @@
 
     border-radius: 12px;
 
-    background: #fff;
+    background: var(--surface);
 
     color: var(--text-light);
 
@@ -471,7 +471,7 @@
 .projects-filter .app-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; border: 0; padding: 0; color: var(--text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .projects-filter .app-select-trigger:focus { outline: 0; }
 .projects-filter .app-select-chevron { flex: 0 0 auto; width: 17px; height: 17px; color: var(--primary); }
-.projects-filter .app-select-menu { position: absolute; z-index: 80; top: calc(100% + 8px); right: -14px; left: -14px; max-height: 260px; overflow-y: auto; border: 1px solid #cbdde3; border-radius: 12px; padding: 6px; background: #fff; box-shadow: 0 16px 34px rgba(20, 54, 72, .18); }
+.projects-filter .app-select-menu { position: absolute; z-index: 80; top: calc(100% + 8px); right: -14px; left: -14px; max-height: 260px; overflow-y: auto; border: 1px solid #cbdde3; border-radius: 12px; padding: 6px; background: var(--surface); box-shadow: 0 16px 34px rgba(20, 54, 72, .18); }
 .projects-filter .app-select-menu button { display: block; width: 100%; border: 0; border-radius: 8px; padding: 10px 11px; color: var(--text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .projects-filter .app-select-menu button:hover { background: #edf5f8; }
 .projects-filter .app-select-menu button.is-selected { color: #fff; background: var(--primary); }
@@ -584,7 +584,7 @@
     padding: 0 16px;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     color: var(--primary);
     font: inherit;
     font-weight: 700;
@@ -606,7 +606,7 @@
 .project-create-dialog {
     width: min(520px, 92vw);
     position: relative;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #d9e3ea;
     border-radius: 22px;
     padding: 28px;
@@ -644,7 +644,7 @@
     width: 100%;
     max-height: 230px;
     margin-top: 8px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #d4dee7;
     border-radius: 12px;
     box-shadow: 0 14px 36px #17324d1c;
@@ -662,7 +662,7 @@
     width: 100%;
     border: 0;
     border-bottom: 1px solid #edf2f5;
-    background: #fff;
+    background: var(--surface);
     padding: 12px 14px;
     display: flex;
     justify-content: space-between;
@@ -689,7 +689,7 @@
     border: 1px solid #d4dee7;
     border-radius: 12px;
     padding: 12px;
-    background: #fff;
+    background: var(--surface);
     font: inherit;
     font-weight: 700
 }
@@ -711,7 +711,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #dce6ed;
     border-radius: 20px;
     padding: 24px 28px
@@ -788,7 +788,7 @@
 .empty-panel-folder button {
     border: 1px solid #cbdbe5;
     border-radius: 11px;
-    background: #fff;
+    background: var(--surface);
     color: #315d75;
     padding: 11px 16px;
     display: flex;
@@ -835,7 +835,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #d8e3ea;
     border-radius: 12px;
     padding: 0 13px
@@ -857,7 +857,7 @@
 
 .panel-folder-card {
     position: relative;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #d8e3ea;
     border-radius: 18px;
     padding: 18px;
@@ -969,7 +969,7 @@
     z-index: 4;
     top: 52px;
     left: 14px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #d7e2e9;
     border-radius: 12px;
     padding: 6px;
@@ -981,7 +981,7 @@
     display: flex;
     width: 100%;
     border: 0;
-    background: #fff;
+    background: var(--surface);
     padding: 10px;
     border-radius: 8px;
     gap: 7px;
@@ -998,7 +998,7 @@
 }
 
 .empty-panel-folder {
-    background: #fff;
+    background: var(--surface);
     border: 1px dashed #9db6c4;
     border-radius: 18px;
     padding: 54px 20px;
@@ -1087,7 +1087,7 @@
     padding: 8px 16px;
     border: 1px solid #cadbe7;
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     color: #2e607c;
     font: inherit;
     font-weight: 700;
@@ -1107,7 +1107,7 @@
     padding-inline: 14px;
     border: 1px solid #d7e1e8;
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     font: inherit;
 }
 
@@ -1166,7 +1166,7 @@
     padding: 0 14px;
     border: 1px solid #cad8e5;
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     font: inherit;
 }
 
@@ -1175,7 +1175,7 @@
     padding: 24px;
     border: 1px solid #d7e2eb;
     border-radius: 24px;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 10px 30px rgba(35, 70, 92, .06);
 }
 
@@ -1230,7 +1230,7 @@
     padding: 9px 12px;
     border: 1px solid #c9d8e4;
     border-radius: 10px;
-    background: #fff;
+    background: var(--surface);
     font: inherit;
     color: #132f44;
     box-sizing: border-box;
@@ -1317,7 +1317,7 @@
     border: 1px solid #d7e2eb;
     border-radius: 10px;
     overflow: hidden;
-    background: #fff;
+    background: var(--surface);
 }
 
 .execution-builder-files button {
@@ -1377,7 +1377,7 @@
     padding: 10px 13px;
     border: 1px solid #dce6ee;
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     font-weight: 700;
 }
 
@@ -1418,12 +1418,12 @@
 
 .execution-select-control .copper-select-trigger {
     min-height: 46px;
-    background: #fff;
+    background: var(--surface);
 }
 
 .execution-order-card .execution-select-control .copper-select-trigger {
     color: #26384a;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid #cad8e5;
 }
 
@@ -1553,7 +1553,7 @@
     padding: 11px;
     border: 1px solid #d5e1ea;
     border-radius: 15px;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 6px 18px rgba(33, 70, 93, .05);
 }
 
@@ -1723,7 +1723,7 @@
     overflow: auto;
     padding: 20px;
     border-radius: 22px;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 25px 80px rgba(0, 0, 0, .3);
 }
 
@@ -1896,7 +1896,7 @@
 .execution-preview-link span { display: grid; gap: 3px; }
 .execution-preview-link small { color: #71818b; }
 .execution-preview-link a { grid-column: 1 / -1; overflow-wrap: anywhere; color: #176a99; direction: ltr; text-align: left; }
-.execution-preview-link > button { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #bfd4df; border-radius: 10px; color: #285d78; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.execution-preview-link > button { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #bfd4df; border-radius: 10px; color: #285d78; background: var(--surface); font: inherit; font-weight: 800; cursor: pointer; }
 
 .manufacturing-engineer-note {
     margin-top: 14px;
@@ -1959,7 +1959,7 @@ textarea[aria-invalid="true"] {
     width: min(460px, 100%);
     padding: 25px;
     border-radius: 18px;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 24px 70px rgba(15, 31, 45, .24);
     text-align: right;
     direction: rtl;
@@ -1968,7 +1968,7 @@ textarea[aria-invalid="true"] {
 .project-delete-dialog h2 { margin: 0 0 10px; color: #162f43; }
 .project-delete-dialog p { margin: 0 0 22px; color: #687786; line-height: 1.8; }
 .project-delete-dialog > div { display: flex; flex-direction: row; gap: 10px; direction: rtl; }
-.project-delete-dialog button { flex: 1; min-height: 46px; border: 1px solid #d8e2e8; border-radius: 11px; background: #fff; color: #324f62; font: inherit; font-weight: 900; cursor: pointer; }
+.project-delete-dialog button { flex: 1; min-height: 46px; border: 1px solid #d8e2e8; border-radius: 11px; background: var(--surface); color: #324f62; font: inherit; font-weight: 900; cursor: pointer; }
 .project-delete-dialog button.danger { border-color: #c92d3b; background: #c92d3b; color: #fff; }
 
 @media (max-width: 600px) {

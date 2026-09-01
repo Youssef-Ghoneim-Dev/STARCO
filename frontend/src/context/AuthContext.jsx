@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { getProfile } from "../services/profileAPI";
 import { registerAuthStatusUpdater, unregisterAuthStatusUpdater } from "../services/api";
-import { saveAccountSession } from "../utils/accountSessions";
 
 const AuthContext = createContext();
 
@@ -102,7 +101,6 @@ export function AuthProvider({ children }) {
       const { data } = await getProfile();
 
       setUser(data);
-      saveAccountSession(data, token);
       checkPendingStatus(data);
     } catch (error) {
       if (error?.response?.status === 404) {

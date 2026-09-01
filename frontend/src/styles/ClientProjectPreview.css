@@ -35,7 +35,7 @@
   padding: 11px 16px;
   border: 1px solid #cad9e5;
   border-radius: 15px;
-  background: #fff;
+  background: var(--surface);
   color: #173c56;
   font: inherit;
   text-align: right;
@@ -73,13 +73,13 @@
 .client-execution-panel-track > button.is-active { color: #fff; border-color: #2f6c89; background: linear-gradient(135deg, #2c617d, #3f819e); box-shadow: 0 7px 18px rgb(38 101 132 / 17%); }
 .client-execution-panel-track > button.is-active::after { content: ""; position: absolute; inset: -45% -20%; background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 15%) 50%, transparent 65%); transform: translateX(-65%); animation: client-panel-sheen 2.8s ease-in-out infinite; pointer-events: none; }
 .client-execution-panel-number { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #356b86; background: #e8f3f7; direction: ltr; font-size: 12px; font-weight: 900; }
-.client-execution-panel-track > button.is-active .client-execution-panel-number { color: #245a74; background: #fff; }
+.client-execution-panel-track > button.is-active .client-execution-panel-number { color: #245a74; background: var(--surface); }
 .client-execution-panel-name { min-width: 0; display: grid; gap: 2px; }
 .client-execution-panel-name small { color: #7a8c98; font-size: 10px; font-weight: 700; }
 .client-execution-panel-name bdi { overflow: hidden; font-size: 14px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .client-execution-panel-track > button.is-active .client-execution-panel-name small { color: #d7e9f1; }
 .client-execution-panel-indicator { width: 9px; height: 9px; border: 2px solid #b6ccd7; border-radius: 50%; transition: .22s ease; }
-.client-execution-panel-track > button.is-active .client-execution-panel-indicator { border-color: #fff; background: #fff; box-shadow: 0 0 0 5px rgb(255 255 255 / 14%); }
+.client-execution-panel-track > button.is-active .client-execution-panel-indicator { border-color: #fff; background: var(--surface); box-shadow: 0 0 0 5px rgb(255 255 255 / 14%); }
 @keyframes client-panel-switcher-enter { from { opacity: 0; transform: translateY(-8px) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes client-panel-sheen { 0%, 55% { transform: translateX(-70%); } 85%, 100% { transform: translateX(70%); } }
 .client-preview-inline-error { width: min(1180px, 92%); margin: 12px auto 0; padding: 11px 15px; border: 1px solid #f2b8b5; border-radius: 12px; color: #b42318; background: #fff4f3; text-align: center; }
@@ -97,7 +97,7 @@
   width: 100%;
   height: auto;
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 8px 24px rgb(18 45 71 / 12%);
   user-select: none;
 }
@@ -114,7 +114,7 @@
   width: min(100%, 420px);
   padding: 36px 28px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 12px 32px rgb(18 45 71 / 10%);
 }
 

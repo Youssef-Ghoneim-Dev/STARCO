@@ -34,7 +34,6 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
     setLoggingOut(true);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("starco_account_sessions");
     window.setTimeout(() => navigate("/login", { replace: true }), 350);
   };
 

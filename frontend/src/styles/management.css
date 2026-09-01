@@ -49,7 +49,7 @@
     padding: 10px 14px;
     border: 1px solid var(--primary);
     border-radius: 11px;
-    background: #fff;
+    background: var(--surface);
     color: var(--primary);
     cursor: pointer;
     font: inherit;
@@ -74,7 +74,7 @@
 }
 
 .recycle-bin-tabs { display: flex; gap: 10px; margin: 0 0 22px; }
-.recycle-bin-tabs button { border: 1px solid var(--border); background: #fff; color: var(--text-light); border-radius: 10px; padding: 10px 18px; font: inherit; cursor: pointer; }
+.recycle-bin-tabs button { border: 1px solid var(--border); background: var(--surface); color: var(--text-light); border-radius: 10px; padding: 10px 18px; font: inherit; cursor: pointer; }
 .recycle-bin-tabs button.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
 .delete-project-confirmation {
@@ -126,7 +126,7 @@
     margin-bottom: 18px;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text-light);
 }
 
@@ -190,7 +190,7 @@
     display: grid;
     gap: 14px;
     padding: 24px;
-    background: #fff;
+    background: var(--surface);
     border-radius: 18px;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .2);
 }
@@ -232,7 +232,7 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0 12px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     font: inherit;
 }

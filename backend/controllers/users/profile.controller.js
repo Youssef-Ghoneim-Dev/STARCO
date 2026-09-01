@@ -90,12 +90,15 @@ const getProfile = async (req, res, next) => {
                 message: "Account no longer exists"
             });
         }
+        await models.ensureTheme(user._id);
+        const theme = ["light", "dark"].includes(user.theme) ? user.theme : "light";
         return res.status(200).json({
             id: user._id,
             name: user.name,
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
+            theme,
             approved: user.approved,
             whatsappOptInRequired: user.whatsappOptInRequired === true,
             whatsappOptInVerifiedAt: user.whatsappOptInVerifiedAt || null,
@@ -107,8 +110,24 @@ const getProfile = async (req, res, next) => {
         next(error);
     }
 };
+const UpdateTheme = async (req, res, next) => {
+    try {
+        const theme = req.body?.theme;
+        if (!["light", "dark"].includes(theme)) {
+            return res.status(400).json({ status: "error", message: "Invalid theme." });
+        }
+        const user = await models.updateTheme(req.decodedToken.id, theme);
+        if (!user) {
+            return res.status(404).json({ status: "error", message: "Account no longer exists" });
+        }
+        return res.status(200).json({ status: "ok", theme });
+    } catch (error) {
+        next(error);
+    }
+};
 module.exports = {
     UpdateProfile,
+    UpdateTheme,
     DeleteProfile,
     getProfile
 }

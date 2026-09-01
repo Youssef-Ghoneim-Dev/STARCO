@@ -22,7 +22,7 @@
 
 .users-table {
 
-    background: white;
+    background: var(--surface);
 
     border-radius: 18px;
 
@@ -195,7 +195,7 @@
 .role-save-btn { width: 32px; height: 32px; background: #e8f1ff; color: #1463c3; }
 .whatsapp-btn:hover, .restore-btn:hover, .role-save-btn:hover { transform: translateY(-2px); }
 .role-editor { display: flex; align-items: center; gap: 8px; padding-right: 18px; box-sizing: border-box; }
-.role-editor select { min-width: 0; width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 9px; padding: 0 8px; background: #fff; color: var(--text); }
+.role-editor select { min-width: 0; width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 9px; padding: 0 8px; background: var(--surface); color: var(--text); }
 .role-editor .app-select-trigger { min-height: 38px; height: 38px; border-radius: 9px; padding-inline: 8px; }
 .role-editor .app-select-menu { z-index: 100; }
 .phone-value { direction: ltr; text-align: left; }
@@ -206,7 +206,7 @@
 .current-user-badge { display: block; margin-top: 5px; color: var(--primary); font-size: 12px; font-weight: 600; }
 
 .user-edit-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, .42); }
-.user-edit-modal { width: min(100%, 420px); background: #fff; border-radius: 18px; padding: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
+.user-edit-modal { width: min(100%, 420px); background: var(--surface); border-radius: 18px; padding: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
 .user-edit-modal h2 { margin: 0; color: var(--text); }
 .user-edit-modal p { margin: 7px 0 18px; color: var(--text-light); font-size: 14px; }
 .user-edit-modal label { display: grid; gap: 7px; margin-top: 13px; color: var(--text); font-weight: 600; font-size: 14px; }

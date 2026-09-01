@@ -28,6 +28,7 @@ usersrouter.patch("/admin/:id", authMw, CheckuserToken, manger.restoreUser);
 // remain protected by CheckuserToken.
 usersrouter.get("/profile", authMw, profile.getProfile);
 usersrouter.put("/profile", authMw, profileValidation, profile.UpdateProfile);
+usersrouter.patch("/profile/theme", authMw, profile.UpdateTheme);
 usersrouter.delete("/profile", authMw, profile.DeleteProfile);
 
 

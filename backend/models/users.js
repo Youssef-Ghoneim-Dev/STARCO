@@ -80,6 +80,29 @@ const update = async (user, { allowRole = false } = {}) => {
     return queryResult;
 }
 
+const updateTheme = async (userId, theme) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.findByIdAndUpdate(
+        userId,
+        { $set: { theme } },
+        { new: true, runValidators: true }
+    );
+};
+
+const ensureTheme = async (userId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.updateOne(
+        {
+            _id: userId,
+            $or: [
+                { theme: { $exists: false } },
+                { theme: { $nin: ["light", "dark"] } }
+            ]
+        },
+        { $set: { theme: "light" } }
+    );
+};
+
 const deleteOne = async (userId, deletedBy = null) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     const user = await openconnection.findByIdAndUpdate(userId,
@@ -114,6 +137,8 @@ module.exports = {
     add_one,
     selectall,
     update,
+    updateTheme,
+    ensureTheme,
     deleteOne,
     restore,
     approve,

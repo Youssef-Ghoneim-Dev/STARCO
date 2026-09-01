@@ -21,8 +21,11 @@ import Clients from "./pages/Clients";
 import DeletedProjects from "./pages/DeletedProjects";
 import ClientProjectPreview from "./pages/ClientProjectPreview";
 import RoleRoute from "./routes/RoleRoute";
+import { useTheme } from "./context/ThemeContext";
 
 function App() {
+  const { isDark } = useTheme();
+
   useEffect(() => {
     const isNumberInput = (target) => target?.tagName === "INPUT" && target.type === "number";
     const blockScientificNotation = (event) => {
@@ -67,6 +70,9 @@ function App() {
             direction: "rtl",
             justifyContent: "flex-start",
             overflowWrap: "anywhere",
+            color: "var(--text)",
+            background: "var(--surface)",
+            boxShadow: isDark ? "0 16px 40px rgba(0, 0, 0, .38)" : "0 12px 30px rgba(31, 41, 55, .14)",
           },
           success: {
             style: {

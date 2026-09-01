@@ -13,6 +13,27 @@
     --radius: 18px;
     --shadow: 0 10px 30px rgba(0, 0, 0, .12);
     --transition: .25s;
+    --surface-muted: #F8FAFC;
+    --surface-soft: #EEF3F7;
+    --overlay: rgba(15, 23, 42, .46);
+}
+
+:root[data-theme="dark"] {
+    --primary: #6fa8c7;
+    --primary-hover: #8bbbd4;
+    --secondary: #E6EEF5;
+    --acade: #73a9c1;
+    --success: #4ADE80;
+    --danger: #F87171;
+    --background: #0B121A;
+    --surface: #121D27;
+    --surface-muted: #17232E;
+    --surface-soft: #1D2B37;
+    --text: #E8EEF4;
+    --text-light: #A9B7C3;
+    --border: #2B3B48;
+    --shadow: 0 12px 34px rgba(0, 0, 0, .34);
+    --overlay: rgba(0, 0, 0, .68);
 }
 
 @font-face {
@@ -61,9 +82,95 @@ body,
 
 body {
     overflow-x: hidden;
+    color: var(--text);
+    background: var(--background);
     -webkit-user-select: none;
     user-select: none;
+    transition: color var(--transition), background-color var(--transition);
 }
+
+html[data-theme="dark"] :where(.dashboard-layout, .dashboard-content) {
+    color: var(--text);
+    background-color: var(--background);
+}
+
+html[data-theme="dark"] :where(
+    .topbar, .sidebar, .project-card, .panel-index-card, .marketing-panel,
+    .marketing-metric, .dashboard-card, .profile-card, .management-card,
+    .configuration-card, .auth-card, .notification-popover,
+    .account-switcher-popover, .account-modal, .mobile-bottom-nav,
+    .app-select-menu, .logout-confirm-card
+) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+/*
+ * Feature styles contain a few decorative light gradients.  Keep every
+ * dashboard surface genuinely dark without having to duplicate each page's
+ * component rules, while leaving status chips and primary actions untouched.
+ */
+html[data-theme="dark"] .dashboard-content :where(
+    [class$="-card"], [class*="-card "],
+    [class$="-panel"], [class*="-panel "],
+    .copper-quick-settings,
+    .client-execution-panel-switcher,
+    .panel-delivery-date-picker,
+    .skip-execution-btn
+) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface) !important;
+}
+
+html[data-theme="dark"] .dashboard-content :where(
+    .marketer-link,
+    .marketer-actions a:not(:first-child),
+    .marketing-card-link,
+    .marketing-production article,
+    .marketer-projects th,
+    .marketing-team th
+) {
+    color: var(--text-light);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .dashboard-content :where(
+    .marketer-date-tools > label,
+    .marketer-metric span,
+    .marketer-production > div span,
+    .marketer-production > div > strong,
+    .marketer-status p,
+    .marketer-summary > div:last-child span,
+    .marketing-date-input,
+    .marketing-metric span,
+    .marketing-production article span,
+    .marketing-status-body p,
+    .marketing-alerts p,
+    th
+) {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] :where(input, textarea, select, .app-select-trigger) {
+    color: var(--text);
+    border-color: var(--border);
+    background-color: var(--surface-muted);
+}
+
+html[data-theme="dark"] :where(input, textarea)::placeholder { color: #7F91A0; }
+html[data-theme="dark"] :where(.topbar, .sidebar, .mobile-bottom-nav) { box-shadow: 0 1px 0 var(--border); }
+html[data-theme="dark"] :where(.notification-item, .account-switcher-list > button) { color: var(--text); background: var(--surface); }
+html[data-theme="dark"] :where(.notification-item:hover, .account-switcher-list > button:hover) { background: var(--surface-muted); }
+html[data-theme="dark"] :where(.auth-tabs, .auth-container) { background-color: var(--surface-muted); }
+html[data-theme="dark"] .auth-card { background: var(--surface); }
+html[data-theme="dark"] .auth-tabs a { color: var(--text-light); }
+html[data-theme="dark"] .auth-tabs a.active-tab { color: #fff; }
+html[data-theme="dark"] .theme-toggle-btn { color: #F4C95D; background: rgba(244, 201, 93, .1); }
+
+.theme-toggle-btn { color: var(--primary); }
 
 input,
 textarea,
@@ -123,6 +230,11 @@ textarea {
 
 ::-webkit-scrollbar-track:hover {
     background: #e0e0e0;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track,
+html[data-theme="dark"] ::-webkit-scrollbar-track:hover {
+    background: var(--surface-muted);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
