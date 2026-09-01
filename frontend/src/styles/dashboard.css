@@ -69,9 +69,9 @@
 
     z-index: 1000;
 
-    width: 280px;
+    width: 250px;
 
-    left: -280px;
+    left: -250px;
 
     transition: left .22s ease;
 
@@ -85,7 +85,7 @@
 
     justify-content: space-between;
 
-    padding: 24px 18px;
+    padding: 22px 15px;
 
     box-sizing: border-box;
 
@@ -103,7 +103,7 @@
 
 .dashboard-layout.sidebar-is-open .dashboard-main {
 
-    margin-left: 280px;
+    margin-left: 250px;
 
 }
 
@@ -742,11 +742,11 @@
 
         position: fixed;
 
-        left: -300px;
+        left: -270px;
 
         top: 0;
 
-        width: 300px;
+        width: 270px;
 
         height: 100vh;
         height: 100dvh;
@@ -788,6 +788,71 @@
 
     }
 
+}
+
+.account-switcher-shell { position: relative; }
+.user-info.is-open { background: rgba(0, 93, 156, .08); }
+.account-switcher-popover {
+    position: absolute;
+    z-index: 1250;
+    top: calc(100% + 12px);
+    right: 0;
+    width: min(380px, calc(100vw - 28px));
+    overflow: hidden;
+    border: 1px solid #d8e5ec;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 22px 65px rgba(20, 52, 70, .2);
+}
+.account-switcher-popover > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; color: #fff; background: linear-gradient(135deg, #285f7b, #397d98); }
+.account-switcher-popover > header div { min-width: 0; display: grid; gap: 2px; }
+.account-switcher-popover > header span { color: #d8edf5; font-size: 11px; font-weight: 700; }
+.account-switcher-popover > header strong, .account-switcher-popover > header small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-switcher-popover > header strong { font-size: 17px; }
+.account-switcher-popover > header small { color: #d8edf5; font-size: 12px; }
+.account-switcher-popover > header > svg { flex: 0 0 auto; font-size: 27px; }
+.account-switcher-list { max-height: 285px; overflow-y: auto; padding: 10px; }
+.account-switcher-list > button { display: grid; width: 100%; grid-template-columns: 42px minmax(0, 1fr) 22px; align-items: center; gap: 10px; padding: 10px; border: 1px solid transparent; border-radius: 14px; color: #17374a; background: transparent; text-align: right; font: inherit; cursor: pointer; }
+.account-switcher-list > button:hover { background: #f2f8fb; }
+.account-switcher-list > button.is-active { border-color: #cde0e9; background: #edf6fa; cursor: default; }
+.account-switcher-list .user-avatar { width: 40px; height: 40px; font-size: 16px; }
+.account-switcher-list > button > span { min-width: 0; display: grid; gap: 1px; }
+.account-switcher-list strong, .account-switcher-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-switcher-list strong { font-size: 14px; }
+.account-switcher-list small { color: #6c7f8a; font-size: 11px; }
+.account-switcher-list em { width: fit-content; margin-top: 3px; padding: 2px 7px; border-radius: 999px; color: #376b86; background: #e3f0f6; font-size: 9px; font-style: normal; font-weight: 800; }
+.account-switcher-list > button > svg { color: #219b64; font-size: 19px; }
+.account-switcher-popover > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 11px; border-top: 1px solid #e8eff3; background: #f9fbfc; }
+.account-switcher-popover > footer.single-action { grid-template-columns: 1fr; }
+.account-switcher-popover > footer button { display: flex; min-height: 43px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d7e3e9; border-radius: 11px; color: #315f77; background: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.account-switcher-popover > footer .account-add-btn { border-color: #356e89; color: #fff; background: #356e89; }
+
+.account-modal-backdrop { position: fixed; z-index: 2500; inset: 0; display: grid; padding: 18px; place-items: center; background: rgba(8, 27, 39, .5); backdrop-filter: blur(7px); }
+.account-modal { width: min(100%, 470px); max-height: calc(100dvh - 36px); overflow-y: auto; border: 1px solid rgba(255, 255, 255, .75); border-radius: 24px; background: #fff; box-shadow: 0 30px 90px rgba(8, 31, 45, .32); }
+.account-modal > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 24px 24px 19px; border-bottom: 1px solid #e6eef2; background: linear-gradient(145deg, #f5fafc, #fff); }
+.account-modal > header span { color: #34718d; font-size: 11px; font-weight: 900; }
+.account-modal > header h2 { margin: 3px 0 4px; color: #123248; font-size: 23px; }
+.account-modal > header p { margin: 0; color: #6b7d88; font-size: 12px; line-height: 1.6; }
+.account-modal > header button { display: grid; flex: 0 0 auto; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 11px; color: #42677b; background: #e8f1f5; font-size: 21px; cursor: pointer; }
+.account-modal form { display: grid; gap: 14px; padding: 21px 24px 10px; }
+.account-modal form label { display: grid; gap: 7px; color: #274c60; font-size: 13px; font-weight: 800; }
+.account-modal form input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid #cedce4; border-radius: 12px; outline: 0; color: #152f40; background: #fbfdfe; font: inherit; box-sizing: border-box; direction: ltr; text-align: left; }
+.account-modal form input:focus { border-color: #3d7b98; box-shadow: 0 0 0 4px rgba(61, 123, 152, .1); }
+.account-modal form > button { min-height: 49px; margin-top: 3px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, #326d89, #245873); font: inherit; font-weight: 900; cursor: pointer; }
+.account-modal button:disabled { opacity: .6; cursor: wait; }
+.account-modal-google { display: grid; gap: 10px; padding: 7px 24px 24px; text-align: center; }
+.account-modal-google > span { color: #87969f; font-size: 12px; }
+.account-modal-google > div { position: relative; display: grid; place-items: center; min-height: 44px; overflow: hidden; border-radius: 999px; }
+.account-google-visual { position: absolute; z-index: 0; inset: 0; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #d7e1e7; border-radius: 999px; color: #365366; background: #fff; font-size: 13px; font-weight: 800; }
+.account-google-visual svg { color: #4285f4; }
+.account-modal-google iframe { position: relative; z-index: 1; opacity: .01; }
+
+@media (max-width: 600px) {
+    .account-switcher-popover { position: fixed; top: 76px; right: 12px; left: 12px; width: auto; }
+    .account-modal-backdrop { padding: 10px; align-items: end; }
+    .account-modal { max-height: calc(100dvh - 20px); border-radius: 23px 23px 15px 15px; }
+    .account-modal > header, .account-modal form { padding-inline: 18px; }
+    .account-modal-google { padding-inline: 18px; }
 }
 
 @media (max-width:949px) {

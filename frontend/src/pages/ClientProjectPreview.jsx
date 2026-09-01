@@ -5,7 +5,6 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { getClientExecutionPdfFile, getClientProjectPreview, getClientProjectPreviewByKey } from "../services/projectsAPI";
 import { createExecutionPdf } from "../utils/executionPdf";
 import { createProjectPdf } from "../utils/projectPdf";
-import { getPriceTableRows, THICKNESS_OPTIONS } from "../utils/priceCalculator";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
 import "../styles/ClientProjectPreview.css";
 
@@ -48,7 +47,6 @@ function ClientProjectPreview() {
   const { id, previewKey } = useParams();
   const [searchParams] = useSearchParams();
   const [project, setProject] = useState(null);
-  const [copperConfiguration, setCopperConfiguration] = useState({});
   const [quoteDocument, setQuoteDocument] = useState(null);
   const [executionDocuments, setExecutionDocuments] = useState({});
   const [activeDocument, setActiveDocument] = useState("quote");
@@ -71,21 +69,6 @@ function ClientProjectPreview() {
     panel.executionPdf?.status && panel.executionPdf.status !== "notRequested"
   ));
   const executionWasSkipped = (project?.panels || []).some((panel) => panel.executionPdf?.skipped);
-  const additionalThicknessOffers = useMemo(() => (project?.panels || []).map((panel) => {
-    const selected = (panel.thickness || []).map(Number).filter(Number.isFinite);
-    const highestRequested = selected.length ? Math.max(...selected) : 0;
-    const extraThicknesses = THICKNESS_OPTIONS.filter((value) => Number(value) > highestRequested);
-    return {
-      panel,
-      rows: extraThicknesses.length ? getPriceTableRows(
-        { ...panel, thickness: extraThicknesses },
-        project?.prices || {},
-        project?.client?.profitPercentage || 0,
-        copperConfiguration,
-      ) : [],
-    };
-  }).filter((entry) => entry.rows.length), [project, copperConfiguration]);
-
   const showExecutionNotice = (message) => {
     window.clearTimeout(executionNoticeTimerRef.current);
     setExecutionNotice(message);
@@ -123,7 +106,6 @@ function ClientProjectPreview() {
         if (!active) return safeDestroyPdf(loadedDocument);
         documentsRef.current.quote = loadedDocument;
         setProject(loadedProject);
-        setCopperConfiguration(copperConfiguration || {});
         setQuoteDocument(loadedDocument);
         setState({ loading: false, executionLoading: false, error: "" });
       } catch (error) {
@@ -221,21 +203,6 @@ function ClientProjectPreview() {
     <section className="client-preview-pdf" aria-label={activeDocument === "execution" ? "معاينة PDF التنفيذ" : "معاينة ملف عرض السعر STARCO"}>
       {Array.from({ length: displayedDocument?.numPages || 0 }, (_, index) => <PdfPage key={`${activeDocument}-${selectedPanelId}-${index + 1}`} pdfDocument={displayedDocument} pageNumber={index + 1} title={activeDocument === "execution" ? "PDF التنفيذ" : "عرض السعر"} />)}
     </section>
-    {activeDocument === "quote" && additionalThicknessOffers.length > 0 && <section className="client-additional-offers" aria-label="بدائل سماكات إضافية">
-      <i className="client-offer-orb orb-one" aria-hidden="true" /><i className="client-offer-orb orb-two" aria-hidden="true" />
-      <header><span><i /> فرصة للترقية</span><h2>قوة إضافية… بسعر قد يفاجئك</h2><p>قارن السماكات الأعلى فورًا، واختر التوازن الأنسب بين المتانة والميزانية.</p><div><b>تسعير فوري</b><b>نفس مواصفات اللوحة</b><b>خيارات حتى 3 مم</b></div></header>
-      <div>{additionalThicknessOffers.map(({ panel, rows }) => <article key={panelKey(panel)}>
-        <div className="client-offer-panel-heading"><span><small>بدائل لوحة</small><strong><bdi dir={getPanelNameDirection(panel.panelName || panel.panelCode)}>{panel.panelName || panel.panelCode}</bdi></strong></span><em>{rows.length} خيارات إضافية</em></div>
-        <div className="client-offer-options">{rows.map((row, index) => <section className={index === 0 ? "recommended" : ""} key={row.thickness} style={{ "--offer-delay": `${index * 70}ms` }}>
-          {index === 0 && <mark>بداية الترقية</mark>}
-          <div className="client-offer-thickness"><small>سمك الصاج</small><strong><bdi dir="ltr">{row.thickness}</bdi><span>mm</span></strong></div>
-          <div className="client-offer-strength"><i><b style={{ width: `${Math.min(100, Math.max(28, (Number(row.thickness) / 3) * 100))}%` }} /></i><small>مؤشر المتانة</small></div>
-          <div className="client-offer-weight"><small>الوزن التقريبي</small><b>{row.weight ? `${row.weight.toFixed(2)} كجم` : "—"}</b></div>
-          <div className="client-offer-price"><small>السعر شامل الربح</small><strong>{row.price ? Number(row.price).toLocaleString("ar-EG") : "يُراجع"}</strong><span>جنيه مصري</span></div>
-        </section>)}</div>
-      </article>)}</div>
-      <footer><span>أعجبك بديل؟</span><strong>تواصل مع مسؤول المشروع لاعتماده قبل إصدار أمر التنفيذ.</strong><small>الأسعار محسوبة من نفس بيانات عرض السعر.</small></footer>
-    </section>}
   </main>;
 }
 

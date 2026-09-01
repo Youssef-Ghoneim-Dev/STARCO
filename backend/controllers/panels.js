@@ -15,7 +15,6 @@ const executionStatuses = ["executionPdfRequested", "executionPdfReady", "execut
 const marketingEditableStatuses = ["pendingPricing", "pricing", "quoteCompleted", "editing", "executionPdfRequested", "executionPdfReady"];
 const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
 const executionPdfPurposes = ["page2", "page3", "page4", "gallery"];
-const thicknessOptions = [0.6, 0.7, 0.8, 0.9, 1, 1.25, 1.5, 1.8, 2, 2.5, 3];
 const history = (req, from, to, action, note = "") => ({ from, to, action, note, actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role, createdAt: new Date() });
 const buildProductionDeadlines = (approvedDate) => ({
     manufacturingFilesDueAt: subtractEgyptWorkingDays(approvedDate, 5),
@@ -382,12 +381,11 @@ const transition = async (req, res, next, { from, to, roles, extra = {}, notify,
 const requestExecutionPdf = async (req, res, next) => { try {
     const panel = await loadPanel(req.params.projectId, req.params.panelId);
     const selectedThickness = Number(req.body?.steelThickness);
-    const quotedThicknesses = (panel?.pricing?.thickness || panel?.marketerData?.thickness || []).map(Number);
-    const highestQuotedThickness = quotedThicknesses.length ? Math.max(...quotedThicknesses) : 0;
-    const availableThicknesses = [...quotedThicknesses, ...thicknessOptions.filter((value) => value > highestQuotedThickness)];
+    const quotedThicknessSource = panel?.pricing?.thickness?.length ? panel.pricing.thickness : panel?.marketerData?.thickness || [];
+    const quotedThicknesses = quotedThicknessSource.map(Number).filter(Number.isFinite);
     if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
-    if (!Number.isFinite(selectedThickness) || !availableThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
-        return res.status(400).json({ status: "error", message: "اختر سمكًا من عرض السعر أو من بدائل السماكات الأعلى المعروضة للعميل." });
+    if (!Number.isFinite(selectedThickness) || !quotedThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
+        return res.status(400).json({ status: "error", message: "اختر سمكًا معتمدًا ضمن عرض السعر." });
     }
     return transition(req, res, next, { from: ["quoteCompleted"], to: "executionPdfRequested", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.steelThickness": selectedThickness, "executionPdf.requestedAt": new Date(), "executionPdf.requestedBy": req.user._id }, notify: (project, savedPanel) => notifyPanelPeople(savedPanel, ["OwnerManager", "ProductionManager"], (recipient) => sendExecutionPdfRequested(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["OwnerManager", "ProductionManager"], type: "executionPdfRequested", title: "في انتظار PDF التنفيذ", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
 } catch (error) { next(error); } };

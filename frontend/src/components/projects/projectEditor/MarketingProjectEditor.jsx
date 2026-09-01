@@ -293,7 +293,7 @@ function MarketingProjectEditor() {
                         placeholder="اختر النوع"
                         onChange={(value) => setCopperDetail("switches", value)}
                         options={[
-                          { value: "My Nature", label: "My Nature" },
+                          { value: "Minture", label: "Minture" },
                           { value: "Molded", label: "Molded" },
                         ]}
                       />

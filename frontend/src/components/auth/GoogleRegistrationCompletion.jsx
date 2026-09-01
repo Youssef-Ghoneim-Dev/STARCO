@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import AuthInput from "./AuthInput";
-import { googleLogin } from "../../services/authApi";
+import { googleRegister } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/logo.jpg";
 import { normalizeEgyptianPhone } from "../../utils/phoneNumber";
@@ -28,7 +28,7 @@ function GoogleRegistrationCompletion() {
     if (!phoneNumber) return setPhoneError("Enter a valid Egyptian mobile number, such as 01012345678.");
     setLoading(true);
     try {
-      const response = await googleLogin({ credential, ...formData, phoneNumber });
+      const response = await googleRegister({ credential, ...formData, phoneNumber });
       localStorage.setItem("token", response.headers["x-auth-token"]);
       sessionStorage.removeItem("starco_google_registration_credential");
       await reloadProfile();

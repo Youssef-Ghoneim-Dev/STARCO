@@ -8,4 +8,6 @@ export const register = (data) => {
     return api.post("/users/register", data);
 };
 
-export const googleLogin = (data) => api.post("/users/google", data);
+export const googleLogin = (data) => api.post("/users/google/login", data);
+
+export const googleRegister = (data) => api.post("/users/google/register", data);

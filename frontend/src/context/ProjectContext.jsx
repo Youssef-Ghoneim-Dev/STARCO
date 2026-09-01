@@ -153,7 +153,11 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
     || String(type.name || "").toLowerCase().replace(/[.\-\s_]/g, "") === normalizedType
     || (normalizedType === "ont" && type.key === "ont")
   );
-  const marketerCopper = incomingPanel.copperDetails || incomingPanel.marketerData?.copperDetails || {};
+  const rawMarketerCopper = incomingPanel.copperDetails || incomingPanel.marketerData?.copperDetails || {};
+  const marketerCopper = {
+    ...rawMarketerCopper,
+    switches: rawMarketerCopper.switches === "My Nature" ? "Minture" : rawMarketerCopper.switches,
+  };
   const marketerBranchGroups = Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : [];
   const incomingCopper = incomingPanel.copper && Object.keys(incomingPanel.copper).length
     ? incomingPanel.copper
@@ -203,6 +207,7 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
         : incomingPanel.status || incomingPanel.quoteStatus || inferredQuoteStatus,
     panelName: incomingPanel.panelName || basePanel.panelName,
     thickness: effectiveThickness,
+    copperDetails: marketerCopper,
     copper: {
       ...(basePanel.copper || {}),
       ...(incomingCopper || {}),

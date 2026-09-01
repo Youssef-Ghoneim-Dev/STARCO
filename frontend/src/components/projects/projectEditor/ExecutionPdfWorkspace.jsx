@@ -26,7 +26,6 @@ import {
   updateManufacturingStage,
 } from "../../../services/projectsAPI";
 import { createExecutionPdf } from "../../../utils/executionPdf";
-import { THICKNESS_OPTIONS } from "../../../utils/priceCalculator";
 
 const quoteFinishedStatuses = [
   "quoteCompleted",
@@ -200,11 +199,9 @@ function ExecutionPdfWorkspace() {
   const [deliveryResponseNote, setDeliveryResponseNote] = useState("");
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
-  const availableExecutionThicknesses = useMemo(() => {
-    const quoted = (panel?.thickness || []).map(String);
-    const highestQuoted = quoted.length ? Math.max(...quoted.map(Number)) : 0;
-    return [...new Set([...quoted, ...THICKNESS_OPTIONS.filter((value) => Number(value) > highestQuoted)])].sort((a, b) => Number(a) - Number(b));
-  }, [panel?.thickness]);
+  const availableExecutionThicknesses = useMemo(() => (
+    [...new Set((panel?.thickness || []).map(String))].sort((a, b) => Number(a) - Number(b))
+  ), [panel?.thickness]);
   const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
   const [executionDesignSaveState, setExecutionDesignSaveState] = useState("idle");
   const [executionDesignRetry, setExecutionDesignRetry] = useState(0);
