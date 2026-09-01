@@ -954,3 +954,33 @@
     .google-login-shell > div,
     .google-login-shell iframe { height: 42px !important; min-height: 42px; }
 }
+
+/* Tablets in portrait mode must not inherit the desktop artwork composition.
+   A 1024px iPad is wide enough to miss the phone breakpoint, but its tall
+   viewport makes background-size: cover enlarge and crop the artwork badly. */
+@media (max-width: 1100px) and (orientation: portrait) {
+    .auth-page {
+        padding: clamp(8px, 2vw, 16px);
+    }
+
+    .auth-container {
+        background-image: none;
+        background-color: #fff;
+        border-radius: clamp(18px, 2.5vw, 26px);
+    }
+
+    .auth-card,
+    .auth-login-card,
+    .auth-register-card,
+    .google-completion-card {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding-inline: clamp(24px, 8vw, 88px);
+    }
+
+    .auth-login-card {
+        justify-content: center;
+    }
+}

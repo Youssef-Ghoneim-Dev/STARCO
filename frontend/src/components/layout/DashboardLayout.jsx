@@ -8,12 +8,12 @@ function DashboardLayout({ children, notAllowed, pending = false }) {
   const { pending: accountPending } = useAuth();
   const isPending = pending || accountPending;
   const [isSidebarOpen, setIsSidebarOpen] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 950,
+    () => typeof window !== "undefined" && window.innerWidth > 1100,
   );
 
   useEffect(() => {
     const syncSidebarForViewport = () => {
-      setIsSidebarOpen(window.innerWidth >= 950);
+      setIsSidebarOpen(window.innerWidth > 1100);
     };
 
     window.addEventListener("resize", syncSidebarForViewport);
