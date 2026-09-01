@@ -102,24 +102,54 @@
   user-select: none;
 }
 
-.client-additional-offers { position: relative; width: min(1180px, 92%); box-sizing: border-box; margin: 2px auto 42px; overflow: hidden; border: 1px solid #c9dde7; border-radius: 24px; background: linear-gradient(145deg, #fff, #f1f8fb); box-shadow: 0 18px 45px rgb(25 73 98 / 10%); }
-.client-additional-offers::before { content: ""; position: absolute; inset: -130px -100px auto auto; width: 270px; height: 270px; border-radius: 50%; background: radial-gradient(circle, rgb(53 126 158 / 18%), transparent 68%); pointer-events: none; }
-.client-additional-offers > header { position: relative; padding: 27px 28px 20px; }
-.client-additional-offers > header span { display: inline-flex; margin-bottom: 8px; padding: 5px 11px; border-radius: 999px; color: #24617f; background: #e3f2f7; font-size: 12px; font-weight: 900; }
-.client-additional-offers h2 { margin: 0; color: #153b54; font-size: clamp(22px, 2.3vw, 30px); }
-.client-additional-offers header p { margin: 7px 0 0; color: #657b8a; font-weight: 600; }
-.client-additional-offers > div { position: relative; display: grid; gap: 14px; padding: 0 22px 22px; }
-.client-additional-offers article { overflow: hidden; border: 1px solid #d8e5eb; border-radius: 18px; background: rgb(255 255 255 / 90%); }
-.client-additional-offers article > div:first-child { display: grid; gap: 3px; padding: 16px 18px; border-bottom: 1px solid #e3ebef; color: #173e58; }
-.client-additional-offers article > div:first-child strong { font-size: 17px; }
-.client-additional-offers article > div:first-child small { color: #748692; }
-.client-offer-table { overflow-x: auto; }
-.client-offer-table table { width: 100%; min-width: 520px; border-collapse: collapse; text-align: right; }
-.client-offer-table th, .client-offer-table td { padding: 14px 18px; border-bottom: 1px solid #edf1f3; }
-.client-offer-table th { color: #6c7e8b; background: #f8fbfc; font-size: 12px; }
-.client-offer-table td { color: #263f50; font-weight: 700; }
-.client-offer-table td strong { color: #246986; }
-.client-additional-offers footer { padding: 14px 24px; color: #687c89; background: #eaf4f8; font-size: 12px; font-weight: 700; text-align: center; }
+.client-additional-offers { position: relative; isolation: isolate; width: min(1180px, 92%); box-sizing: border-box; margin: 6px auto 48px; overflow: hidden; border: 1px solid rgb(124 176 200 / 42%); border-radius: 30px; color: #fff; background: linear-gradient(135deg, #0f3147 0%, #174c67 46%, #236f8d 100%); box-shadow: 0 26px 70px rgb(12 50 73 / 24%), inset 0 1px 0 rgb(255 255 255 / 12%); }
+.client-additional-offers::before { content: ""; position: absolute; z-index: -1; inset: 0; background: linear-gradient(110deg, transparent 25%, rgb(255 255 255 / 8%) 43%, transparent 60%); transform: translateX(-100%); animation: client-offer-sweep 7s ease-in-out infinite; pointer-events: none; }
+.client-offer-orb { position: absolute; z-index: -1; border-radius: 50%; filter: blur(2px); opacity: .55; pointer-events: none; animation: client-offer-float 8s ease-in-out infinite alternate; }
+.client-offer-orb.orb-one { inset: -125px -70px auto auto; width: 300px; height: 300px; background: radial-gradient(circle at 40% 40%, #58c7d4, transparent 68%); }
+.client-offer-orb.orb-two { inset: auto auto -170px -80px; width: 360px; height: 360px; background: radial-gradient(circle at 50% 50%, #477ee1, transparent 69%); animation-delay: -3s; }
+.client-additional-offers > header { position: relative; padding: 34px 34px 25px; }
+.client-additional-offers > header > span { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 10px; padding: 7px 13px; border: 1px solid rgb(255 255 255 / 18%); border-radius: 999px; color: #dff9ff; background: rgb(255 255 255 / 9%); font-size: 12px; font-weight: 900; backdrop-filter: blur(8px); }
+.client-additional-offers > header > span i { width: 7px; height: 7px; border-radius: 50%; background: #78e6b5; box-shadow: 0 0 0 6px rgb(120 230 181 / 13%), 0 0 18px #78e6b5; animation: client-offer-pulse 1.9s ease-in-out infinite; }
+.client-additional-offers h2 { margin: 0; color: #fff; font-size: clamp(26px, 3vw, 41px); line-height: 1.25; text-shadow: 0 8px 24px rgb(0 0 0 / 18%); }
+.client-additional-offers header p { max-width: 690px; margin: 8px 0 0; color: #cce0ea; font-size: 15px; font-weight: 600; }
+.client-additional-offers > header > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }.client-additional-offers > header > div b { padding: 6px 10px; border-radius: 9px; color: #dbf4ff; background: rgb(255 255 255 / 8%); font-size: 11px; }
+.client-additional-offers > div { position: relative; display: grid; gap: 17px; padding: 0 24px 25px; }
+.client-additional-offers article { overflow: hidden; border: 1px solid rgb(255 255 255 / 15%); border-radius: 23px; background: rgb(240 250 255 / 9%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 9%); backdrop-filter: blur(13px); }
+.client-offer-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 17px 20px; border-bottom: 1px solid rgb(255 255 255 / 12%); }.client-offer-panel-heading > span { min-width: 0; display: grid; gap: 2px; }.client-offer-panel-heading small { color: #aac7d5; font-size: 11px; }.client-offer-panel-heading strong { overflow: hidden; color: #fff; font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }.client-offer-panel-heading em { flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; color: #17445c; background: #dff5fb; font-size: 11px; font-style: normal; font-weight: 900; }
+.client-offer-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 11px; padding: 14px; }
+.client-offer-options > section { position: relative; min-width: 0; display: grid; gap: 14px; padding: 17px; overflow: hidden; border: 1px solid #d9e7ed; border-radius: 17px; color: #183e55; background: linear-gradient(160deg, #fff, #f1f7fa); box-shadow: 0 9px 24px rgb(1 25 40 / 13%); animation: client-offer-card-in .55s cubic-bezier(.2,.8,.2,1) var(--offer-delay) both; transition: transform .22s ease, box-shadow .22s ease; }.client-offer-options > section:hover { transform: translateY(-5px); box-shadow: 0 17px 34px rgb(1 25 40 / 23%); }.client-offer-options > section::after { content: ""; position: absolute; inset: -50% -80%; background: linear-gradient(110deg, transparent 40%, rgb(255 255 255 / 58%) 50%, transparent 60%); transform: translateX(-60%); transition: transform .7s ease; pointer-events: none; }.client-offer-options > section:hover::after { transform: translateX(60%); }
+.client-offer-options mark { position: absolute; inset: 10px auto auto 10px; padding: 4px 8px; border-radius: 999px; color: #176744; background: #dcf8e9; font-size: 9px; font-weight: 900; }
+.client-offer-thickness { display: grid; gap: 1px; }.client-offer-thickness small, .client-offer-weight small, .client-offer-price small { color: #788c98; font-size: 10px; font-weight: 800; }.client-offer-thickness strong { display: flex; align-items: baseline; gap: 4px; color: #175a79; font-size: 35px; line-height: 1; }.client-offer-thickness strong span { font-size: 11px; }
+.client-offer-strength { display: grid; gap: 5px; }.client-offer-strength > i { height: 6px; overflow: hidden; border-radius: 999px; background: #dce8ed; }.client-offer-strength > i b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #53b5c2, #246f91); box-shadow: 0 0 12px rgb(42 130 160 / 40%); animation: client-offer-bar 1s ease var(--offer-delay) both; }.client-offer-strength small { color: #718692; font-size: 9px; font-weight: 800; }
+.client-offer-weight { display: flex; align-items: center; justify-content: space-between; gap: 8px; }.client-offer-weight b { color: #405d6c; font-size: 12px; }
+.client-offer-price { display: grid; padding-top: 11px; border-top: 1px solid #dfe9ed; }.client-offer-price strong { color: #123e56; font-size: 22px; line-height: 1.15; }.client-offer-price span { color: #76909e; font-size: 9px; font-weight: 700; }
+.client-additional-offers footer { position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; padding: 16px 24px; border-top: 1px solid rgb(255 255 255 / 12%); color: #c9dce5; background: rgb(3 28 43 / 20%); font-size: 11px; text-align: center; }.client-additional-offers footer span { color: #8deabb; font-weight: 900; }.client-additional-offers footer strong { color: #fff; }.client-additional-offers footer small { color: #a9c2cf; }
+@keyframes client-offer-sweep { 0%, 58% { transform: translateX(-100%); } 82%, 100% { transform: translateX(100%); } } @keyframes client-offer-float { to { transform: translate3d(20px, -18px, 0) scale(1.08); } } @keyframes client-offer-pulse { 50% { opacity: .55; box-shadow: 0 0 0 10px transparent, 0 0 8px #78e6b5; } } @keyframes client-offer-card-in { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } } @keyframes client-offer-bar { from { width: 0; } }
+
+/* Keep every sales detail comfortably readable on customer-facing screens. */
+.client-additional-offers > header > span { gap: 8px; margin-bottom: 12px; padding: 8px 15px; font-size: 14px; }
+.client-additional-offers h2 { font-size: clamp(31px, 3.4vw, 47px); }
+.client-additional-offers header p { max-width: 760px; margin-top: 10px; color: #d9ebf3; font-size: 18px; line-height: 1.7; font-weight: 700; }
+.client-additional-offers > header > div { gap: 9px; margin-top: 21px; }
+.client-additional-offers > header > div b { padding: 8px 12px; font-size: 13px; }
+.client-offer-panel-heading small { color: #c2d9e3; font-size: 13px; }
+.client-offer-panel-heading strong { font-size: 23px; }
+.client-offer-panel-heading em { padding: 8px 13px; font-size: 13px; }
+.client-offer-options { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 13px; padding: 16px; }
+.client-offer-options > section { gap: 17px; padding: 21px; border-radius: 19px; }
+.client-offer-options mark { inset: 12px auto auto 12px; padding: 5px 9px; font-size: 11px; }
+.client-offer-thickness { gap: 3px; }
+.client-offer-thickness small, .client-offer-weight small, .client-offer-price small { color: #667f8d; font-size: 13px; font-weight: 900; }
+.client-offer-thickness strong { gap: 5px; font-size: 44px; }
+.client-offer-thickness strong span { font-size: 14px; }
+.client-offer-strength small { color: #607987; font-size: 12px; font-weight: 900; }
+.client-offer-weight { gap: 9px; }
+.client-offer-weight b { color: #314f60; font-size: 15px; }
+.client-offer-price { padding-top: 14px; }
+.client-offer-price strong { font-size: 29px; }
+.client-offer-price span { color: #657f8e; font-size: 12px; font-weight: 800; }
+.client-additional-offers footer { gap: 9px; padding: 19px 25px; color: #d4e6ed; font-size: 14px; line-height: 1.7; }
+.client-additional-offers footer small { color: #bfd3dc; font-size: 12px; }
 
 .client-preview-state {
   display: grid;
@@ -154,11 +184,20 @@
   .client-additional-offers { width: 89%; border-radius: 19px; }
   .client-additional-offers > header { padding: 21px 18px 16px; }
   .client-additional-offers > div { padding: 0 12px 12px; }
-  .client-additional-offers h2 { font-size: 21px; }
+  .client-additional-offers h2 { font-size: 26px; }
+  .client-additional-offers header p { font-size: 15px; line-height: 1.7; }
+  .client-offer-panel-heading { align-items: flex-start; padding: 14px; }
+  .client-offer-options { display: flex; overflow-x: auto; padding: 12px; scroll-snap-type: x mandatory; scrollbar-width: thin; }
+  .client-offer-options > section { flex: 0 0 82%; scroll-snap-align: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .client-execution-panel-switcher,
-  .client-execution-panel-track > button.is-active::after { animation: none; }
+  .client-execution-panel-track > button.is-active::after,
+  .client-additional-offers::before,
+  .client-offer-orb,
+  .client-additional-offers > header > span i,
+  .client-offer-options > section,
+  .client-offer-strength > i b { animation: none; }
   .client-execution-panel-track > button { transition: none; }
 }
