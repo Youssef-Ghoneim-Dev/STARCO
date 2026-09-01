@@ -58,6 +58,7 @@ const productionStageDefinitions = [
   { key: "painting", title: "الانتهاء من رش/دهان اللوحة", description: "إتمام تجهيز السطح والدهان" },
   { key: "assembly", title: "الانتهاء من التجميع", description: "إتمام تجميع اللوحة بالكامل" },
 ];
+const EXECUTION_DESIGN_AUTOSAVE_DELAY = 900;
 
 const productionDelayReasons = {
   laser: ["عطل في ماكينة الليزر", "ازدحام/ضغط على الليزر", "مشكلة في ملفات DXF", "نقص خامات/صاج", "انتظار تعديل من المهندس", "انقطاع كهرباء", "أخرى"],
@@ -171,6 +172,10 @@ function ExecutionPdfWorkspace() {
   const [copied, setCopied] = useState(false);
   const executionInputRefs = useRef({});
   const loadedExecutionDesignKey = useRef("");
+  const lastSavedExecutionDesignRef = useRef("");
+  const latestExecutionDesignRef = useRef("");
+  const executionDesignRetryTimerRef = useRef(null);
+  const executionDesignSaveInFlightRef = useRef(false);
   const manufacturingInputRef = useRef(null);
   const panel = project.panels?.[activePanel];
   const executionPdfState = panel?.executionPdf;
@@ -190,6 +195,8 @@ function ExecutionPdfWorkspace() {
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
   const [executionDesign, setExecutionDesign] = useState(() => defaultExecutionDesign(panel, workflow));
+  const [executionDesignSaveState, setExecutionDesignSaveState] = useState("idle");
+  const [executionDesignRetry, setExecutionDesignRetry] = useState(0);
   const [executionPreviews, setExecutionPreviews] = useState({});
   const [cropFileId, setCropFileId] = useState("");
   const canIssueOrder = user?.role === "OwnerManager"
@@ -206,6 +213,7 @@ function ExecutionPdfWorkspace() {
   const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
   const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
   const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable;
+  const executionDesignStorageKey = project?._id && panel?.panelId ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}` : "";
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
     marketingRepresentative: project.marketingRepresentative || nextProject.marketingRepresentative,
@@ -226,15 +234,75 @@ function ExecutionPdfWorkspace() {
     setDeliveryResponseNote(deliverySchedule.responseNote || "");
   }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.responseNote]);
 
-  useEffect(() => () => window.clearTimeout(stageSavedTimerRef.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(stageSavedTimerRef.current);
+    window.clearTimeout(executionDesignRetryTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const designKey = `${panel?.panelId || ""}:${workflow.status || ""}:${workflow.requestedAt || ""}`;
     if (loadedExecutionDesignKey.current === designKey) return;
     loadedExecutionDesignKey.current = designKey;
     setSelectedSteelThickness(workflow.steelThickness || "");
-    setExecutionDesign(defaultExecutionDesign(panel, workflow));
-  }, [panel, workflow]);
+    const serverDesign = defaultExecutionDesign(panel, workflow);
+    const serverSerialized = JSON.stringify(serverDesign);
+    let restoredDesign = null;
+    if (executionDesignStorageKey && workflow.status === "requested") {
+      try {
+        const localDraft = JSON.parse(window.localStorage.getItem(executionDesignStorageKey) || "null");
+        if (localDraft?.design && typeof localDraft.design === "object") restoredDesign = { ...serverDesign, ...localDraft.design };
+      } catch { window.localStorage.removeItem(executionDesignStorageKey); }
+    }
+    lastSavedExecutionDesignRef.current = serverSerialized;
+    const nextDesign = restoredDesign || serverDesign;
+    latestExecutionDesignRef.current = JSON.stringify(nextDesign);
+    setExecutionDesign(nextDesign);
+    setExecutionDesignSaveState(restoredDesign ? "pending" : workflow?.design && Object.keys(workflow.design).length ? "saved" : "idle");
+  }, [executionDesignStorageKey, panel, workflow]);
+
+  useEffect(() => {
+    if (!executionDesignStorageKey || workflow.status !== "requested" || !canPreparePdf) return undefined;
+    const serialized = JSON.stringify(executionDesign);
+    latestExecutionDesignRef.current = serialized;
+    if (serialized === lastSavedExecutionDesignRef.current) {
+      window.localStorage.removeItem(executionDesignStorageKey);
+      return undefined;
+    }
+    window.localStorage.setItem(executionDesignStorageKey, JSON.stringify({ design: executionDesign, updatedAt: new Date().toISOString() }));
+    setExecutionDesignSaveState("pending");
+    const timer = window.setTimeout(async () => {
+      if (executionDesignSaveInFlightRef.current) {
+        window.clearTimeout(executionDesignRetryTimerRef.current);
+        executionDesignRetryTimerRef.current = window.setTimeout(() => setExecutionDesignRetry((value) => value + 1), 250);
+        return;
+      }
+      executionDesignSaveInFlightRef.current = true;
+      let saveCompleted = false;
+      setExecutionDesignSaveState("saving");
+      try {
+        await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+        saveCompleted = true;
+        lastSavedExecutionDesignRef.current = serialized;
+        if (latestExecutionDesignRef.current === serialized) {
+          window.localStorage.removeItem(executionDesignStorageKey);
+          setExecutionDesignSaveState("saved");
+        }
+      } catch (error) {
+        setExecutionDesignSaveState(error?.response ? "error" : "offline");
+        if (!error?.response) {
+          window.clearTimeout(executionDesignRetryTimerRef.current);
+          executionDesignRetryTimerRef.current = window.setTimeout(() => setExecutionDesignRetry((value) => value + 1), 4000);
+        }
+      } finally {
+        executionDesignSaveInFlightRef.current = false;
+        if (saveCompleted && latestExecutionDesignRef.current !== serialized) {
+          window.clearTimeout(executionDesignRetryTimerRef.current);
+          executionDesignRetryTimerRef.current = window.setTimeout(() => setExecutionDesignRetry((value) => value + 1), 50);
+        }
+      }
+    }, EXECUTION_DESIGN_AUTOSAVE_DELAY);
+    return () => window.clearTimeout(timer);
+  }, [canPreparePdf, executionDesign, executionDesignRetry, executionDesignStorageKey, panel?.panelId, project?._id, workflow.status]);
 
   const productionStages = useMemo(() => {
     const currentKey = productionStageDefinitions.some((stage) => stage.key === manufacturing.currentStage)
@@ -396,6 +464,11 @@ function ExecutionPdfWorkspace() {
     setGeneratingExecution(true);
     try {
       await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+      const savedDesign = JSON.stringify(executionDesign);
+      lastSavedExecutionDesignRef.current = savedDesign;
+      latestExecutionDesignRef.current = savedDesign;
+      if (executionDesignStorageKey) window.localStorage.removeItem(executionDesignStorageKey);
+      setExecutionDesignSaveState("saved");
       // Generate once locally to verify the persisted design. The resulting
       // PDF is intentionally not uploaded; it is rebuilt on demand.
       await buildExecutionPdf(executionDesign);
@@ -740,7 +813,7 @@ function ExecutionPdfWorkspace() {
 
     {workflow.status === "requested" && canPreparePdf && <>
       <section className="execution-pdf-builder">
-        <header><span className="execution-phase-label">إنشاء الملف</span><h3>محرر PDF التنفيذ</h3><p>ارفع الصور مرة واحدة، ثم اختر مكان كل صورة واضبط القص قبل إنشاء الملف.</p></header>
+        <header><span className="execution-phase-label">إنشاء الملف</span><h3>محرر PDF التنفيذ</h3><p>ارفع الصور مرة واحدة، ثم اختر مكان كل صورة واضبط القص قبل إنشاء الملف.</p><div className={`execution-draft-save-status ${executionDesignSaveState}`}>{executionDesignSaveState === "saved" ? <HiOutlineCheckCircle /> : executionDesignSaveState === "error" || executionDesignSaveState === "offline" ? <HiOutlineExclamationCircle /> : <HiOutlineCloudUpload />}<span>{executionDesignSaveState === "saving" ? "جاري حفظ مسودة PDF التنفيذ..." : executionDesignSaveState === "pending" ? "توجد تعديلات في انتظار الحفظ..." : executionDesignSaveState === "saved" ? "تم حفظ مسودة PDF التنفيذ" : executionDesignSaveState === "offline" ? "لا يوجد اتصال — المسودة محفوظة على هذا الجهاز وستُرفع تلقائيًا" : executionDesignSaveState === "error" ? "تعذر الحفظ على الخادم — المسودة محفوظة على هذا الجهاز" : "سيتم حفظ أي تعديل تلقائيًا"}</span></div></header>
         <div className="execution-builder-summary editable">
           <label><b>Panel size</b><input dir="ltr" value={executionDesign.panelSize} onChange={(event) => setExecutionDesign((current) => ({ ...current, panelSize: event.target.value }))} /></label>
           <label><b>Steel thickness</b><input dir="ltr" value={executionDesign.steelThickness} onChange={(event) => setExecutionDesign((current) => ({ ...current, steelThickness: event.target.value }))} /></label>

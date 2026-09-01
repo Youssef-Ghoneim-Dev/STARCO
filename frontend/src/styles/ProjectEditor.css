@@ -1570,6 +1570,12 @@
 .execution-pdf-heading h2 { margin: 5px 0 7px; color: var(--text); }
 .execution-pdf-heading p { margin: 0; color: var(--text-light); }
 .execution-phase-label { display: inline-flex; padding: 5px 10px; border-radius: 999px; color: var(--primary); background: #eaf4fa; font-size: 13px; font-weight: 800; }
+.execution-draft-save-status { display: inline-flex; width: fit-content; max-width: 100%; align-items: center; gap: 8px; margin-top: 10px; border: 1px solid #d5e2e9; border-radius: 999px; padding: 7px 11px; color: #5e7481; background: #f7fafb; font-size: 12px; font-weight: 800; }
+.execution-draft-save-status svg { flex: 0 0 auto; font-size: 18px; }
+.execution-draft-save-status.pending, .execution-draft-save-status.saving { color: #356a83; border-color: #bad5e2; background: #edf7fb; }
+.execution-draft-save-status.saving svg { animation: spin 1s linear infinite; }
+.execution-draft-save-status.saved { color: #197548; border-color: #b9dfca; background: #edf9f2; }
+.execution-draft-save-status.error, .execution-draft-save-status.offline { color: #9b5b15; border-color: #ecd0a4; background: #fff8ec; }
 .project-id-copy { display: flex; align-items: center; gap: 10px; max-width: 340px; padding: 11px 14px; border: 1px solid #cfe0ea; border-radius: 12px; background: #f8fbfd; color: var(--primary); cursor: pointer; text-align: right; }
 .project-id-copy > svg { flex: 0 0 auto; font-size: 22px; }
 .project-id-copy span { display: grid; gap: 2px; min-width: 0; }
