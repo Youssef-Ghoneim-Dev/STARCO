@@ -25,6 +25,15 @@ const userSchema = new mongoose.Schema({
     },
     approved: { type: Boolean, default: false, required: true },
     theme: { type: String, enum: ["light", "dark"], default: "light" },
+    dashboardNotes: {
+        type: [{
+            text: { type: String, required: true, trim: true, maxlength: 500 },
+            createdAt: { type: Date, default: Date.now }
+        }],
+        default: []
+    },
+    accountGroupId: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null, index: true },
+    accountCreatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
     // This gate is enabled explicitly for accounts created after the WhatsApp
     // opt-in flow was introduced. Keeping the default false avoids locking
     // existing accounts that predate the flow.

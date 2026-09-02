@@ -103,6 +103,15 @@ const ensureTheme = async (userId) => {
     );
 };
 
+const setAccountGroup = async (userId, accountGroupId) => {
+    const openconnection = await dbconfig.openconnection(collectionName, userSchema);
+    return openconnection.findByIdAndUpdate(
+        userId,
+        { $set: { accountGroupId } },
+        { new: true }
+    );
+};
+
 const deleteOne = async (userId, deletedBy = null) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
     const user = await openconnection.findByIdAndUpdate(userId,
@@ -139,6 +148,7 @@ module.exports = {
     update,
     updateTheme,
     ensureTheme,
+    setAccountGroup,
     deleteOne,
     restore,
     approve,

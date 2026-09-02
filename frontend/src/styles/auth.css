@@ -521,7 +521,7 @@
     left: 47px;
     top: 50%;
     transform: translateY(-50%);
-    color: #526174;
+    color: #94a3b8;
     font-size: 14px;
     font-weight: 700;
     pointer-events: none;
@@ -703,6 +703,8 @@
     width: min(100%, 300px);
     height: 46px;
     min-height: 46px;
+    border-radius: 999px;
+    overflow: hidden;
 }
 
 .google-login-visual {
@@ -724,7 +726,6 @@
 }
 
 .google-login-visual svg {
-    color: #4285f4;
     font-size: 17px;
 }
 
@@ -734,7 +735,7 @@
     z-index: 2;
     width: 100% !important;
     height: 46px !important;
-    opacity: .01;
+    opacity: 0 !important;
     cursor: pointer;
 }
 
@@ -1129,6 +1130,7 @@
     box-shadow: none;
     font-size: 21px;
     cursor: pointer;
+    opacity: 0 !important;
 }
 
 .auth-theme-toggle:focus,

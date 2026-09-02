@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClock, HiOutlineCloudUpload, HiOutlineDocumentText, HiOutlineExclamation, HiOutlineExternalLink, HiOutlineFolder, HiOutlineRefresh, HiOutlineTemplate } from "react-icons/hi";
 import StyledSelect from "../common/StyledSelect";
+import toast from "react-hot-toast";
 import DashboardName from "./DashboardName";
 import DashboardDonut from "./DashboardDonut";
 import DashboardAverage from "./DashboardAverage";
 import { currentAction, engineerDeadline, isThisMonth, itemClient, itemCode, itemDate, itemLink, itemName, manufacturingFilesUploadedOn, sameDay, statusLabel, statusMeta, statusProgress, taskOutcome, workflowAverages } from "../../utils/dashboardData";
+import { createDashboardNote, deleteDashboardNote, getDashboardNotes } from "../../services/dashboardNotesAPI";
 
 const dateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const fromDate = (value) => { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); };
@@ -31,10 +33,20 @@ function EngineerDashboard({ name, userId, panels = [], loading, onRefresh }) {
   const yesterday = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1), [today]);
   const minimumDate = useMemo(() => { const date = new Date(today); date.setDate(date.getDate() - 29); return date; }, [today]);
   const [selectedValue, setSelectedValue] = useState(dateValue(today));
-  const [notes, setNotes] = useState(() => { try { return JSON.parse(localStorage.getItem(`dashboard-notes-${userId || name}`)) || []; } catch { return []; } });
+  const [notes, setNotes] = useState([]);
   const [note, setNote] = useState("");
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [noteSaving, setNoteSaving] = useState(false);
   const dateRef = useRef(null);
-  useEffect(() => { localStorage.setItem(`dashboard-notes-${userId || name}`, JSON.stringify(notes)); }, [notes, userId, name]);
+  useEffect(() => {
+    let active = true;
+    setNotesLoading(true);
+    getDashboardNotes()
+      .then(({ data }) => { if (active) setNotes(data?.notes || []); })
+      .catch((error) => { if (active) toast.error(error?.response?.data?.message || "تعذر تحميل الملاحظات السريعة."); })
+      .finally(() => { if (active) setNotesLoading(false); });
+    return () => { active = false; };
+  }, [userId]);
   const selectedDate = fromDate(selectedValue);
   const selectedLabel = selectedValue === dateValue(today) ? "اليوم" : selectedValue === dateValue(yesterday) ? "أمس" : selectedDate.toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
   const preset = selectedValue === dateValue(today) ? "today" : selectedValue === dateValue(yesterday) ? "yesterday" : "custom";
@@ -51,7 +63,29 @@ function EngineerDashboard({ name, userId, panels = [], loading, onRefresh }) {
   const completedSelected = panels.filter((panel) => panel.status === "completed" && sameDay(itemDate(panel), selectedDate)).length;
   const pdfCount = panels.filter((panel) => panel.executionPdf?.readyAt && sameDay(panel.executionPdf.readyAt, selectedDate)).length;
   const fileCount = manufacturingFilesUploadedOn(panels, selectedDate);
-  const addNote = (event) => { event.preventDefault(); if (!note.trim()) return; setNotes((current) => [{ id: Date.now(), text: note.trim() }, ...current]); setNote(""); };
+  const addNote = async (event) => {
+    event.preventDefault();
+    const text = note.trim();
+    if (!text || noteSaving) return;
+    setNoteSaving(true);
+    try {
+      const { data } = await createDashboardNote(text);
+      setNotes((current) => [data.note, ...current]);
+      setNote("");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "تعذر حفظ الملاحظة.");
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+  const removeNote = async (noteId) => {
+    try {
+      await deleteDashboardNote(noteId);
+      setNotes((current) => current.filter((item) => item.id !== noteId));
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "تعذر حذف الملاحظة.");
+    }
+  };
   const openPicker = () => { try { dateRef.current?.showPicker?.(); } catch { dateRef.current?.focus(); } };
 
   return <div className="engineer-dashboard" dir="rtl">
@@ -66,7 +100,7 @@ function EngineerDashboard({ name, userId, panels = [], loading, onRefresh }) {
       <section className="engineer-panel engineer-deadlines"><h2>المواعيد النهائية {selectedLabel}</h2>{deadlines.map((panel) => <Link to={itemLink(panel)} key={panel._id}><div><strong><DashboardName>{itemName(panel)}</DashboardName></strong><span>آخر موعد لرفع ملفات التصنيع</span></div><time>{engineerDeadline(panel).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}</time></Link>)}{!deadlines.length && <p className="engineer-empty">لا توجد ملفات تصنيع مستحقة في هذا اليوم</p>}</section>
       <section className="engineer-panel engineer-recent-card"><h2>المشاريع الأخيرة</h2><div className="engineer-table-scroll"><table><thead><tr><th>اللوحة</th><th>الحالة الفعلية</th><th>آخر تحديث</th><th>التقدم</th></tr></thead><tbody>{sorted.slice(0, 6).map((panel) => <tr key={panel._id}><td><DashboardName>{itemName(panel)}</DashboardName></td><td>{statusLabel(panel)}</td><td>{itemDate(panel).toLocaleDateString("ar-EG")}</td><td><span className="engineer-progress" title={`${statusProgress(panel)}%`}><i style={{ width: `${statusProgress(panel)}%` }} /></span></td></tr>)}</tbody></table></div><Link className="engineer-more-link" to="/panels">عرض جميع لوحاتي <HiOutlineExternalLink /></Link></section>
       <section className="engineer-panel engineer-priority-card"><h2>أعلى الأولويات</h2>{priorities.map((panel) => { const due = engineerDeadline(panel); const urgent = due && due <= today; return <Link to={itemLink(panel)} key={panel._id}><div><HiOutlineExclamation /><span><strong><DashboardName>{itemName(panel)}</DashboardName></strong><small>{currentAction(panel, "Engineer")}{due ? ` · آخر موعد ${due.toLocaleDateString("ar-EG")}` : ""}</small></span></div><b className={due ? "high" : "medium"}>{urgent ? "مطلوب اليوم" : due ? "موعد نهائي" : "بانتظارك"}</b></Link>; })}{!priorities.length && <p className="engineer-empty">لا توجد أولويات حاليًا</p>}</section>
-      <section className="engineer-panel engineer-notes"><h2>ملاحظات سريعة</h2><form onSubmit={addNote}><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="اكتب ملاحظة لنفسك..." /><button type="submit">إضافة</button></form><div>{notes.slice(0, 5).map((entry) => <p key={entry.id}><span>{entry.text}</span><button type="button" aria-label="حذف الملاحظة" onClick={() => setNotes((current) => current.filter((item) => item.id !== entry.id))}>×</button></p>)}{!notes.length && <p className="engineer-empty">لا توجد ملاحظات محفوظة</p>}</div></section>
+      <section className="engineer-panel engineer-notes"><h2>ملاحظات سريعة</h2><form onSubmit={addNote}><input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} placeholder="اكتب ملاحظة لنفسك..." disabled={noteSaving} /><button type="submit" disabled={noteSaving || !note.trim()}>{noteSaving ? "جاري الحفظ..." : "إضافة"}</button></form><div>{notes.slice(0, 5).map((entry) => <p key={entry.id}><span>{entry.text}</span><button type="button" aria-label="حذف الملاحظة" onClick={() => removeNote(entry.id)}>×</button></p>)}{notesLoading && <p className="engineer-empty">جاري تحميل الملاحظات...</p>}{!notesLoading && !notes.length && <p className="engineer-empty">لا توجد ملاحظات محفوظة</p>}</div></section>
     </section>
     <section className="engineer-kpi-strip"><div><HiOutlineFolder /><span>متوسط رفع ملفات التصنيع</span><DashboardAverage result={averages.manufacturingFiles} /></div><div><HiOutlineDocumentText /><span>متوسط تجهيز PDF التنفيذ</span><DashboardAverage result={averages.executionPdf} /></div><div><HiOutlineClock /><span>متوسط إنجاز عرض السعر</span><DashboardAverage result={averages.quote} /></div><div><HiOutlineCloudUpload /><span>ملفات التصنيع المرفوعة اليوم</span><strong>{manufacturingFilesUploadedOn(panels, today)}</strong></div><div><HiOutlineCheckCircle /><span>اللوحات المكتملة هذا الشهر</span><strong>{panels.filter((panel) => panel.status === "completed" && isThisMonth(itemDate(panel), today)).length}</strong></div></section>
   </div>;

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 import toast from "react-hot-toast";
 import AuthTabs from "./AuthTabs";
 import AuthInput from "./AuthInput";
@@ -46,7 +47,7 @@ function LoginForm() {
       <div className="password-group"><AuthInput label="Password" type={showPassword ? "text" : "password"} name="password" placeholder="Enter your password" value={formData.password} onChange={handleChange} /><button type="button" className="eye-btn" onClick={() => setShowPassword((current) => !current)}>{showPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
       <button className="auth-btn" type="submit" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
     </form>
-    {import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="google-auth"><span>أو</span><div className="google-login-shell"><span className="google-login-visual"><FaGoogle />Login with Google</span><GoogleLogin onSuccess={signInWithGoogle} onError={() => toast.error("تعذر الاتصال بـ Google.")} text="signin_with" theme="outline" shape="pill" size="large" width="300" /></div></div>}
+    {import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="google-auth"><span>أو</span><div className="google-login-shell"><span className="google-login-visual"><FcGoogle />Login with Google</span><GoogleLogin onSuccess={signInWithGoogle} onError={() => toast.error("تعذر الاتصال بـ Google.")} text="signin_with" theme="outline" shape="pill" size="large" width="300" /></div></div>}
     <div className="auth-switch auth-footer">Don't have an account?<button type="button" onClick={() => navigate("/register")}>Create account</button></div>
   </div>;
 }

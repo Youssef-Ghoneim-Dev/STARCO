@@ -1,4 +1,4 @@
-import { HiOutlineCheck, HiOutlineMenuAlt2, HiOutlineMoon, HiOutlineSun } from "react-icons/hi";
+import { HiOutlineCheck, HiOutlineMenuAlt2, HiOutlineMoon, HiOutlinePlus, HiOutlineSun, HiOutlineSwitchHorizontal, HiOutlineUserCircle } from "react-icons/hi";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { IoChevronDown } from "react-icons/io5";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +8,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import UserAvatar from "./UserAvatar";
 import { useTheme } from "../../context/ThemeContext";
+import AddAccountModal from "../auth/AddAccountModal";
+import { getLinkedAccounts, switchLinkedAccount } from "../../services/linkedAccountsAPI";
 
 function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const { user } = useAuth();
@@ -15,15 +17,50 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, pushState, enablePush, readOne, readAll } = useNotifications();
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [addAccountOpen, setAddAccountOpen] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [switchingId, setSwitchingId] = useState("");
   const notificationShellRef = useRef(null);
+  const accountShellRef = useRef(null);
+  const canAddAccount = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
+  const canOpenAccountMenu = canAddAccount || accounts.length > 1;
 
   useEffect(() => {
     const close = (event) => {
       if (!notificationShellRef.current?.contains(event.target)) setNotificationOpen(false);
+      if (!accountShellRef.current?.contains(event.target)) setAccountOpen(false);
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id && !user?._id) return;
+    let active = true;
+    setAccountsLoading(true);
+    getLinkedAccounts()
+      .then(({ data }) => { if (active) setAccounts(Array.isArray(data) ? data : []); })
+      .catch(() => { if (active) setAccounts([]); })
+      .finally(() => { if (active) setAccountsLoading(false); });
+    return () => { active = false; };
+  }, [user?.id, user?._id]);
+
+  const changeAccount = async (account) => {
+    if (account.current || !account.approved) return;
+    setSwitchingId(String(account.id));
+    try {
+      const response = await switchLinkedAccount(account.id);
+      const token = response.headers["x-auth-token"] || response.data?.token;
+      if (!token) throw new Error("Missing session token");
+      localStorage.setItem("token", token);
+      window.location.assign("/dashboard");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "تعذر فتح الحساب.");
+      setSwitchingId("");
+    }
+  };
 
   const openNotification = async (notification) => {
     if (!notification.readAt) await readOne(notification._id).catch(() => {});
@@ -75,7 +112,7 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
           {isDark ? <HiOutlineSun /> : <HiOutlineMoon />}
         </button>
         <div className="notification-shell" ref={notificationShellRef}>
-          <button type="button" className="notification-btn" disabled={pending} onClick={() => setNotificationOpen((value) => !value)} aria-label={`الإشعارات${unreadCount ? `، ${unreadCount} غير مقروء` : ""}`} aria-expanded={notificationOpen}>
+          <button type="button" className="notification-btn" disabled={pending} onClick={() => { setNotificationOpen((value) => !value); setAccountOpen(false); }} aria-label={`الإشعارات${unreadCount ? `، ${unreadCount} غير مقروء` : ""}`} aria-expanded={notificationOpen}>
             <IoNotificationsOutline />
             {unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
           </button>
@@ -88,15 +125,22 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
           </section>}
         </div>
 
-        <div className="account-switcher-shell">
-          <button type="button" className="user-info" onClick={() => navigate("/profile")} aria-label="فتح الملف الشخصي">
+        <div className="account-switcher-shell" ref={accountShellRef}>
+          <button type="button" className={`user-info${accountOpen ? " is-open" : ""}`} onClick={() => { if (canOpenAccountMenu) { setAccountOpen((value) => !value); setNotificationOpen(false); } else navigate("/profile"); }} aria-label={canOpenAccountMenu ? "فتح قائمة الحسابات" : "فتح الملف الشخصي"} aria-expanded={canOpenAccountMenu ? accountOpen : undefined}>
             <UserAvatar name={user?.name} />
             <div><h4>{user?.name}</h4><span>{user?.role}</span></div>
             <IoChevronDown />
           </button>
+          {accountOpen && <section className="account-switcher-popover" dir="rtl">
+            <header><div><span>الحساب الحالي</span><strong>{user?.name}</strong><small>{user?.email}</small></div><HiOutlineSwitchHorizontal /></header>
+            <div className="account-switcher-list">
+              {accountsLoading ? <p className="account-list-state">جاري تحميل الحسابات...</p> : accounts.map((account) => <button type="button" key={account.id} className={account.current ? "is-active" : ""} onClick={() => changeAccount(account)} disabled={account.current || !account.approved || switchingId === String(account.id)}><UserAvatar name={account.name} /><span><strong>{account.name}</strong><small>{account.email}</small><em>{account.role}</em>{!account.approved && <i>بانتظار الموافقة</i>}</span>{account.current && <HiOutlineCheck />}</button>)}
+            </div>
+            <footer className={canAddAccount ? "" : "single-action"}><button type="button" onClick={() => { setAccountOpen(false); navigate("/profile"); }}><HiOutlineUserCircle /> الملف الشخصي</button>{canAddAccount && <button type="button" className="account-add-btn" onClick={() => { setAccountOpen(false); setAddAccountOpen(true); }}><HiOutlinePlus /> إضافة حساب</button>}</footer>
+          </section>}
         </div>
       </div>
-    </header></>
+    </header>{addAccountOpen && <AddAccountModal currentUser={user} onClose={() => setAddAccountOpen(false)} onCreated={(account) => setAccounts((current) => [...current, account])} />}</>
   );
 }
 

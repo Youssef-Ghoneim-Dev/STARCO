@@ -3,6 +3,8 @@ const approval = require("../controllers/users/approval.controller.js")
 const profile = require("../controllers/users/profile.controller")
 const manger = require("../controllers/users/manager.controller")
 const auth = require("../controllers/users/auth.controller")
+const linkedAccounts = require("../controllers/users/linkedAccounts.controller")
+const dashboardNotes = require("../controllers/users/dashboardNotes.controller")
 const uservalidatetion = require("../validatetion/users")
 const profileValidation = require("../validatetion/profile")
 const loginvalidatetion = require("../validatetion/login")
@@ -30,6 +32,14 @@ usersrouter.get("/profile", authMw, profile.getProfile);
 usersrouter.put("/profile", authMw, profileValidation, profile.UpdateProfile);
 usersrouter.patch("/profile/theme", authMw, profile.UpdateTheme);
 usersrouter.delete("/profile", authMw, profile.DeleteProfile);
+
+usersrouter.get("/linked-accounts", authMw, CheckuserToken, linkedAccounts.listLinkedAccounts);
+usersrouter.post("/linked-accounts", authMw, CheckuserToken, linkedAccounts.createLinkedAccount);
+usersrouter.post("/linked-accounts/:id/switch", authMw, CheckuserToken, linkedAccounts.switchLinkedAccount);
+
+usersrouter.get("/dashboard-notes", authMw, CheckuserToken, dashboardNotes.listNotes);
+usersrouter.post("/dashboard-notes", authMw, CheckuserToken, dashboardNotes.addNote);
+usersrouter.delete("/dashboard-notes/:noteId", authMw, CheckuserToken, dashboardNotes.deleteNote);
 
 
 usersrouter.get("/approval", authMw, CheckuserToken, approval.getPendingUsers);

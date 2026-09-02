@@ -35,7 +35,7 @@ const whatsappActivationUrl = () => {
 };
 
 const issueSession = (res, user) => {
-    const token = jwt.sign({ id: user._id, name: user.name, email: user.email, role: user.role }, process.env.TOKEN_KEY);
+    const token = jwt.sign({ id: user._id }, process.env.TOKEN_KEY);
     res.header("Access-Control-Expose-Headers", "*");
     res.header("x-auth-token", token);
     const account = {

@@ -834,6 +834,9 @@
 .account-switcher-list small { color: #6c7f8a; font-size: 11px; }
 .account-switcher-list em { width: fit-content; margin-top: 3px; padding: 2px 7px; border-radius: 999px; color: #376b86; background: #e3f0f6; font-size: 9px; font-style: normal; font-weight: 800; }
 .account-switcher-list > button > svg { color: #219b64; font-size: 19px; }
+.account-list-state { margin: 0; padding: 24px 12px; color: var(--text-light); text-align: center; font-size: 12px; }
+.account-switcher-list > button:disabled { opacity: .72; cursor: not-allowed; }
+.account-switcher-list > button span > i { width: fit-content; margin-top: 3px; color: #a46d19; font-size: 9px; font-style: normal; }
 .account-switcher-popover > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 11px; border-top: 1px solid #e8eff3; background: #f9fbfc; }
 .account-switcher-popover > footer.single-action { grid-template-columns: 1fr; }
 .account-switcher-popover > footer button { display: flex; min-height: 43px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d7e3e9; border-radius: 11px; color: #315f77; background: var(--surface); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
@@ -850,6 +853,10 @@
 .account-modal form label { display: grid; gap: 7px; color: #274c60; font-size: 13px; font-weight: 800; }
 .account-modal form input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid #cedce4; border-radius: 12px; outline: 0; color: #152f40; background: #fbfdfe; font: inherit; box-sizing: border-box; direction: ltr; text-align: left; }
 .account-modal form input:focus { border-color: #3d7b98; box-shadow: 0 0 0 4px rgba(61, 123, 152, .1); }
+.account-modal form .app-select { width: 100%; }
+.account-modal form .app-select-trigger { width: 100%; min-height: 48px; border-radius: 12px; }
+.account-approval-note { margin: 0; border-radius: 11px; padding: 11px 12px; color: #187348; background: #edf9f2; font-size: 11px; line-height: 1.6; }
+.account-approval-note.is-pending { color: #87590e; background: #fff6df; }
 .account-modal form > button { min-height: 49px; margin-top: 3px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, #326d89, #245873); font: inherit; font-weight: 900; cursor: pointer; }
 .account-modal button:disabled { opacity: .6; cursor: wait; }
 .account-modal-google { display: grid; gap: 10px; padding: 7px 24px 24px; text-align: center; }
