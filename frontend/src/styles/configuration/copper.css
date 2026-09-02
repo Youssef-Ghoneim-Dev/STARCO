@@ -55,7 +55,7 @@
     display: grid;
     gap: 7px;
     min-width: 0;
-    color: #10233f;
+    color: var(--text);
     font-size: 14px;
     font-weight: 800;
 }
@@ -70,7 +70,7 @@
     padding: 0 12px;
     overflow-x: auto;
     background: var(--surface);
-    color: #21344c;
+    color: var(--text);
     font-weight: 700;
     direction: ltr;
     text-align: left;
@@ -84,12 +84,12 @@
     border-radius: 12px;
     padding: 14px;
     background: var(--surface-muted);
-    color: #10233f;
+    color: var(--text);
     direction: rtl;
 }
 
 .copper-formula-help>strong {
-    color: var(--primary);
+    color: var(--text);
     font-size: 15px;
 }
 
@@ -112,15 +112,15 @@
     justify-self: start;
     border-radius: 7px;
     padding: 4px 7px;
-    background: #e8f2f7;
-    color: #245b76;
+    background: var(--surface-soft);
+    color: var(--text);
     font-size: 12px;
     font-weight: 800;
 }
 
 .copper-formula-variables span,
 .copper-formula-help small {
-    color: #68778a;
+    color: var(--text-light);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.65;
@@ -144,7 +144,7 @@
 }
 
 .copper-bar-count-heading strong {
-    color: var(--primary);
+    color: var(--text);
     font-size: 16px;
 }
 
@@ -178,7 +178,7 @@
     border: 1px solid #cbdde7;
     border-radius: 999px;
     padding: 2px 8px;
-    color: var(--primary);
+    color: var(--text);
     background: var(--surface-soft);
     font-size: 13px;
 }
@@ -190,7 +190,7 @@
     height: 22px;
     border: 0;
     padding: 0;
-    color: #b42318;
+    color: var(--danger);
     background: transparent;
     cursor: pointer;
 }
@@ -334,4 +334,3 @@
     justify-items: start;
     gap: 10px;
 }
-

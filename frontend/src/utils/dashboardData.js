@@ -79,7 +79,9 @@ export const daysLate = (panel, now = new Date()) => {
   if (!due || panel?.status === "completed" || due >= now) return 0;
   return Math.max(1, Math.ceil((now - due) / DAY));
 };
-export const isDelayed = (panel, now = new Date()) => daysLate(panel, now) > 0 || (panel?.manufacturing?.productionStages || []).some((stage) => stage.delayReason || stage.delayedAt);
+// A recorded delay reason documents an incident; it does not make a panel late.
+// A panel is late only while its approved delivery deadline has actually passed.
+export const isDelayed = (panel, now = new Date()) => daysLate(panel, now) > 0;
 
 export const currentAction = (panel, role) => {
   const status = panel?.status;

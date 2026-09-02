@@ -24,7 +24,7 @@
     --secondary: #F3F8FB;
     --acade: #a1cada;
     --success: #55D68A;
-    --danger: #FF8585;
+    --danger: #E67880;
     --background: #172A35;
     --surface: #203A48;
     --surface-muted: #294856;
@@ -259,6 +259,99 @@ html[data-theme="dark"] .mobile-bottom-nav a.active {
 html[data-theme="dark"] .owner-kpi-strip svg {
     color: var(--acade);
     background: transparent !important;
+}
+
+/* Owner Manager: the brand primary is designed for light surfaces. Keep it
+   unchanged globally and provide high-contrast controls only in dark mode. */
+html[data-theme="dark"] .owner-dashboard :where(.dashboard-date-tools>button, .dashboard-date-input, .dashboard-date-input input, .dashboard-period-select .app-select-trigger, .dashboard-period-select .app-select-chevron) {
+    color: #fff;
+}
+
+html[data-theme="dark"] :where(.engineer-date-tools, .marketing-date-tools, .marketer-date-tools, .production-date-tools) :where(button, label, input, .app-select-trigger, .app-select-chevron, svg) {
+    color: #fff;
+}
+
+html[data-theme="dark"] .owner-dashboard :where(.owner-card-link, .performance-report-button, .owner-table-card>h2 svg) {
+    color: var(--acade) !important;
+}
+
+html[data-theme="dark"] .owner-dashboard .owner-card-link {
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .owner-dashboard .owner-card-link:hover {
+    color: var(--primary) !important;
+    border-color: #d8e8ef;
+    background: #f7fbfd;
+}
+
+html[data-theme="dark"] .owner-dashboard .production-average {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .owner-dashboard .production-average span {
+    color: var(--text-light) !important;
+}
+
+html[data-theme="dark"] .owner-dashboard .performance-icon {
+    color: var(--performance-color);
+    background: color-mix(in srgb, var(--performance-color) 17%, var(--surface));
+}
+
+html[data-theme="dark"] .app-select-menu button:hover,
+html[data-theme="dark"] .app-select-menu button.is-selected {
+    color: #fff;
+    background: #416f84;
+}
+
+html[data-theme="dark"] .app-select-chevron {
+    color: #fff;
+}
+
+html[data-theme="dark"] .route-loading {
+    color: var(--text);
+    background: color-mix(in srgb, var(--background) 92%, transparent);
+}
+
+html[data-theme="dark"] .route-loading .spinner {
+    border-color: var(--border);
+    border-top-color: var(--acade);
+}
+
+html[data-theme="dark"] .sidebar-link:hover {
+    color: #fff;
+    background: var(--surface-soft);
+}
+
+/* Configuration uses the same primary actions as the light theme, but on the
+   navy surface they need a lighter action tone and neutral readable labels. */
+html[data-theme="dark"] .configuration-page :where(.configuration-heading h1, .pricing-form h2, .configuration-subheading h2, .part-settings legend, .panel-type-settings>summary, .additional-part-card strong, .additional-part-chip, .copper-catalog-settings>summary) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .configuration-page :where(.template-form button, .pricing-form>button, .drive-connection-card button, .copper-bar-count-add button, .additional-part-add-grid>button) {
+    color: #fff;
+    background: #477e98;
+}
+
+html[data-theme="dark"] .configuration-page :where(.configuration-secondary, .additional-part-chip, .copper-bar-count-chips>span) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .configuration-page :where(.configuration-delete, .additional-part-card>button, .additional-part-chip button, .copper-bar-count-chips button) {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+
+html[data-theme="dark"] .configuration-page :where(.copper-quick-settings, .additional-part-card, .additional-part-add-grid) {
+    border-color: var(--border);
+    background: var(--surface-muted) !important;
 }
 
 html[data-theme="dark"] :where(.auth-tabs, .auth-container) {

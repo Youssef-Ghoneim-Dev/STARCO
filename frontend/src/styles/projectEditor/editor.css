@@ -1681,6 +1681,13 @@
     background: var(--surface);
 }
 
+.app-select-menu.app-select-menu-portal {
+    position: fixed;
+    inset: auto;
+    z-index: 5000;
+    overflow-y: auto;
+}
+
 .app-select-menu button {
     display: block;
     width: 100%;
@@ -1769,4 +1776,3 @@
         padding: 16px;
     }
 }
-

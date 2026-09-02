@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { getDashboardStatistics } from "../../services/dashboardAPI";
 import StyledSelect from "../common/StyledSelect";
 import DashboardName from "./DashboardName";
 import DashboardDonut from "./DashboardDonut";
 import DashboardAverage from "./DashboardAverage";
-import { daysLate, formatAverage, isDelayed, itemName, realDelayReasons, statusMeta as panelStatusMeta, workflowAverages } from "../../utils/dashboardData";
+import { daysLate, deliveryDate, formatAverage, isDelayed, itemName, realDelayReasons, statusMeta as panelStatusMeta, workflowAverages } from "../../utils/dashboardData";
 import {
   HiOutlineCalendar,
   HiOutlineChartBar,
@@ -18,6 +19,7 @@ import {
   HiOutlineRefresh,
   HiOutlineUserGroup,
   HiOutlineUsers,
+  HiOutlineX,
 } from "react-icons/hi";
 
 const statusMeta = [
@@ -111,20 +113,50 @@ function ProductionOverview({ stages, averages }) {
   </section>;
 }
 
-function PerformanceCard({ data }) {
+function PerformanceCard({ data, onReport }) {
   return <article className={`performance-card ${data.tone}`}>
     <div className="performance-heading"><div className="performance-icon"><HiOutlineChartBar /></div><div><h3>{data.title}</h3><strong>{data.value}</strong><span>{data.unit}</span></div></div>
     <div className="performance-values">{data.items.map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
-    <Link to={data.to || "/projects"}>عرض التقرير <HiOutlineExternalLink /></Link>
+    <button type="button" className="performance-report-button" onClick={() => onReport(data)}>عرض التقرير <HiOutlineExternalLink /></button>
   </article>;
 }
 
-function DataTable({ title, icon, columns, rows, linkLabel = "عرض الكل", to = "/projects" }) {
+function DataTable({ title, icon, columns, rows, linkLabel = "عرض الكل", to = "/projects", onAction }) {
   return <section className="owner-dashboard-card owner-table-card">
     <h2>{icon}{title}</h2>
     <div className="owner-table-scroll"><table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${title}-${index}`}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>
-    <Link className="owner-card-link" to={to}>{linkLabel} <HiOutlineExternalLink /></Link>
+    {onAction ? <button type="button" className="owner-card-link" onClick={onAction}>{linkLabel} <HiOutlineExternalLink /></button> : <Link className="owner-card-link" to={to}>{linkLabel} <HiOutlineExternalLink /></Link>}
   </section>;
+}
+
+function OwnerDashboardModal({ title, subtitle, onClose, children }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const closeWithEscape = (event) => { if (event.key === "Escape") onClose(); };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeWithEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [onClose]);
+
+  return createPortal(<div className="owner-report-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="owner-report-modal" role="dialog" aria-modal="true" aria-labelledby="owner-report-title" dir="rtl">
+      <header><div><span>تقرير تفصيلي</span><h2 id="owner-report-title">{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button type="button" onClick={onClose} aria-label="إغلاق التقرير"><HiOutlineX /></button></header>
+      <div className="owner-report-body">{children}</div>
+    </section>
+  </div>, document.body);
+}
+
+function PerformanceReport({ data, selectedLabel, onClose }) {
+  const maximum = Math.max(1, ...data.items.map(([, value]) => Number(value) || 0));
+  const itemTotal = data.items.reduce((total, [, value]) => total + (Number(value) || 0), 0);
+  return <OwnerDashboardModal title={data.title} subtitle={`ملخص الأداء المسجل خلال ${selectedLabel}`} onClose={onClose}>
+    <div className={`owner-report-hero ${data.tone}`}><div><HiOutlineChartBar /></div><span>إجمالي الفريق<strong>{data.value}</strong><small>{data.unit}</small></span><span>إجمالي النشاط<strong>{itemTotal}</strong><small>عملية مسجلة</small></span></div>
+    <div className="owner-report-bars">{data.items.map(([label, value]) => <div key={label}><div><span>{label}</span><strong>{value}</strong></div><i><b style={{ width: `${Math.max(Number(value) ? 8 : 0, ((Number(value) || 0) / maximum) * 100)}%` }} /></i></div>)}</div>
+    <p className="owner-report-note">الأرقام مبنية على الحالة الحالية وسجل العمليات في التاريخ المحدد، ويمكن مقارنة البنود بصريًا من أطوال المؤشرات.</p>
+  </OwnerDashboardModal>;
 }
 
 function OwnerManagerDashboard({ name, projects, panels = [], users = [], clientsCount, loading, onRefresh }) {
@@ -134,6 +166,8 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
   minDashboardDate.setDate(minDashboardDate.getDate() - 29);
   const [selectedDateValue, setSelectedDateValue] = useState(dateInputValue(today));
   const [storedStatistics, setStoredStatistics] = useState(null);
+  const [activeReport, setActiveReport] = useState(null);
+  const [showDelayedPanels, setShowDelayedPanels] = useState(false);
   const selectedDate = useMemo(() => {
     const [year, month, day] = selectedDateValue.split("-").map(Number);
     return new Date(year, month - 1, day);
@@ -197,7 +231,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
     return [index + 1, <DashboardName key={project._id}>{project.client?.name || "عميل غير محدد"}</DashboardName>, engineerIds.map((id) => userMap.get(id)).filter(Boolean).join("، ") || "غير مسند", formatDate(projectDate(project))];
   }) : [["—", "لا توجد مشاريع بعد", "—", "—"]];
   const delayedPanels = panels.filter((panel) => isDelayed(panel, today)).sort((a, b) => daysLate(b, today) - daysLate(a, today));
-  const delayedRows = delayedPanels.slice(0, 5).map((panel, index) => [index + 1, <DashboardName key={panel._id}>{itemName(panel)}</DashboardName>, panelStatusMeta(panel).label, <span className="delay-value" key={panel._id}>{daysLate(panel, today) ? `${daysLate(panel, today)} يوم` : "سبب مسجل"}</span>]);
+  const delayedRows = delayedPanels.slice(0, 5).map((panel, index) => [index + 1, <DashboardName key={panel._id}>{itemName(panel)}</DashboardName>, panelStatusMeta(panel).label, <span className="delay-value" key={panel._id}>{daysLate(panel, today)} يوم</span>]);
   const engineers = users.filter((person) => person.role === "Engineer");
   const marketers = users.filter((person) => person.role === "Marketer");
   const engineerRows = engineers.map((person, index) => {
@@ -219,7 +253,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
     { title: "أداء المندوبين", value: marketers.length, unit: "مندوبين", tone: "blue", to: "/projects", items: [["تأكيد تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.confirmedAt, selectedDate)).length], ["أمر تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.requestedAt, selectedDate)).length], ["مشروع جديد", createdForDate]] },
   ];
 
-  return <div className="owner-dashboard" dir="rtl">
+  return <><div className="owner-dashboard" dir="rtl">
     <header className="owner-dashboard-header"><div><h1>لوحة التحكم - Owner Manager</h1><p>مرحبًا {name || "بك"}، إليك نظرة شاملة على أداء الشركة في التاريخ المحدد.</p></div><div className="dashboard-date-tools"><button type="button" onClick={refreshAll} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث"}</button><label className="dashboard-date-input" onClick={openDatePicker}><HiOutlineCalendar aria-hidden="true" /><input ref={dateInputRef} aria-label="اختيار تاريخ الإحصائيات" type="date" inputMode="none" value={selectedDateValue} min={dateInputValue(minDashboardDate)} max={dateInputValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onDrop={(event) => event.preventDefault()} onChange={(event) => setSelectedDateValue(event.target.value)} /></label><div className="dashboard-period-select"><StyledSelect value={datePreset} onChange={changeDatePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(datePreset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
     <section className="owner-metrics-grid">
       <MetricCard tone="blue" icon={<HiOutlineFolder />} title={`إجمالي المشاريع حتى ${selectedLabel}`} value={loading ? "—" : metricValue("totalProjects", projectsForSelectedDate.length)} note={loading ? "جاري التحميل" : comparisonNote(metricValue("totalProjects", projectsForSelectedDate.length), previousMetricValue("totalProjects", projectsForPreviousDate.length))} />
@@ -233,19 +267,24 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
       <ProductionOverview stages={stages} averages={averages} />
       <StatusOverview counts={displayedStatusCounts} total={projectsForSelectedDate.length} />
       <WeeklyChart projects={projects} endDate={selectedDate} statistics={storedStatistics?.history} />
-      <PerformanceCard data={performanceCards[0]} />
-      <PerformanceCard data={performanceCards[1]} />
-      <PerformanceCard data={performanceCards[2]} />
-      <PerformanceCard data={performanceCards[3]} />
+      <PerformanceCard data={performanceCards[0]} onReport={setActiveReport} />
+      <PerformanceCard data={performanceCards[1]} onReport={setActiveReport} />
+      <PerformanceCard data={performanceCards[2]} onReport={setActiveReport} />
+      <PerformanceCard data={performanceCards[3]} onReport={setActiveReport} />
     </section>
     <section className="owner-tables-grid">
       <DataTable title="آخر المشاريع المضافة" icon={<HiOutlineFolder />} columns={["#", "اسم المشروع", "المهندس", "تاريخ الإنشاء"]} rows={latestRows} linkLabel="عرض جميع المشاريع" />
-      <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" to="/panels?view=delayed&delayed=true" />
+      <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" onAction={() => setShowDelayedPanels(true)} />
       <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" to="/users" />
       <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" to="/users" />
     </section>
     <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر سبب تأخير</span><strong>{delayReasons[0]?.[0] || "لا يوجد"}</strong></div><div><HiOutlineCalendar /><span>متوسط تجهيز PDF التنفيذ</span><DashboardAverage result={averages.executionPdf} /></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><DashboardAverage result={averages.quote} /></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
-  </div>;
+  </div>
+  {activeReport && <PerformanceReport data={activeReport} selectedLabel={selectedLabel} onClose={() => setActiveReport(null)} />}
+  {showDelayedPanels && <OwnerDashboardModal title="اللوحات المتأخرة فعليًا" subtitle="لوحات غير مكتملة تجاوزت موعد التسليم المعتمد" onClose={() => setShowDelayedPanels(false)}>
+    <div className="owner-delayed-modal-list">{delayedPanels.length ? delayedPanels.map((panel) => <article key={panel._id}><div><DashboardName>{itemName(panel)}</DashboardName><span>{panelStatusMeta(panel).label}</span></div><div><small>موعد التسليم</small><strong>{deliveryDate(panel)?.toLocaleDateString("ar-EG") || "غير محدد"}</strong></div><b>{daysLate(panel, today)} يوم</b></article>) : <p className="owner-report-empty">لا توجد لوحات متأخرة عن موعد التسليم حاليًا.</p>}</div>
+  </OwnerDashboardModal>}
+  </>;
 }
 
 export default OwnerManagerDashboard;

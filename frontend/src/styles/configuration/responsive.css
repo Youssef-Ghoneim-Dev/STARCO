@@ -1,4 +1,11 @@
 @media (max-width: 1050px) {
+    .configuration-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .part-settings {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .configured-part {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -36,6 +36,11 @@ export default function Panels() {
   const view = searchParams.get("view") || "";
   const requestedStatuses = useMemo(() => new Set((searchParams.get("statuses") || "").split(",").filter(Boolean)), [searchParams]);
   const requestedDate = searchParams.get("date");
+  const requestedDateEnd = useMemo(() => {
+    if (!requestedDate) return null;
+    const [year, month, day] = requestedDate.split("-").map(Number);
+    return new Date(year, month - 1, day, 23, 59, 59, 999);
+  }, [requestedDate]);
   const sameDate = (value) => {
     if (!requestedDate || !value) return !requestedDate;
     const date = new Date(value);
@@ -46,11 +51,9 @@ export default function Panels() {
   const matchesDashboardView = (panel) => {
     if (requestedStatuses.size && !requestedStatuses.has(panel.status)) return false;
     if (searchParams.get("delayed") === "true") {
-      const delayedOnRequestedDate = (panel.manufacturing?.productionStages || []).some((stage) => sameDate(stage.delayedAt))
-        || (panel.manufacturing?.productionHistory || []).some((entry) => entry.action === "delayed" && sameDate(entry.createdAt));
-      if (requestedDate ? !delayedOnRequestedDate : !isDelayed(panel)) return false;
+      if (!isDelayed(panel, requestedDateEnd || new Date())) return false;
     }
-    if (searchParams.get("production") === "true" && !["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(panel.status)) return false;
+    if (searchParams.get("production") === "true" && !["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"].includes(panel.status)) return false;
     if (view === "engineerTasks" && !currentAction(panel, "Engineer")) return false;
     if (view === "productionTasks" && !currentAction(panel, "ProductionManager")) return false;
     if (requestedDate) {
@@ -73,7 +76,7 @@ export default function Panels() {
     engineerTasks: ["المهام التي تنتظر إجراءك", "اللوحات التي تحتاج إجراءً هندسيًا منك الآن."],
     requests: ["طلبات التاريخ المحدد", "كل الطلبات المسجلة في التاريخ الذي اخترته من لوحة التحكم."],
     production: ["تفاصيل مراحل الإنتاج", "كل اللوحات التي دخلت دورة الإنتاج الفعلية."],
-    delayed: ["اللوحات المتأخرة", "اللوحات التي تجاوزت موعدها أو سُجل لها سبب تأخير."],
+    delayed: ["اللوحات المتأخرة", "اللوحات غير المكتملة التي تجاوزت موعد التسليم المعتمد فعليًا."],
     readyFiles: ["ملفات جاهزة للإنتاج", "اللوحات التي أصبحت ملفات تصنيعها جاهزة ولم تبدأ الإنتاج بعد."],
     executionOrders: ["أوامر التنفيذ", "أوامر التنفيذ المطابقة للفترة والحالة المختارتين."],
     executionPdfs: ["ملفات PDF التنفيذ", "اللوحات الموجودة في مرحلة PDF التنفيذ."],

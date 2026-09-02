@@ -172,12 +172,15 @@
 }
 
 .additional-part-card>button {
+    display: grid;
+    place-items: center;
     width: 26px;
     height: 26px;
     border: 0;
     border-radius: 50%;
-    color: #b42318;
-    background: #fee4e2;
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    line-height: 1;
     cursor: pointer;
     font-size: 18px;
 }
@@ -281,4 +284,3 @@
 .type-delete {
     justify-self: start;
 }
-
