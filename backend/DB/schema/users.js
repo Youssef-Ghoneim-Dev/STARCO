@@ -4,10 +4,7 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phoneNumber: {
-        type: String,
-        unique: true,
-        sparse: true,
-        default: null
+        type: String
     },
     password: { type: String, required: false, default: null },
     // Password accounts do not have a Google id. The partial index below keeps

@@ -238,6 +238,29 @@ html[data-theme="dark"] .account-modal form input {
     background: var(--surface-muted);
 }
 
+html[data-theme="dark"] .account-modal .account-approval-note {
+    color: #8ee0b4 !important;
+    background: rgba(45, 170, 105, .14);
+}
+
+html[data-theme="dark"] .account-modal .account-approval-note.is-pending {
+    color: #f1cf83 !important;
+    background: rgba(221, 161, 46, .14);
+}
+
+html[data-theme="dark"] .mobile-bottom-nav a {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .mobile-bottom-nav a.active {
+    color: var(--acade);
+}
+
+html[data-theme="dark"] .owner-kpi-strip svg {
+    color: var(--acade);
+    background: transparent !important;
+}
+
 html[data-theme="dark"] :where(.auth-tabs, .auth-container) {
     background-color: var(--surface-muted);
 }

@@ -419,12 +419,13 @@
 
     .account-modal-backdrop {
         padding: 10px;
-        align-items: end;
+        align-items: center;
     }
 
     .account-modal {
         max-height: calc(100dvh - 20px);
-        border-radius: 23px 23px 15px 15px;
+        border-radius: 23px;
+        overscroll-behavior: contain;
     }
 
     .account-modal>header,
@@ -514,6 +515,7 @@
     .mobile-bottom-nav a.active {
 
         color: var(--primary);
+        font-weight: 900;
 
     }
 

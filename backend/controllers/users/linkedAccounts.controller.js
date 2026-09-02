@@ -72,7 +72,6 @@ const createLinkedAccount = async (req, res, next) => {
             name,
             email,
             password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)),
-            phoneNumber: null,
             authProvider: "password",
             role,
             approved: !requiresApproval,
