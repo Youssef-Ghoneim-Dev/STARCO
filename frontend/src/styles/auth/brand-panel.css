@@ -18,7 +18,7 @@
     height: 100%;
     overflow: hidden;
     color: #fff;
-    background: #07182f url("../assets/images/login-bg-clean.png") center / cover no-repeat;
+    background: #07182f url("../../assets/images/login-bg-clean.png") center / cover no-repeat;
 }
 
 .auth-visual::before {
