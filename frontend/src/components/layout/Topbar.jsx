@@ -12,7 +12,7 @@ import AddAccountModal from "../auth/AddAccountModal";
 import { getLinkedAccounts, switchLinkedAccount } from "../../services/linkedAccountsAPI";
 
 function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
-  const { user } = useAuth();
+  const { user, reloadProfile } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, pushState, enablePush, readOne, readAll } = useNotifications();
@@ -26,6 +26,7 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const accountShellRef = useRef(null);
   const canAddAccount = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
   const canOpenAccountMenu = canAddAccount || accounts.length > 1;
+  const quickSwitchAccount = accounts.find((account) => !account.current && account.approved);
 
   useEffect(() => {
     const close = (event) => {
@@ -55,7 +56,11 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
       const token = response.headers["x-auth-token"] || response.data?.token;
       if (!token) throw new Error("Missing session token");
       localStorage.setItem("token", token);
-      window.location.assign("/dashboard");
+      await reloadProfile();
+      setAccountOpen(false);
+      setSwitchingId("");
+      navigate("/dashboard", { replace: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
     } catch (error) {
       toast.error(error.response?.data?.message || "تعذر فتح الحساب.");
       setSwitchingId("");
@@ -132,7 +137,7 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
             <IoChevronDown />
           </button>
           {accountOpen && <section className="account-switcher-popover" dir="rtl">
-            <header><div><span>الحساب الحالي</span><strong>{user?.name}</strong><small>{user?.email}</small></div><HiOutlineSwitchHorizontal /></header>
+            <header><div><span>الحساب الحالي</span><strong>{user?.name}</strong><small>{user?.email}</small></div>{quickSwitchAccount ? <button type="button" className="account-quick-switch" aria-label={`التبديل إلى حساب ${quickSwitchAccount.name}`} title={`التبديل إلى ${quickSwitchAccount.name}`} disabled={Boolean(switchingId)} onClick={() => changeAccount(quickSwitchAccount)}><HiOutlineSwitchHorizontal /></button> : <HiOutlineSwitchHorizontal />}</header>
             <div className="account-switcher-list">
               {accountsLoading ? <p className="account-list-state">جاري تحميل الحسابات...</p> : accounts.map((account) => <button type="button" key={account.id} className={account.current ? "is-active" : ""} onClick={() => changeAccount(account)} disabled={account.current || !account.approved || switchingId === String(account.id)}><UserAvatar name={account.name} /><span><strong>{account.name}</strong><small>{account.email}</small><em>{account.role}</em>{!account.approved && <i>بانتظار الموافقة</i>}</span>{account.current && <HiOutlineCheck />}</button>)}
             </div>

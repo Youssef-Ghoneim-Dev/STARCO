@@ -195,6 +195,8 @@ html[data-theme="dark"] :where(.notification-item:hover, .account-switcher-list 
 html[data-theme="dark"] .account-switcher-popover > footer { border-color: var(--border); background: var(--surface-muted); }
 html[data-theme="dark"] .account-switcher-list :where(strong, small) { color: var(--text) !important; }
 html[data-theme="dark"] .account-switcher-list em { color: var(--text); background: var(--surface-soft); }
+html[data-theme="dark"] .account-switcher-list > button.is-active { color: var(--text); border-color: var(--border); background: var(--surface-soft); opacity: 1; }
+html[data-theme="dark"] .account-switcher-popover > footer button:not(.account-add-btn) { color: var(--text); border-color: var(--border); background: var(--surface); }
 html[data-theme="dark"] .account-modal > header { border-color: var(--border); background: var(--surface-muted); }
 html[data-theme="dark"] .account-modal :where(h2, p, label) { color: var(--text) !important; }
 html[data-theme="dark"] .account-modal > header button { color: var(--text); background: var(--surface-soft); }
@@ -204,6 +206,55 @@ html[data-theme="dark"] .auth-card { background: var(--surface); }
 html[data-theme="dark"] .auth-tabs a { color: var(--text-light); }
 html[data-theme="dark"] .auth-tabs a.active-tab { color: #fff; }
 html[data-theme="dark"] :where(.auth-btn, .google-login-visual) { color: #fff !important; }
+
+/* Production Manager: replace fixed light surfaces while preserving the
+   deliberately colored stage tiles. */
+html[data-theme="dark"] .production-manager-dashboard :where(.production-card-link, .production-delay-reasons .production-empty-reasons) {
+    color: #d9edf6 !important;
+    border-color: var(--border);
+    background: var(--surface-muted) !important;
+}
+html[data-theme="dark"] .production-manager-dashboard .production-manager-metric span,
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div span,
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div em,
+html[data-theme="dark"] .production-manager-dashboard .production-manager-kpis span {
+    color: var(--text-light);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-manager-card th {
+    color: var(--text) !important;
+    border-color: var(--border);
+    background: var(--surface-soft);
+}
+html[data-theme="dark"] .production-manager-dashboard :where(.production-table-scroll, .production-manager-card td, .production-alerts > p, .production-waiting > a, .production-manager-kpis > div) {
+    border-color: var(--border);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-clickable-row:hover,
+html[data-theme="dark"] .production-manager-dashboard .production-clickable-row:focus-visible {
+    background: var(--surface-soft);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-delayed-list > div a {
+    border-color: rgba(222, 83, 96, .34);
+    background: rgba(222, 83, 96, .08);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div > i {
+    background: var(--surface-soft);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-waiting > a > i {
+    background: rgba(221, 161, 46, .13);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-pdf-today > div > svg {
+    background: rgba(130, 94, 208, .15);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-manager-kpis svg {
+    background: var(--surface-soft);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-current-stages article {
+    border-color: color-mix(in srgb, var(--stage-color) 30%, white);
+    background: color-mix(in srgb, var(--stage-color) 10%, white);
+}
+html[data-theme="dark"] .production-manager-dashboard .production-current-stages article :where(span, strong, small) {
+    color: #17212b !important;
+}
 html[data-theme="dark"] .theme-toggle-btn { color: #F4C95D; background: rgba(244, 201, 93, .1); }
 html[data-theme="dark"] .logout-btn { color: #FF9A9A; }
 html[data-theme="dark"] .logout-btn:hover { color: #FFD0D0; background: rgba(255, 154, 154, .1); }

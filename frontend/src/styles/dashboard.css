@@ -823,6 +823,9 @@
 .account-switcher-popover > header strong { font-size: 17px; }
 .account-switcher-popover > header small { color: #d8edf5; font-size: 12px; }
 .account-switcher-popover > header > svg { flex: 0 0 auto; font-size: 27px; }
+.account-quick-switch { display: grid; flex: 0 0 auto; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 13px; color: #fff; background: rgba(255,255,255,.1); font: inherit; font-size: 27px; cursor: pointer; transition: background-color .18s ease, transform .18s ease; }
+.account-quick-switch:hover { background: rgba(255,255,255,.2); transform: translateX(-2px); }
+.account-quick-switch:disabled { cursor: wait; opacity: .65; }
 .account-switcher-list { max-height: 285px; overflow-y: auto; padding: 10px; }
 .account-switcher-list > button { display: grid; width: 100%; grid-template-columns: 42px minmax(0, 1fr) 22px; align-items: center; gap: 10px; padding: 10px; border: 1px solid transparent; border-radius: 14px; color: #17374a; background: transparent; text-align: right; font: inherit; cursor: pointer; }
 .account-switcher-list > button:hover { background: #f2f8fb; }
