@@ -1,0 +1,1772 @@
+.project-editor-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.project-editor-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, .06);
+    direction: rtl;
+
+}
+
+.project-info-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.whatsapp-project-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-muted);
+}
+
+.whatsapp-project-tabs button {
+    border: 0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    background: transparent;
+    color: var(--text-light);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.whatsapp-project-tabs button.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(53, 95, 122, .22);
+}
+
+.whatsapp-project-data {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.whatsapp-data-heading,
+.whatsapp-copper-data,
+.whatsapp-media-accordions details {
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+}
+
+.whatsapp-data-heading h2,
+.whatsapp-copper-data h3 {
+    margin: 0;
+    color: var(--text);
+}
+
+.whatsapp-data-heading p {
+    margin: 8px 0 0;
+    color: var(--text-light);
+}
+
+.whatsapp-data-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.project-section-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    border: 1px solid #bdd3dc;
+    border-radius: 10px;
+    padding: 8px 13px;
+    color: var(--primary);
+    background: var(--surface-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.project-section-refresh:hover:not(:disabled) {
+    border-color: var(--primary);
+    background: #e8f3f6;
+}
+
+.project-section-refresh:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+.project-section-refresh svg {
+    flex: 0 0 auto;
+    font-size: 17px;
+}
+
+.project-section-refresh .is-spinning {
+    animation: project-refresh-spin .8s linear infinite;
+}
+
+@keyframes project-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.whatsapp-readonly-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.whatsapp-readonly-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.whatsapp-readonly-field input {
+    height: 50px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-muted);
+    color: var(--text-light);
+    font: inherit;
+}
+
+.whatsapp-copper-data {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.whatsapp-media-accordions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.whatsapp-media-accordions details {
+    padding: 0;
+    overflow: hidden;
+}
+
+.whatsapp-media-accordions summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 19px 22px;
+    cursor: pointer;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.whatsapp-media-accordions summary b {
+    display: grid;
+    place-items: center;
+    min-width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e8f1f7;
+    color: var(--primary);
+}
+
+.project-media-summary-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.project-media-summary-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    direction: ltr;
+}
+
+.project-media-refresh {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #c9dce4;
+    border-radius: 8px;
+    padding: 0;
+    color: var(--primary);
+    background: var(--surface-muted);
+    cursor: pointer;
+}
+
+.project-media-refresh:hover:not(:disabled) {
+    border-color: var(--primary);
+    background: #e8f3f6;
+}
+
+.project-media-refresh:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.project-media-refresh svg {
+    width: 16px;
+    height: 16px;
+}
+
+.project-media-refresh .is-spinning {
+    animation: project-refresh-spin .8s linear infinite;
+}
+
+.whatsapp-images-grid,
+.whatsapp-audio-list {
+    padding: 0 22px 22px;
+    display: grid;
+    gap: 14px;
+}
+
+.whatsapp-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.whatsapp-image-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #eef4f7;
+    cursor: zoom-in;
+}
+
+.whatsapp-image-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .2s ease;
+}
+
+.whatsapp-image-thumb:hover img {
+    transform: scale(1.05);
+}
+
+.starco-audio-player {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-muted);
+}
+
+.starco-audio-player button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.starco-audio-player span {
+    color: var(--text-light);
+    font-size: .9rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.starco-audio-player time {
+    color: var(--text-light);
+    font-size: .82rem;
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+}
+
+.starco-audio-progress {
+    flex: 1;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #d9e4eb;
+}
+
+.starco-audio-progress i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #4d86a5;
+}
+
+.whatsapp-media-loading,
+.whatsapp-media-error,
+.whatsapp-media-accordions p {
+    margin: 0;
+    color: var(--text-light);
+}
+
+.whatsapp-media-error {
+    color: #b42318;
+}
+
+.panel-type-confirmation {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #f3c883;
+    border-radius: 14px;
+    background: #fffbeb;
+    color: #754d00;
+}
+
+.panel-type-confirmation p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.panel-type-confirmation>div {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.panel-type-confirmation button {
+    min-height: 40px;
+    padding: 0 17px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(117, 77, 0, .1);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.panel-type-confirmation button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 14px rgba(117, 77, 0, .16);
+}
+
+.panel-type-confirmation .primary-button {
+    background: linear-gradient(135deg, #355f7a, #457e9c);
+    color: #fff;
+}
+
+.panel-type-confirmation .secondary-button {
+    border-color: #e4bd78;
+    background: #fffdf8;
+    color: #795617;
+}
+
+.project-gallery-backdrop {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 70px 90px;
+    background: rgba(9, 20, 29, .92);
+    direction: ltr;
+}
+
+.project-gallery-image-wrap {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.project-gallery-image-wrap.is-zoomed {
+    cursor: grab;
+}
+
+.project-gallery-image-wrap.is-zoomed:active {
+    cursor: grabbing;
+}
+
+.project-gallery-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform-origin: center;
+    transition: transform .12s ease;
+    user-select: none;
+    pointer-events: none;
+}
+
+.project-gallery-close,
+.project-gallery-nav,
+.project-gallery-tools button {
+    display: grid;
+    place-items: center;
+    border: 0;
+    color: #fff;
+    background: rgba(255, 255, 255, .16);
+    cursor: pointer;
+}
+
+.project-gallery-close {
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 26px;
+}
+
+.project-gallery-nav {
+    position: absolute;
+    top: 50%;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 30px;
+    transform: translateY(-50%);
+}
+
+.project-gallery-next {
+    right: 24px;
+}
+
+.project-gallery-previous {
+    left: 24px;
+}
+
+.project-gallery-tools {
+    position: absolute;
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 99px;
+    color: #fff;
+    background: rgba(0, 0, 0, .35);
+    direction: ltr;
+}
+
+.project-gallery-tools button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+}
+
+@media (max-width: 640px) {
+    .whatsapp-readonly-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .whatsapp-data-heading,
+    .whatsapp-copper-data {
+        padding: 18px;
+    }
+
+    .project-gallery-backdrop {
+        padding: 70px 18px;
+    }
+
+    .project-gallery-nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .project-gallery-next {
+        right: 10px;
+    }
+
+    .project-gallery-previous {
+        left: 10px;
+    }
+}
+
+.project-prices-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.price-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.price-field label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.price-field input {
+    height: 52px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 16px;
+    font-size: 15px;
+    outline: none;
+}
+
+.price-field input:focus {
+    border-color: var(--primary);
+}
+
+@media (max-width: 640px) {
+    .project-prices-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.project-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.project-field {
+    position: relative;
+}
+
+.project-field label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.project-field input,
+.project-field select {
+
+    height: 52px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+    padding: 0 16px;
+
+    font-size: 15px;
+    outline: none;
+
+}
+
+.project-field input:focus,
+.project-field select:focus {
+
+    border-color: var(--primary);
+
+}
+
+.profit-section {
+
+    margin-top: 24px;
+
+}
+
+.profit-section label {
+
+    display: block;
+
+    margin-bottom: 12px;
+
+    font-weight: 700;
+
+}
+
+.profit-grid {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+}
+
+.profit-btn {
+
+    min-width: 70px;
+
+    height: 42px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 10px;
+
+    background: var(--surface);
+
+    cursor: pointer;
+
+    transition: .2s;
+
+}
+
+.profit-btn:hover {
+
+    border-color: var(--primary);
+
+}
+
+.profit-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.client-suggestions {
+    position: static;
+    width: 100%;
+    margin-top: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+    max-height: 220px;
+    overflow: auto;
+}
+
+.suggestion-item {
+    display: block;
+    width: 100%;
+    text-align: right;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background: #f6f9ff;
+}
+
+.search-loading,
+.search-error {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.search-loading {
+    color: var(--text-light);
+}
+
+.search-error {
+    color: #b42318;
+}
+
+.client-match-card {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border: 1px solid #b8d5e6;
+    border-radius: 12px;
+    background: var(--surface-muted);
+    color: var(--text);
+}
+
+.client-match-card p {
+    margin: 0;
+    font-weight: 600;
+}
+
+.client-match-card div {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.client-match-card button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font: inherit;
+    cursor: pointer;
+    background: var(--primary);
+    color: #fff;
+}
+
+.client-match-card button:last-child {
+    background: var(--surface);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+}
+
+.marketing-client-search {
+    position: static;
+}
+
+.marketing-client-suggestions {
+    position: static;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.panels-tabs {
+
+    display: flex;
+
+    gap: 14px;
+
+    flex-wrap: wrap;
+
+}
+
+.part-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.panels-overview-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.panels-overview-heading h2,
+.panels-overview-heading p {
+    margin: 0;
+}
+
+.panels-overview-heading p {
+    margin-top: 5px;
+    color: var(--text-light);
+}
+
+.panels-overview-heading>span {
+    padding: 8px 13px;
+    border-radius: 999px;
+    background: #edf5fa;
+    color: var(--primary);
+    font-weight: 800;
+}
+
+.panels-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.panels-card-grid .panel-tab-wrapper {
+    position: relative;
+    min-width: 0;
+    min-height: 178px;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: var(--surface-muted);
+    overflow: hidden;
+    transition: .18s ease;
+}
+
+.panels-card-grid .panel-tab-wrapper:hover,
+.panels-card-grid .panel-tab-wrapper.active {
+    transform: translateY(-2px);
+    border-color: #79a9c4;
+    box-shadow: 0 10px 24px rgb(53 95 122 / 12%);
+}
+
+.panels-card-grid .panel-tab-wrapper.active {
+    background: #f5fbff;
+    color: var(--text);
+}
+
+.panels-card-grid .panel-tab {
+    width: 100%;
+    height: 100%;
+    min-height: 178px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 9px;
+    padding: 22px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: right;
+    cursor: pointer;
+}
+
+.panels-card-grid .panel-tab.active {
+    color: var(--text);
+}
+
+.panels-card-grid .panel-tab .panel-name-text {
+    max-width: 100%;
+    font-size: 1.18rem;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.panels-card-grid .panel-tab small {
+    color: #718096;
+}
+
+.panels-card-grid .panel-tab b {
+    margin-top: 4px;
+    color: var(--primary);
+    font-size: .9rem;
+}
+
+.panel-card-status {
+    display: inline-flex;
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: #52606d;
+    background: #edf1f5;
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.panel-card-status.pending {
+    color: #936000;
+    background: #fff3cd;
+}
+
+.panel-card-status.working {
+    color: #315c78;
+    background: #e7f2f8;
+}
+
+.panel-card-status.editing {
+    color: #8a4b08;
+    background: #fff0df;
+}
+
+.panel-card-status.completed {
+    color: #08753c;
+    background: #e4f7ec;
+}
+
+.panels-card-grid .delete-panel-btn {
+    position: absolute;
+    top: 11px;
+    left: 11px;
+    z-index: 2;
+}
+
+.panel-add-card {
+    min-height: 178px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font: inherit;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.panel-add-card strong {
+    font-size: 1.7rem;
+}
+
+.panel-detail-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.panel-detail-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: #edf5fa;
+    direction: rtl;
+}
+
+.panel-detail-heading h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.panel-detail-heading button {
+    border: 0;
+    border-radius: 9px;
+    padding: 9px 13px;
+    background: var(--surface);
+    color: var(--primary);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.panel-detail-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.panel-detail-heading .panel-inline-edit-btn {
+    background: var(--primary);
+    color: #fff;
+}
+
+.panel-detail-heading .panel-inline-edit-btn:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+.part-quantity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.part-quantity button {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.part-quantity input {
+    width: 30px !important;
+    height: 20px !important;
+    font-size: 10px;
+    padding: 0 !important;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.add-panel-btn {
+
+    padding: 12px 26px;
+
+    border: 2px dashed var(--primary);
+
+    background: var(--surface);
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+}
+
+.panel-editor {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 24px;
+
+}
+
+.save-actions {
+
+    display: grid;
+
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    gap: 16px;
+
+}
+
+.primary-btn {
+
+    width: 100%;
+
+    height: 50px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: var(--primary);
+
+    color: #fff;
+
+    cursor: pointer;
+
+}
+
+.secondary-btn {
+
+    width: 100%;
+
+    height: 50px;
+
+    border: 1px solid var(--border);
+
+    background: var(--surface);
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+}
+
+.secondary-btn.download-pdf-btn {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+    font-weight: 800;
+}
+
+.complete-project-btn {
+
+    width: 100%;
+
+    min-height: 50px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    background: #15803d;
+
+    color: #fff;
+
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+
+    font: inherit;
+
+    font-weight: 700;
+
+}
+
+.save-actions.save-actions-two {
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+}
+
+.save-actions.save-actions-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.complete-project-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.save-validation-list {
+    margin: 18px 0 0;
+    padding: 12px 28px 12px 12px;
+    border: 1px solid #fecdca;
+    border-radius: 12px;
+    background: #fff5f4;
+    color: #b42318;
+    line-height: 1.8;
+}
+
+.pdf-choice-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .35);
+    backdrop-filter: blur(6px);
+}
+
+.pdf-choice-dialog {
+    width: min(380px, 100%);
+    padding: 22px;
+    border-radius: 20px;
+    background: var(--surface);
+    direction: rtl;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+}
+
+.pdf-choice-dialog h2 {
+    margin: 0;
+    color: var(--text);
+}
+
+.pdf-choice-dialog p {
+    margin: 12px 0 24px;
+    color: var(--text-light);
+}
+
+.pdf-choice-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.pdf-choice-cancel {
+    margin-top: 16px;
+    border: 0;
+    background: transparent;
+    color: var(--text-light);
+    cursor: pointer;
+    font: inherit;
+}
+
+@media (max-width: 480px) {
+    .pdf-choice-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .save-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+.supplies-grid {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.check-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+}
+
+.check-card input {
+    width: 18px;
+    height: 18px;
+}
+
+.thickness-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.manufacturing-prices-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.manufacturing-prices-table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.manufacturing-prices-table th,
+.manufacturing-prices-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-left: 1px solid var(--border);
+}
+
+.manufacturing-prices-table th:last-child,
+.manufacturing-prices-table td:last-child {
+    border-left: none;
+}
+
+.manufacturing-prices-table th {
+    background: var(--surface-muted);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.manufacturing-prices-table td {
+    border-top: 1px solid var(--border);
+}
+
+.manufacturing-prices-table input {
+    width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 10px;
+    text-align: center;
+    font-size: 15px;
+    outline: none;
+}
+
+.manufacturing-prices-table input:focus,
+.extra-price input:focus {
+    border-color: var(--primary);
+}
+
+.thickness-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.thickness-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+}
+
+.extra-price {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.extra-price input {
+    height: 50px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 16px;
+    font-size: 15px;
+    outline: none;
+}
+
+.copper-add-action {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px 18px 14px;
+    direction: rtl;
+}
+
+.copper-add-action button,
+.copper-branches-heading>button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 15px;
+    color: #fff;
+    background: var(--primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.copper-calculator {
+    margin-top: 22px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-muted);
+}
+
+.copper-calculator-heading,
+.copper-branches-heading,
+.copper-branch-title,
+.copper-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.copper-branches-heading {
+    flex-wrap: wrap;
+    margin-top: 24px;
+}
+
+.copper-calculator h3,
+.copper-calculator h4 {
+    margin: 0;
+    color: var(--text);
+}
+
+.copper-calculator-heading p {
+    margin: 6px 0 0;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.copper-remove,
+.copper-branch-title button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: #b42318;
+    background: #fff0ef;
+    font: inherit;
+    cursor: pointer;
+}
+
+.copper-cost-fields,
+.copper-entry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.copper-cost-fields label,
+.copper-entry-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.copper-cost-fields input,
+.copper-entry-grid input,
+.copper-entry-grid select {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 0 13px;
+    font: inherit;
+    background: var(--surface);
+}
+
+.copper-entry-grid select {
+    padding-inline-end: 36px;
+}
+
+.copper-branches-bulk {
+    display: grid;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    grid-template-columns: auto auto auto;
+    align-items: center;
+    gap: 12px;
+    margin-inline-start: auto;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 9px 11px;
+    background: var(--surface);
+}
+
+.copper-branches-bulk>strong {
+    color: var(--primary);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.copper-bulk-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.copper-bulk-group>span {
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.copper-bulk-group>div {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-muted);
+}
+
+.copper-bulk-group button {
+    min-width: 44px;
+    min-height: 32px;
+    border: 0;
+    border-inline-start: 1px solid var(--border);
+    padding: 4px 9px;
+    color: #475569;
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.copper-bulk-group button:first-child {
+    border-inline-start: 0;
+}
+
+.copper-bulk-group button:hover {
+    background: #e8f3f6;
+}
+
+.copper-bulk-group button.is-active {
+    color: #fff;
+    background: var(--primary);
+}
+
+.copper-select-control {
+    position: relative;
+    width: 100%;
+}
+
+.copper-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 0 13px;
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+.copper-select-trigger:hover,
+.copper-select-trigger:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.copper-select-placeholder {
+    color: #94a3b8;
+}
+
+.copper-select-chevron {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
+.copper-select-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 12px 25px rgba(20, 54, 72, .16);
+    background: var(--surface);
+}
+
+.copper-select-menu button {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 7px;
+    padding: 9px 10px;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+.copper-select-menu button:hover {
+    color: #174c61;
+    background: #e8f3f6;
+}
+
+.copper-select-menu button.is-selected {
+    color: #fff;
+    background: var(--primary);
+}
+
+.project-read-only-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.project-read-only-fieldset:disabled {
+    opacity: .72;
+}
+
+.copper-calculator-collapse {
+    margin-top: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-muted);
+}
+
+.copper-calculator-collapse>summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 18px;
+    color: var(--primary);
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+}
+
+.copper-calculator-collapse>summary::-webkit-details-marker {
+    display: none;
+}
+
+.copper-calculator-collapse>summary svg {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    transition: transform .2s ease;
+}
+
+.copper-calculator-collapse[open]>summary svg {
+    transform: rotate(180deg);
+}
+
+.copper-calculator-collapse>.copper-calculator {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+}
+
+.section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.section-title-row .section-title {
+    margin: 0;
+}
+
+.section-title-row {
+    margin-bottom: 22px;
+}
+
+.project-icon-refresh {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #bdd3dc;
+    border-radius: 10px;
+    padding: 0;
+    color: var(--primary);
+    background: var(--surface-muted);
+    cursor: pointer;
+}
+
+.project-icon-refresh:hover:not(:disabled) {
+    border-color: var(--primary);
+    background: #e8f3f6;
+}
+
+.project-icon-refresh:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.project-icon-refresh svg {
+    width: 19px;
+    height: 19px;
+}
+
+.project-icon-refresh .is-spinning {
+    animation: project-refresh-spin .8s linear infinite;
+}
+
+.project-read-only-notice {
+    margin: 0 0 16px;
+    border: 1px solid #f3d28c;
+    border-radius: 12px;
+    padding: 13px 15px;
+    color: #805a17;
+    background: #fff8e8;
+    font-weight: 700;
+}
+
+.app-select {
+    position: relative;
+    width: 100%;
+}
+
+.app-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 52px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 14px;
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+.app-select-trigger:hover,
+.app-select-trigger:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.app-select.is-disabled .app-select-trigger {
+    cursor: not-allowed;
+    opacity: .65;
+    background: var(--surface-soft);
+}
+
+.app-select-placeholder {
+    color: #94a3b8;
+}
+
+.app-select-chevron {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
+.app-select-menu {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 12px 25px rgba(20, 54, 72, .16);
+    background: var(--surface);
+}
+
+.app-select-menu button {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 7px;
+    padding: 10px;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+.app-select-menu button:hover {
+    color: #174c61;
+    background: #e8f3f6;
+}
+
+.app-select-menu button.is-selected {
+    color: #fff;
+    background: var(--primary);
+}
+
+.copper-entry-card {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.copper-readonly {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    min-height: 42px;
+    color: #475569;
+    font-size: 13px;
+}
+
+.copper-readonly strong {
+    color: var(--primary);
+}
+
+.copper-total {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #e9f5f5;
+    color: #174c61;
+}
+
+@media (max-width: 600px) {
+    .copper-calculator {
+        padding: 15px;
+    }
+
+    .copper-calculator-heading,
+    .copper-branches-heading,
+    .copper-total {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .copper-branches-bulk {
+        width: 100%;
+        grid-template-columns: 1fr;
+        margin-inline-start: 0;
+        align-items: stretch;
+    }
+
+    .copper-bulk-group {
+        justify-content: space-between;
+    }
+
+    .copper-total {
+        gap: 7px;
+    }
+
+    .project-section-refresh {
+        width: 100%;
+    }
+
+    .whatsapp-data-heading {
+        padding: 16px;
+    }
+}
+

@@ -1,0 +1,237 @@
+/* Keep the original full-height login composition: only the fields area scrolls. */
+.auth-page {
+    height: 100vh;
+    min-height: 0;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+.auth-container {
+    height: calc(100vh - 77px);
+    min-height: 0;
+}
+
+.auth-card {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.auth-body {
+    overflow-y: auto;
+    padding: 26px 4px 30px 0;
+    box-sizing: border-box;
+}
+
+.auth-btn {
+    height: auto;
+    min-height: 0;
+    margin-top: 12px;
+    padding: 22px 20px;
+    line-height: 1.2;
+    border-radius: 14px;
+}
+
+@media (max-width: 850px) {
+    .auth-page {
+        height: auto;
+        min-height: 100vh;
+        max-height: none;
+        overflow: auto;
+    }
+
+    .auth-container {
+        height: auto;
+        min-height: 0;
+    }
+
+    .auth-card {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .auth-body {
+        overflow: visible;
+        padding: 20px 4px 24px 0;
+    }
+}
+
+@media (max-width: 500px) {
+    .auth-card {
+        padding: 18px 20px;
+    }
+
+    .auth-logo {
+        width: 50px;
+        height: 50px;
+    }
+
+    .auth-body {
+        padding: 26px 4px 30px 0;
+    }
+
+    .input-group input,
+    .auth-select {
+        height: 44px;
+    }
+
+    .auth-btn {
+        height: auto !important;
+        min-height: 0;
+        margin-top: 12px;
+        padding: 22px 20px;
+        line-height: 1.2;
+        border-radius: 14px;
+    }
+
+    .eye-btn {
+        top: 33px;
+    }
+}
+
+.google-auth {
+    margin-top: 8px;
+}
+
+.google-auth>div,
+.google-auth iframe,
+.google-precheck {
+    width: min(100%, 300px) !important;
+}
+
+.google-login-shell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(100%, 300px);
+    height: 46px;
+    min-height: 46px;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.google-login-visual {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: #253858;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(38, 57, 90, .08);
+    pointer-events: none;
+}
+
+.google-login-visual svg {
+    font-size: 17px;
+}
+
+.google-login-shell>div {
+    position: absolute !important;
+    inset: 0;
+    z-index: 2;
+    width: 100% !important;
+    height: 46px !important;
+    opacity: 0 !important;
+    cursor: pointer;
+}
+
+.google-login-shell iframe {
+    width: 100% !important;
+    height: 46px !important;
+    cursor: pointer;
+}
+
+/* The mobile rule previously forced a short fixed height, which pushed the
+   label to the bottom once the button received vertical padding. */
+.auth-body .auth-btn {
+    height: auto !important;
+    min-height: 52px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    line-height: 1.2;
+}
+
+.auth-login-card .auth-body {
+    flex: 0 0 auto;
+    overflow: visible;
+    padding: 0;
+}
+
+.eye-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: calc(100% - 25px);
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+.auth-footer {
+    position: relative;
+    z-index: 2;
+}
+
+.auth-switch button {
+    cursor: pointer;
+    pointer-events: auto;
+    margin-left: 6px;
+}
+
+.input-icon {
+    top: 0;
+    transform: none;
+}
+
+.auth-text-btn {
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.auth-account-notice {
+    width: 100%;
+    margin: 0;
+    padding: 11px 14px;
+    box-sizing: border-box;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    background: #fff1f2;
+    color: #b91c1c;
+    font-size: 14px;
+    text-align: center;
+}
+
+.phone-input-field {
+    width: 100%;
+}
+
+.field-error {
+    margin: 7px 2px 0;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.auth-body .select-wrapper .app-select { width: 100%; }
+.auth-body .select-wrapper .app-select-trigger { min-height: 50px; border-radius: 12px; text-align: left; direction: ltr; }
+.auth-body .select-wrapper .app-select-menu { text-align: left; direction: ltr; z-index: 120; }
+.auth-body .select-wrapper .app-select-menu button { text-align: left; }
+

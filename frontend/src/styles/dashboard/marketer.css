@@ -1,0 +1,755 @@
+/* Marketer dashboard */
+.marketer-dashboard {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    color: var(--text);
+}
+
+.marketer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.marketer-header h1 {
+    margin: 0;
+    font-size: clamp(25px, 2.2vw, 34px);
+}
+
+.marketer-header p {
+    margin: 8px 0 0;
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+.marketer-date-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.marketer-date-tools>button,
+.marketer-date-tools>label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 0 14px;
+    color: var(--primary);
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.marketer-date-tools>button:disabled {
+    opacity: .7;
+    cursor: wait;
+}
+
+.marketer-date-tools>label {
+    position: relative;
+    color: var(--text-light);
+}
+
+.marketer-date-tools>label svg {
+    color: var(--primary);
+    pointer-events: none;
+}
+
+.marketer-date-tools input {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+}
+
+.marketer-date-tools input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.marketer-date-tools>div {
+    position: relative;
+    z-index: 30;
+    width: 120px;
+}
+
+.marketer-date-tools .app-select-trigger {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 11px;
+    font-size: 14px;
+}
+
+.marketer-date-tools .app-select-trigger>span {
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.marketer-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.marketer-metric {
+    --marketer-color: #4b79dd;
+    --marketer-bg: #eaf0ff;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+    min-height: 126px;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 20px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .035);
+}
+
+.marketer-metric::after {
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    content: "";
+    background: var(--marketer-color);
+}
+
+.marketer-metric>div {
+    display: grid;
+    place-items: center;
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border-radius: 17px;
+    color: var(--marketer-color);
+    background: var(--marketer-bg);
+    font-size: 27px;
+}
+
+.marketer-metric section {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.marketer-metric span {
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.marketer-metric strong {
+    font-size: 32px;
+    line-height: 1.05;
+}
+
+.marketer-metric small {
+    margin-top: 5px;
+    color: #28a55f;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.marketer-metric.red {
+    --marketer-color: #df5260;
+    --marketer-bg: #fff0f1;
+}
+
+.marketer-metric.amber {
+    --marketer-color: #dda12e;
+    --marketer-bg: #fff6df;
+}
+
+.marketer-metric.violet {
+    --marketer-color: #825ed0;
+    --marketer-bg: #f2edff;
+}
+
+.marketer-metric.green,
+.marketer-metric.emerald {
+    --marketer-color: #2aa969;
+    --marketer-bg: #e9f8ef;
+}
+
+.marketer-metric.blue {
+    --marketer-color: #4b79dd;
+    --marketer-bg: #eaf0ff;
+}
+
+.marketer-main-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+.marketer-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 22px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .03);
+}
+
+.marketer-panel h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+}
+
+.marketer-actions {
+    grid-column: span 4;
+    min-height: 390px;
+}
+
+.marketer-status {
+    grid-column: span 8;
+    min-height: 390px;
+}
+
+.marketer-production,
+.marketer-delayed {
+    grid-column: span 6;
+    min-height: 390px;
+}
+
+.marketer-notifications {
+    grid-column: span 5;
+}
+
+.marketer-projects {
+    grid-column: span 7;
+}
+
+.marketer-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 43px;
+    box-sizing: border-box;
+    margin-top: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--primary);
+    background: var(--surface-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.marketer-link.danger {
+    color: #cc4552;
+    background: #fff8f8;
+}
+
+.marketer-empty {
+    display: grid;
+    flex: 1;
+    min-height: 100px;
+    place-items: center;
+    color: var(--text-light);
+}
+
+.marketer-production>div {
+    display: grid;
+    grid-template-columns: 90px minmax(90px, 1fr) 40px;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 0;
+}
+
+.marketer-production>div span {
+    display: grid;
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.marketer-production>div small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.marketer-production>div i {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf1f4;
+}
+
+.marketer-production>div i b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.marketer-production>div>strong {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.marketer-delayed>a:not(.marketer-link) {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.marketer-delayed>a>svg {
+    color: var(--primary);
+    font-size: 21px;
+}
+
+.marketer-delayed a span {
+    display: grid;
+    gap: 3px;
+}
+
+.marketer-delayed a strong {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.marketer-delayed a small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.marketer-delayed a b {
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: #d84c58;
+    background: #ffe9eb;
+    font-size: 10px;
+}
+
+.marketer-status>div {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: center;
+    gap: 28px;
+    margin-block: auto;
+}
+
+.marketer-donut {
+    display: grid;
+    width: 180px;
+    height: 180px;
+    place-items: center;
+    border-radius: 50%;
+    transform: rotate(-90deg);
+}
+
+.marketer-donut>div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background: var(--surface);
+    transform: rotate(90deg);
+}
+
+.marketer-donut strong {
+    font-size: 35px;
+}
+
+.marketer-donut span {
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.marketer-status>div>section {
+    display: grid;
+    gap: 16px;
+}
+
+.marketer-status p {
+    display: grid;
+    grid-template-columns: 11px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 11px;
+    margin: 0;
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.marketer-status p i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+}
+
+.marketer-status p strong {
+    color: var(--text);
+    font-size: 15px;
+}
+
+.marketer-status p small {
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.marketer-notifications>a {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding: 11px 0;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.marketer-notifications>a>i {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 11px;
+    color: #4b79dd;
+    background: #edf3ff;
+}
+
+.marketer-notifications>a>i.warning {
+    color: #da9a29;
+    background: #fff5dd;
+}
+
+.marketer-notifications>a>i.success {
+    color: #28a55f;
+    background: #eaf8ef;
+}
+
+.marketer-notifications>a span {
+    display: grid;
+    gap: 3px;
+}
+
+.marketer-notifications strong {
+    font-size: 12px;
+}
+
+.marketer-notifications small,
+.marketer-notifications time {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.marketer-table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.marketer-projects table {
+    width: 100%;
+    min-width: 650px;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: right;
+}
+
+.marketer-projects th {
+    padding: 11px;
+    color: var(--text-light);
+    background: var(--surface-muted);
+    white-space: nowrap;
+}
+
+.marketer-projects td {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 11px;
+    white-space: nowrap;
+}
+
+.marketer-state {
+    display: inline-block;
+    border-radius: 8px;
+    padding: 6px 9px;
+    color: #4b79dd;
+    background: #edf3ff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.marketer-state.completed {
+    color: #26955c;
+    background: #e9f8ef;
+}
+
+.marketer-state.production {
+    color: #bd7b16;
+    background: #fff5dd;
+}
+
+.marketer-state.pdf {
+    color: #7351bd;
+    background: #f1edff;
+}
+
+.marketer-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.marketer-summary {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: center;
+}
+
+.marketer-summary>div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.marketer-summary>div:first-child>svg {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    padding: 12px;
+    color: #4b79dd;
+    background: #edf3ff;
+}
+
+.marketer-summary>div:first-child span {
+    display: grid;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.marketer-summary>div:first-child strong {
+    color: var(--text);
+    font-size: 27px;
+}
+
+.marketer-summary>div:last-child {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.marketer-summary>div:last-child span {
+    display: grid;
+    gap: 7px;
+    border-inline-start: 1px solid var(--border);
+    color: var(--text-light);
+    font-size: 12px;
+    text-align: center;
+}
+
+.marketer-summary>div:last-child strong {
+    color: var(--text);
+    font-size: 24px;
+}
+
+.marketer-actions>div {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.marketer-actions a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 54px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 16px;
+    color: var(--primary);
+    background: var(--surface-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    text-decoration: none;
+}
+
+.marketer-actions a:first-child {
+    color: #fff;
+    border-color: var(--primary);
+    background: var(--primary);
+}
+
+.marketer-actions a svg {
+    flex: 0 0 auto;
+    font-size: 22px;
+}
+
+@media (max-width: 1350px) {
+    .marketer-actions {
+        grid-column: span 4;
+    }
+
+    .marketer-status {
+        grid-column: span 8;
+    }
+
+    .marketer-production,
+    .marketer-delayed {
+        grid-column: span 6;
+    }
+
+    .marketer-notifications,
+    .marketer-projects {
+        grid-column: span 12;
+    }
+}
+
+@media (max-width: 900px) {
+    .marketer-header {
+        flex-direction: column;
+    }
+
+    .marketer-date-tools {
+        flex-wrap: wrap;
+    }
+
+    .marketer-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .marketer-actions,
+    .marketer-status,
+    .marketer-production,
+    .marketer-delayed {
+        grid-column: span 12;
+    }
+
+    .marketer-summary {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .marketer-dashboard {
+        gap: 14px;
+    }
+
+    .marketer-header h1 {
+        font-size: 23px;
+    }
+
+    .marketer-header p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .marketer-date-tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+        width: 100%;
+        gap: 9px;
+    }
+
+    .marketer-date-tools>button {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .marketer-date-tools>label,
+    .marketer-date-tools>div {
+        width: 100%;
+    }
+
+    .marketer-date-tools>label {
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .marketer-date-tools input {
+        width: 100%;
+    }
+
+    .marketer-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .marketer-metric {
+        min-height: 98px;
+        padding: 15px;
+    }
+
+    .marketer-metric>div {
+        flex-basis: 48px;
+        width: 48px;
+        height: 48px;
+    }
+
+    .marketer-metric strong {
+        font-size: 27px;
+    }
+
+    .marketer-panel {
+        padding: 16px;
+    }
+
+    .marketer-panel h2 {
+        font-size: 18px;
+    }
+
+    .marketer-status>div {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+
+    .marketer-status>div>section {
+        width: 100%;
+    }
+
+    .marketer-summary>div:last-child {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+    }
+
+    .marketer-summary>div:last-child span {
+        min-height: 72px;
+        justify-content: center;
+        border-top: 1px solid var(--border);
+    }
+}
+

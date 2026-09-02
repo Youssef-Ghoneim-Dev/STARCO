@@ -1,0 +1,563 @@
+.project-create-backdrop {
+    min-height: calc(100vh - 120px);
+    display: grid;
+    place-items: center;
+    padding: 24px
+}
+
+.project-create-dialog {
+    width: min(520px, 92vw);
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 24px 60px #17324d20
+}
+
+.project-create-dialog h1 {
+    margin: 0 0 8px;
+    color: #102a43
+}
+
+.project-create-dialog p {
+    margin: 0 0 24px;
+    color: #6b7c8f
+}
+
+.project-create-dialog label {
+    display: grid;
+    gap: 9px;
+    font-weight: 700
+}
+
+.project-create-dialog input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.project-client-results {
+    position: static;
+    z-index: 5;
+    width: 100%;
+    max-height: 230px;
+    margin-top: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 14px 36px #17324d1c;
+    overflow-x: hidden;
+    overflow-y: auto
+}
+
+.project-client-results>span {
+    display: block;
+    padding: 12px;
+    color: #708090
+}
+
+.project-client-results button {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    font: inherit;
+    cursor: pointer
+}
+
+.project-client-results button:hover {
+    background: var(--surface-muted)
+}
+
+.project-client-results small {
+    color: #6b7c8f
+}
+
+.project-create-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 26px
+}
+
+.project-create-actions button {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--surface);
+    font: inherit;
+    font-weight: 700
+}
+
+.project-create-actions .primary {
+    background: #396b86;
+    color: #fff;
+    border-color: #396b86
+}
+
+.project-folder-page {
+    padding: 0;
+    max-width: 1500px;
+    margin: auto
+}
+
+.project-folder-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 28px
+}
+
+.project-folder-header h1 {
+    margin: 8px 0 4px;
+    color: #102a43
+}
+
+.project-folder-header p {
+    margin: 0;
+    color: #6b7c8f
+}
+
+.project-folder-code {
+    direction: ltr;
+    display: inline-flex;
+    background: #eef6fa;
+    color: #396b86;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 800
+}
+
+.project-folder-code-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0 13px;
+    background: #eef6fa;
+    color: #315d75;
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.project-folder-code-wrap:hover {
+    background: #e2f0f6;
+}
+
+.project-folder-code-wrap .project-folder-code {
+    background: transparent;
+    padding: 0;
+}
+
+.project-folder-code-wrap>svg {
+    flex: 0 0 auto;
+    margin-inline-end: 1px;
+}
+
+.project-folder-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap
+}
+
+.project-submit-action {
+    position: relative;
+    display: grid;
+}
+
+.project-submit-action .form-field-error {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5;
+    width: max-content;
+    max-width: 260px;
+    margin: 0;
+    border: 1px solid #f2b6bb;
+    border-radius: 9px;
+    padding: 6px 9px;
+    background: #fff7f7;
+    box-shadow: 0 8px 20px rgba(122, 26, 34, .12);
+}
+
+.project-folder-actions .submit.is-disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.project-folder-actions button,
+.empty-panel-folder button {
+    border: 1px solid #cbdbe5;
+    border-radius: 11px;
+    background: var(--surface);
+    color: #315d75;
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer
+}
+
+.project-folder-actions .primary {
+    background: #396b86;
+    color: #fff
+}
+
+.project-folder-actions .submit {
+    background: #168a46;
+    color: #fff;
+    border-color: #168a46
+}
+
+.project-submit-reminder {
+    margin: 16px 0;
+    background: #fff8df;
+    border: 1px solid #eed488;
+    border-radius: 14px;
+    padding: 14px 18px;
+    color: #795b08
+}
+
+.project-panels-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 28px 0 16px
+}
+
+.project-panels-toolbar h2 {
+    font-size: 28px;
+    margin: 0
+}
+
+.project-panels-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 13px
+}
+
+.project-panels-toolbar input {
+    border: 0;
+    outline: 0;
+    padding: 12px;
+    width: min(300px, 45vw);
+    font: inherit
+}
+
+.panel-folder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+    gap: 18px
+}
+
+.panel-folder-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+    cursor: pointer;
+    transition: .2s
+}
+
+.panel-folder-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 35px #17324d14;
+    border-color: #9fbac9
+}
+
+.panel-folder-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center
+}
+
+.panel-folder-card-top>button {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer
+}
+
+.panel-folder-status {
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 800
+}
+
+.panel-folder-status.draft {
+    background: #edf1f4;
+    color: #607180
+}
+
+.panel-folder-status.pending {
+    background: #fff3cf;
+    color: #8c6700
+}
+
+.panel-folder-status.working {
+    background: #e7f1ff;
+    color: #2765a7
+}
+
+.panel-folder-status.ready,
+.panel-folder-status.complete {
+    background: #e3f7ea;
+    color: #13793a
+}
+
+.panel-folder-status.editing {
+    background: #f7eafd;
+    color: #8444a1
+}
+
+.panel-folder-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 15px;
+    background: #eef6fa;
+    color: #396b86;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    margin: 18px 0 12px;
+    direction: ltr
+}
+
+.panel-folder-card h2 {
+    margin: 0 0 7px;
+    color: #102a43
+}
+
+.panel-folder-card code {
+    direction: ltr;
+    display: block;
+    color: #6b7c8f
+}
+
+.panel-folder-card dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 18px 0 0
+}
+
+.panel-folder-card dl div {
+    background: var(--surface-muted);
+    border-radius: 10px;
+    padding: 10px
+}
+
+.panel-folder-card dt {
+    font-size: 12px;
+    color: #718293
+}
+
+.panel-folder-card dd {
+    margin: 4px 0 0;
+    font-weight: 700
+}
+
+.panel-card-menu {
+    position: absolute;
+    z-index: 4;
+    top: 52px;
+    left: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 12px 30px #17324d20;
+    min-width: 180px
+}
+
+.panel-card-menu button {
+    display: flex;
+    width: 100%;
+    border: 0;
+    background: var(--surface);
+    padding: 10px;
+    border-radius: 8px;
+    gap: 7px;
+    font: inherit;
+    cursor: pointer
+}
+
+.panel-card-menu button:hover {
+    background: var(--surface-muted)
+}
+
+.panel-card-menu .danger {
+    color: #c92d3b
+}
+
+.empty-panel-folder {
+    background: var(--surface);
+    border: 1px dashed #9db6c4;
+    border-radius: 18px;
+    padding: 54px 20px;
+    text-align: center
+}
+
+.empty-panel-folder p {
+    color: #728292
+}
+
+.empty-panel-folder button {
+    margin: 18px auto 0;
+    background: #396b86;
+    color: #fff
+}
+
+@media(max-width:700px) {
+    .project-folder-page {
+        padding: 0
+    }
+
+    .project-folder-header {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 20px
+    }
+
+    .project-folder-actions button {
+        flex: 1;
+        justify-content: center
+    }
+
+    .project-panels-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px
+    }
+
+    .project-panels-toolbar input {
+        width: 100%
+    }
+
+    .panel-folder-grid {
+        grid-template-columns: 1fr
+    }
+
+    .project-create-dialog {
+        padding: 22px
+    }
+
+    .project-client-results {
+        width: 100%
+    }
+}
+
+.project-attention-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: -5px 0 15px;
+    padding: 8px 11px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fff1f2;
+    color: #b42318;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.project-attention-badge>span {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, .12);
+}
+
+.project-folder-back {
+    width: fit-content;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px 16px;
+    border: 1px solid #cadbe7;
+    border-radius: 12px;
+    background: var(--surface);
+    color: #2e607c;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.project-folder-setup {
+    max-width: 1050px;
+    margin-inline: auto;
+    display: grid;
+    gap: 18px;
+}
+
+.project-folder-setup select {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    font: inherit;
+}
+
+.project-folder-setup>div:first-child {
+    text-align: right;
+}
+
+.project-folder-setup>div:first-child h1 {
+    margin: 0 0 5px;
+    color: #10283c;
+    font-size: clamp(28px, 3vw, 40px);
+}
+
+.project-folder-setup>div:first-child p {
+    margin: 0;
+    color: #5d6b76;
+    font-size: 18px;
+}
+
+.project-folder-setup>button {
+    justify-self: end;
+    min-width: 260px;
+    min-height: 52px;
+    padding: 10px 24px;
+    border: 0;
+    border-radius: 13px;
+    background: #356b89;
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.project-folder-setup>button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+

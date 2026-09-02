@@ -1,0 +1,85 @@
+/* ===========================
+            Topbar
+=========================== */
+
+.topbar {
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 950;
+
+    flex: 0 0 80px;
+
+    height: 80px;
+
+    background: var(--surface);
+
+    border-bottom: 1px solid var(--border);
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 0 30px;
+
+    box-sizing: border-box;
+
+}
+
+.menu-btn,
+.notification-btn,
+.theme-toggle-btn {
+
+    width: 45px;
+
+    height: 45px;
+
+    border: none;
+
+    background: transparent;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    cursor: pointer;
+
+    transition: .25s;
+
+}
+
+.menu-btn svg,
+.notification-btn svg,
+.theme-toggle-btn svg {
+
+    font-size: 24px;
+
+}
+
+.menu-btn:hover,
+.notification-btn:hover,
+.theme-toggle-btn:hover {
+
+    background: rgba(0, 93, 156, .08);
+
+}
+
+.topbar-right {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+}
+
+

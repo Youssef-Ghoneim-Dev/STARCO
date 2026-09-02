@@ -64,7 +64,7 @@
 
 .profile-card input[readonly] {
     color: var(--text-light);
-    background: #f5f7fa;
+    background: var(--surface-muted);
     cursor: default;
 }
 
@@ -98,7 +98,7 @@
 }
 
 .profile-card .profile-back-btn {
-    background: #eef2f7;
+    background: var(--surface-soft);
     color: var(--text);
 }
 

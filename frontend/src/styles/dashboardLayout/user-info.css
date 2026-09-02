@@ -1,0 +1,392 @@
+/* ===========================
+          User Info
+=========================== */
+
+.user-info {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    cursor: pointer;
+
+    border: 0;
+
+    background: transparent;
+
+    padding: 6px;
+
+    border-radius: 12px;
+
+}
+
+.notification-shell {
+    position: relative;
+}
+
+.notification-btn {
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    inset-block-start: 1px;
+    inset-inline-end: 0;
+    display: grid;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    place-items: center;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    color: #fff;
+    background: #ef4444;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.notification-popover {
+    position: absolute;
+    z-index: 1200;
+    top: calc(100% + 13px);
+    right: 0;
+    left: auto;
+    width: min(390px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: 0 18px 55px rgba(27, 55, 71, .18);
+}
+
+.notification-popover>header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 18px 13px;
+    border-bottom: 1px solid var(--border);
+}
+
+.notification-popover>header div {
+    display: grid;
+    gap: 3px;
+}
+
+.notification-popover h3 {
+    margin: 0;
+    color: #132d3f;
+    font-size: 18px;
+}
+
+.notification-popover>header span {
+    color: #72838e;
+    font-size: 12px;
+}
+
+.notification-popover>header button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    color: #376b86;
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.enable-push-btn {
+    display: flex;
+    width: calc(100% - 24px);
+    min-height: 44px;
+    margin: 12px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #cfe0e9;
+    border-radius: 12px;
+    color: #285b75;
+    background: #f1f8fb;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.notification-list {
+    max-height: min(290px, 42vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.notification-item {
+    position: relative;
+    display: grid;
+    width: 100%;
+    grid-template-columns: 40px minmax(0, 1fr) 8px;
+    align-items: start;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    color: #18364a;
+    background: var(--surface);
+    text-align: right;
+    font: inherit;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: var(--surface-muted);
+}
+
+.notification-item.is-unread {
+    background: #f1f8fc;
+}
+
+.notification-item>i {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 12px;
+    color: #376b86;
+    background: #e2f0f7;
+    font-size: 19px;
+}
+
+.notification-item>span {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.notification-item strong {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+}
+
+.notification-item small {
+    overflow-wrap: anywhere;
+    color: #687b87;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.notification-item time {
+    color: #96a4ad;
+    font-size: 10px;
+}
+
+.notification-item>b {
+    width: 8px;
+    height: 8px;
+    margin-block-start: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+
+.notification-item.is-read {
+    opacity: .75;
+}
+
+.notification-empty {
+    margin: 0;
+    padding: 34px 18px;
+    color: #7a8992;
+    text-align: center;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .notification-popover {
+        position: fixed;
+        top: 76px;
+        right: 12px;
+        left: 12px;
+        bottom: auto;
+        width: auto;
+        max-height: calc(100dvh - 96px);
+    }
+
+    .notification-list {
+        max-height: min(270px, calc(100dvh - 245px));
+    }
+}
+
+.logout-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(11, 24, 37, .46);
+    backdrop-filter: blur(5px);
+}
+
+.logout-confirm-card {
+    width: min(100%, 390px);
+    padding: 28px;
+    border: 1px solid rgba(255, 255, 255, .8);
+    border-radius: 20px;
+    background: var(--surface);
+    text-align: center;
+    box-shadow: 0 22px 70px rgba(15, 23, 42, .25);
+}
+
+.logout-confirm-icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    border-radius: 18px;
+    background: #fff1f1;
+    color: #dc2626;
+    font-size: 27px;
+}
+
+.logout-confirm-card h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 22px;
+}
+
+.logout-confirm-card p {
+    margin: 10px 0 22px;
+    color: var(--text-light);
+    line-height: 1.7;
+}
+
+.logout-confirm-card>div:last-child {
+    display: flex;
+    gap: 10px;
+}
+
+.logout-confirm-card button {
+    flex: 1;
+    min-height: 44px;
+    border: 0;
+    border-radius: 11px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.logout-cancel-btn {
+    background: var(--surface-soft);
+    color: var(--text);
+}
+
+.logout-confirm-btn {
+    background: #dc2626;
+    color: #fff;
+}
+
+.user-info:hover {
+
+    background: rgba(0, 93, 156, .08);
+
+}
+
+.theme-toggle-btn:focus {
+    outline: none;
+}
+
+.theme-toggle-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.user-avatar {
+
+    width: 46px;
+
+    height: 46px;
+
+    border-radius: 50%;
+
+    background: var(--primary);
+
+    color: white;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-size: 20px;
+
+    font-weight: 700;
+
+}
+
+.pending-message {
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    height: 90%;
+
+    text-align: center;
+}
+
+.pending-message h2 {
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--text);
+
+    margin-bottom: 12px;
+}
+
+.pending-message p {
+    font-size: 24px;
+
+    color: var(--primary);
+
+    margin: 0;
+}
+
+.user-info h4 {
+
+    font-size: 15px;
+
+    color: var(--text);
+
+    margin: 0;
+
+}
+
+.user-info span {
+
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 13px;
+
+    color: var(--text-light);
+
+}
+
+.user-info svg:last-child {
+
+    font-size: 18px;
+
+    color: var(--text-light);
+
+}
+
+

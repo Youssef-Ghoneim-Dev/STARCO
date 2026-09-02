@@ -73,9 +73,27 @@
     background: #8f1c13;
 }
 
-.recycle-bin-tabs { display: flex; gap: 10px; margin: 0 0 22px; }
-.recycle-bin-tabs button { border: 1px solid var(--border); background: var(--surface); color: var(--text-light); border-radius: 10px; padding: 10px 18px; font: inherit; cursor: pointer; }
-.recycle-bin-tabs button.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.recycle-bin-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 0 0 22px;
+}
+
+.recycle-bin-tabs button {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-light);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.recycle-bin-tabs button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
 
 .delete-project-confirmation {
     direction: rtl;
@@ -106,7 +124,7 @@
 }
 
 .management-cancel-btn {
-    background: #eef2f7;
+    background: var(--surface-soft);
     color: var(--text);
 }
 
@@ -213,7 +231,7 @@
     place-items: center;
     border: 0;
     border-radius: 10px;
-    background: #eef2f7;
+    background: var(--surface-soft);
     color: var(--text);
     cursor: pointer;
 }
@@ -237,9 +255,18 @@
     font: inherit;
 }
 
-.management-modal .app-select { width: 100%; }
-.management-modal .app-select-trigger { min-height: 46px; border-radius: 10px; }
-.management-modal .app-select-menu { z-index: 120; }
+.management-modal .app-select {
+    width: 100%;
+}
+
+.management-modal .app-select-trigger {
+    min-height: 46px;
+    border-radius: 10px;
+}
+
+.management-modal .app-select-menu {
+    z-index: 120;
+}
 
 .client-name-review {
     width: min(100%, 620px);
@@ -275,7 +302,7 @@
     padding: 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: #f8fafc;
+    background: var(--surface-muted);
 }
 
 .client-name-review-card h3,

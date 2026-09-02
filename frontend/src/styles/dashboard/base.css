@@ -1,0 +1,386 @@
+.dashboard-header {
+
+    margin-bottom: 30px;
+
+}
+
+.dashboard-header h1 {
+
+    font-size: 32px;
+
+    color: var(--text);
+
+}
+
+.new-project-link {
+    text-decoration: none;
+}
+
+.dashboard-header p {
+
+    margin-top: 8px;
+
+    color: var(--text-light);
+
+}
+
+.stats-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 25px;
+
+}
+
+.stat-card {
+
+    background: var(--surface);
+
+    border-radius: 18px;
+
+    padding: 24px;
+
+    border: 1px solid var(--border);
+
+}
+
+.stat-card h3 {
+
+    color: var(--text-light);
+
+    font-size: 15px;
+
+    margin-bottom: 10px;
+
+}
+
+.stat-card h2 {
+
+    font-size: 34px;
+
+    color: var(--primary);
+
+}
+
+.dashboard-grid {
+
+    display: grid;
+
+    grid-template-columns: 2fr 1fr;
+
+    gap: 20px;
+
+}
+
+.dashboard-card {
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    border-radius: 18px;
+
+    padding: 24px;
+
+}
+
+.dashboard-card h2 {
+
+    margin-bottom: 18px;
+
+    font-size: 20px;
+
+}
+
+.dashboard-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.dashboard-card-heading h2 {
+    margin-bottom: 4px;
+}
+
+.dashboard-card-heading p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.dashboard-card-heading a {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dashboard-project-list {
+    display: grid;
+    gap: 10px;
+}
+
+.dashboard-project-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.dashboard-project-row:hover {
+    border-color: #a7c6d6;
+    background: var(--surface-muted);
+}
+
+.dashboard-project-row div {
+    display: grid;
+    gap: 4px;
+}
+
+.dashboard-project-row span,
+.dashboard-project-row time {
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.empty-state {
+
+    height: 220px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    color: var(--text-light);
+
+}
+
+.action-btn {
+
+    width: 100%;
+
+    height: 50px;
+
+    margin-bottom: 12px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    background: var(--primary);
+
+    color: white;
+
+    font-size: 15px;
+
+    transition: .25s;
+
+    display: grid;
+
+    place-items: center;
+
+    text-decoration: none;
+
+}
+
+.action-btn:hover {
+
+    background: var(--primary-hover);
+
+}
+
+@media(max-width:1000px) {
+
+    .stats-grid {
+
+        grid-template-columns: repeat(2, 1fr);
+
+    }
+
+    .dashboard-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+
+@media(max-width:600px) {
+
+    .stats-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+
+.secondary-action-btn {
+    border: 1px solid #b9d0dc;
+    background: var(--surface-muted);
+    color: var(--primary);
+}
+
+.secondary-action-btn:hover {
+    background: #e6f1f6;
+}
+
+.whatsapp-activation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: min(620px, calc(100% - 28px));
+    min-height: 520px;
+    box-sizing: border-box;
+    margin: clamp(30px, 8vh, 90px) auto;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: clamp(28px, 5vw, 54px);
+    background: var(--surface);
+    box-shadow: 0 18px 45px rgba(31, 65, 83, .08);
+    text-align: center;
+}
+
+.whatsapp-activation-icon {
+    display: grid;
+    width: 78px;
+    height: 78px;
+    place-items: center;
+    border-radius: 24px;
+    color: #fff;
+    background: #1faa59;
+    font-size: 42px;
+    box-shadow: 0 12px 25px rgba(31, 170, 89, .2);
+}
+
+.whatsapp-activation h2 {
+    margin: 24px 0 10px;
+    color: var(--text);
+    font-size: clamp(25px, 3vw, 35px);
+}
+
+.whatsapp-activation>p {
+    max-width: 500px;
+    margin: 0;
+    color: var(--text-light);
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+.whatsapp-activation-number {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    width: min(420px, 100%);
+    margin: 25px 0 18px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 13px 16px;
+    color: #627368;
+    background: #f7fbf8;
+}
+
+.whatsapp-activation-number strong {
+    color: var(--text);
+    font-size: 17px;
+}
+
+.whatsapp-activation-button,
+.whatsapp-activation-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: min(420px, 100%);
+    min-height: 52px;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 13px;
+    padding: 10px 18px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.whatsapp-activation-button {
+    color: #fff;
+    background: #1faa59;
+}
+
+.whatsapp-activation-button:hover {
+    background: #168c48;
+}
+
+.whatsapp-activation-refresh {
+    margin-top: 11px;
+    border: 1px solid #cbdde6;
+    color: var(--primary);
+    background: var(--surface-muted);
+}
+
+.whatsapp-activation-refresh:hover {
+    background: #eaf4f8;
+}
+
+.whatsapp-activation-refresh:disabled {
+    cursor: wait;
+    opacity: .7;
+}
+
+.whatsapp-activation>small {
+    margin-top: 15px;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.whatsapp-activation p.whatsapp-activation-error {
+    margin: 8px 0;
+    color: #c6424e;
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .whatsapp-activation {
+        min-height: 0;
+        margin: 22px auto;
+        border-radius: 19px;
+        padding: 30px 18px;
+    }
+
+    .whatsapp-activation-icon {
+        width: 66px;
+        height: 66px;
+        border-radius: 20px;
+        font-size: 36px;
+    }
+
+    .whatsapp-activation>p {
+        font-size: 15px;
+    }
+
+    .whatsapp-activation-number {
+        gap: 10px;
+        font-size: 14px;
+    }
+}
+

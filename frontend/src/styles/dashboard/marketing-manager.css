@@ -1,0 +1,850 @@
+/* Marketing Manager dashboard */
+.marketing-dashboard {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    color: var(--text);
+}
+
+.marketing-dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.marketing-dashboard-header h1 {
+    margin: 0;
+    font-size: clamp(25px, 2.2vw, 34px);
+}
+
+.marketing-dashboard-header p {
+    margin: 8px 0 0;
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+.marketing-date-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    direction: rtl;
+}
+
+.marketing-date-tools>button,
+.marketing-date-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 0 14px;
+    color: var(--primary);
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.marketing-date-tools>button:disabled {
+    opacity: .7;
+    cursor: wait;
+}
+
+.marketing-date-input {
+    position: relative;
+    color: var(--text-light);
+}
+
+.marketing-date-input>svg {
+    color: var(--primary);
+    pointer-events: none;
+}
+
+.marketing-date-input input {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.marketing-date-input input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.marketing-period-select {
+    position: relative;
+    z-index: 30;
+    width: 120px;
+}
+
+.marketing-period-select .app-select-trigger {
+    min-height: 44px;
+    border-radius: 11px;
+    font-size: 14px;
+}
+
+.marketing-period-select .app-select-trigger>span {
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.marketing-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.marketing-metric {
+    --marketing-color: #4b79dd;
+    --marketing-bg: #eaf0ff;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+    min-height: 130px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 21px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .035);
+}
+
+.marketing-metric::after {
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    content: "";
+    background: var(--marketing-color);
+}
+
+.marketing-metric>div:last-child {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.marketing-metric span {
+    color: var(--text-light);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.marketing-metric strong {
+    font-size: 34px;
+    line-height: 1.05;
+}
+
+.marketing-metric small {
+    margin-top: 5px;
+    overflow: hidden;
+    color: #28a55f;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.marketing-metric-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 17px;
+    color: var(--marketing-color);
+    background: var(--marketing-bg);
+    font-size: 28px;
+}
+
+.marketing-metric.green {
+    --marketing-color: #29a965;
+    --marketing-bg: #e9f8ef;
+}
+
+.marketing-metric.purple {
+    --marketing-color: #7656cd;
+    --marketing-bg: #f1edff;
+}
+
+.marketing-metric.amber {
+    --marketing-color: #dc9a25;
+    --marketing-bg: #fff6df;
+}
+
+.marketing-metric.cyan {
+    --marketing-color: #349db3;
+    --marketing-bg: #eaf7f9;
+}
+
+.marketing-metric.emerald {
+    --marketing-color: #28a55f;
+    --marketing-bg: #e9f8ef;
+}
+
+.marketing-metric.blue {
+    --marketing-color: #4b79dd;
+    --marketing-bg: #eaf0ff;
+}
+
+.marketing-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "trend status" "funnel delay" "production production" "team team" "alerts clients" "best activity";
+    gap: 20px;
+    align-items: stretch;
+}
+
+.marketing-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 22px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .025);
+}
+
+.marketing-panel h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+}
+
+.marketing-delay {
+    grid-area: delay;
+}
+
+.marketing-trend {
+    grid-area: trend;
+}
+
+.marketing-funnel {
+    grid-area: funnel;
+}
+
+.marketing-status {
+    grid-area: status;
+}
+
+.marketing-production {
+    grid-area: production;
+}
+
+.marketing-team {
+    grid-area: team;
+}
+
+.marketing-alerts {
+    grid-area: alerts;
+}
+
+.marketing-clients {
+    grid-area: clients;
+}
+
+.marketing-best {
+    grid-area: best;
+}
+
+.marketing-activity {
+    grid-area: activity;
+}
+
+.marketing-card-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 42px;
+    margin-top: auto;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--primary);
+    background: var(--surface-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.marketing-empty {
+    display: grid;
+    flex: 1;
+    min-height: 90px;
+    place-items: center;
+    margin: 0;
+    color: var(--text-light);
+}
+
+.marketing-delay>div {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+}
+
+.marketing-delay>div>b {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    color: #d64d5a;
+    background: #fff0f1;
+    font-size: 12px;
+}
+
+.marketing-delay>div span {
+    display: grid;
+    gap: 2px;
+}
+
+.marketing-delay>div strong {
+    font-size: 13px;
+}
+
+.marketing-delay>div small {
+    color: var(--text-light);
+    font-size: 11px;
+}
+
+.marketing-trend,
+.marketing-status {
+    min-height: 430px;
+}
+
+.marketing-trend>div {
+    min-width: 0;
+}
+
+.marketing-trend-chart {
+    position: relative;
+}
+
+.marketing-trend svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 250px;
+    overflow: visible;
+    direction: ltr;
+}
+
+.marketing-trend svg line {
+    stroke: #e7edf2;
+}
+
+.marketing-trend polyline {
+    fill: none;
+    stroke: #4b79dd;
+    stroke-width: 2.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.marketing-trend polyline.execution {
+    stroke: #36af78;
+}
+
+.marketing-trend circle {
+    fill: #4b79dd;
+    cursor: pointer;
+    outline: none;
+    transition: r .15s ease;
+}
+
+.marketing-trend circle:hover,
+.marketing-trend circle:focus {
+    r: 7px;
+}
+
+.marketing-trend circle.execution-point {
+    fill: #36af78;
+}
+
+.marketing-trend-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    direction: ltr;
+    color: #73808e;
+    font-size: 12px;
+    text-align: center;
+}
+
+.marketing-trend-days span {
+    direction: rtl;
+    white-space: nowrap;
+}
+
+.marketing-trend footer {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin-top: auto;
+    padding-top: 16px;
+    color: #607080;
+    font-size: 14px;
+}
+
+.marketing-trend footer span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.marketing-trend footer i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4b79dd;
+}
+
+.marketing-trend footer span:last-child i {
+    background: #36af78;
+}
+
+.marketing-funnel-visual {
+    display: grid;
+    place-items: center;
+    gap: 9px;
+    padding: 4px 14px 0;
+}
+
+.marketing-funnel-visual span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 45px;
+    box-sizing: border-box;
+    border-radius: 11px;
+    padding: 0 clamp(18px, 3vw, 34px);
+    color: #fff;
+    background: #4b79dd;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .06);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.marketing-funnel-visual span:nth-child(2) {
+    background: #567fd9;
+}
+
+.marketing-funnel-visual span:nth-child(3) {
+    background: #57aeb7;
+}
+
+.marketing-funnel-visual span:nth-child(4) {
+    background: #e4a73b;
+}
+
+.marketing-funnel-visual span:nth-child(5) {
+    background: #df5867;
+}
+
+.marketing-funnel-visual span b {
+    flex: 0 0 auto;
+    margin-inline-start: 14px;
+}
+
+.marketing-funnel p {
+    display: flex;
+    justify-content: space-between;
+    margin: 18px 14px 0;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.marketing-funnel p strong {
+    color: #28a55f;
+}
+
+.marketing-status-body {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    align-items: center;
+    gap: 28px;
+    margin-block: auto;
+}
+
+.marketing-donut {
+    display: grid;
+    width: 190px;
+    height: 190px;
+    place-items: center;
+    border-radius: 50%;
+    transform: rotate(-90deg);
+}
+
+.marketing-donut>div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--surface);
+    transform: rotate(90deg);
+}
+
+.marketing-donut strong {
+    font-size: 34px;
+}
+
+.marketing-donut span {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.marketing-status-body>div:last-child {
+    display: grid;
+    gap: 14px;
+}
+
+.marketing-status-body p {
+    display: grid;
+    grid-template-columns: 11px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.marketing-status-body p i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+}
+
+.marketing-status-body p strong {
+    color: var(--text);
+}
+
+.marketing-status-body p small {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.marketing-production>div {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 17px;
+}
+
+.marketing-production article {
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    min-height: 128px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-muted);
+}
+
+.marketing-production article span {
+    color: var(--text-light);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.marketing-production article strong {
+    font-size: 28px;
+}
+
+.marketing-production article small {
+    color: var(--text-light);
+    font-size: 11px;
+}
+
+.marketing-production article em {
+    color: #df4656;
+    font-size: 11px;
+    font-style: normal;
+}
+
+.marketing-production>p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 0;
+    border: 1px solid #f4d6da;
+    border-radius: 10px;
+    padding: 13px;
+    color: #c63f4c;
+    background: #fff5f6;
+    font-size: 13px;
+}
+
+.marketing-table-scroll {
+    overflow-x: auto;
+}
+
+.marketing-team table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: right;
+}
+
+.marketing-team th {
+    padding: 11px;
+    color: var(--text-light);
+    background: var(--surface-muted);
+}
+
+.marketing-team td {
+    padding: 12px 11px;
+    border-bottom: 1px solid var(--border);
+}
+
+.marketing-team button,
+.marketing-best button,
+.marketing-alerts button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 40px;
+    margin-top: auto;
+    border: 0;
+    color: var(--primary);
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.marketing-alerts {
+    background: #fffdf5;
+}
+
+.marketing-alerts p {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    border-bottom: 1px solid #f2ead1;
+    padding: 12px 0;
+    color: #6b624e;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.marketing-alerts p svg {
+    flex: 0 0 auto;
+    color: #d99b27;
+    font-size: 18px;
+}
+
+.marketing-clients>a:not(.marketing-card-link),
+.marketing-activity>a {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    padding: 11px 0;
+    color: var(--text);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.marketing-clients>a>b {
+    display: grid;
+    width: 25px;
+    height: 25px;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--primary);
+    background: var(--surface-soft);
+}
+
+.marketing-clients>a small,
+.marketing-activity time {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.marketing-best>div {
+    display: grid;
+    grid-template-columns: 27px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+}
+
+.marketing-best>div b {
+    color: var(--primary);
+}
+
+.marketing-best>div span {
+    font-size: 13px;
+}
+
+.marketing-best>div small {
+    color: #28a55f;
+    font-size: 11px;
+}
+
+.marketing-activity>a {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.marketing-activity strong {
+    color: var(--primary);
+}
+
+@media (max-width: 1400px) {
+    .marketing-panel {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .marketing-dashboard-header {
+        flex-direction: column;
+    }
+
+    .marketing-date-tools {
+        flex-wrap: wrap;
+    }
+
+    .marketing-metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .marketing-layout {
+        grid-template-columns: 1fr;
+        grid-template-areas: "status" "trend" "funnel" "delay" "production" "team" "alerts" "clients" "best" "activity";
+    }
+
+    .marketing-trend,
+    .marketing-status {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .marketing-dashboard {
+        gap: 14px;
+    }
+
+    .marketing-dashboard-header h1 {
+        font-size: 23px;
+    }
+
+    .marketing-dashboard-header p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .marketing-date-tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+        width: 100%;
+        gap: 9px;
+    }
+
+    .marketing-date-tools>button {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .marketing-date-input {
+        width: 100%;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .marketing-date-input input {
+        width: 100%;
+    }
+
+    .marketing-period-select {
+        width: 100%;
+    }
+
+    .marketing-period-select .app-select-trigger {
+        width: 100%;
+    }
+
+    .marketing-metrics-grid,
+    .marketing-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .marketing-layout {
+        grid-template-areas: "status" "trend" "funnel" "delay" "production" "team" "alerts" "clients" "best" "activity";
+    }
+
+    .marketing-metric {
+        min-height: 96px;
+        padding: 15px;
+    }
+
+    .marketing-metric strong {
+        font-size: 26px;
+    }
+
+    .marketing-panel {
+        padding: 15px;
+    }
+
+    .marketing-panel h2 {
+        font-size: 18px;
+    }
+
+    .marketing-status-body {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+
+    .marketing-status-body>div:last-child {
+        width: 100%;
+    }
+
+    .marketing-production>div {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .marketing-trend svg {
+        min-height: 0;
+    }
+
+    .marketing-trend-days {
+        font-size: 10px;
+    }
+}

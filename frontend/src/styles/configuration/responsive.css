@@ -1,0 +1,106 @@
+@media (max-width: 1050px) {
+    .configured-part {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .copper-catalog-item {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .copper-bar-count-editor {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .copper-bar-count-controls {
+        justify-content: flex-start;
+    }
+
+    .additional-part-add-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .drive-connection-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .configuration-grid,
+    .configuration-grid.two-columns,
+    .part-settings {
+        grid-template-columns: 1fr;
+    }
+
+    .copper-quick-settings {
+        padding: 14px;
+    }
+
+    .copper-configuration-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .copper-configuration-heading button {
+        width: 100%;
+    }
+
+    .copper-setting-fields,
+    .copper-formula-settings,
+    .copper-formula-variables {
+        grid-template-columns: 1fr;
+    }
+
+    .copper-bar-count-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .whatsapp-template-card-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .copper-bar-count-add {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .pricing-form>button {
+        width: 100%;
+    }
+
+    .additional-part-add {
+        flex-direction: column;
+    }
+
+    .additional-part-add-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-types-editor+.pricing-form {
+        margin-top: 24px;
+    }
+
+    .panel-type-settings>summary {
+        flex-wrap: wrap;
+    }
+
+    .panel-type-settings>summary>span {
+        display: none;
+    }
+
+    .panel-type-summary-actions {
+        width: 100%;
+        margin-inline-start: 0;
+    }
+
+    .panel-type-summary-actions button {
+        flex: 1;
+    }
+
+    .panel-type-settings-body {
+        padding: 15px;
+    }
+}

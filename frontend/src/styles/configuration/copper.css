@@ -1,0 +1,337 @@
+.copper-configuration-editor {
+    margin-top: 22px;
+}
+
+.copper-configuration-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.copper-configuration-heading>div {
+    min-width: 0;
+}
+
+.copper-quick-settings {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #fff, #f7fbfc);
+    box-shadow: 0 7px 18px rgba(34, 78, 100, .06);
+}
+
+.copper-setting-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.copper-setting-fields .configuration-number-field {
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.copper-setting-fields .configuration-number-field input {
+    min-height: 40px;
+    height: 40px;
+    border-radius: 9px;
+    padding: 0 11px;
+    background: var(--surface);
+}
+
+.copper-formula-settings {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    min-width: 0;
+    margin-top: 14px;
+}
+
+.copper-formula-settings label {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    color: #10233f;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.copper-formula-settings input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 12px;
+    overflow-x: auto;
+    background: var(--surface);
+    color: #21344c;
+    font-weight: 700;
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+}
+
+.copper-formula-help {
+    display: grid;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--surface-muted);
+    color: #10233f;
+    direction: rtl;
+}
+
+.copper-formula-help>strong {
+    color: var(--primary);
+    font-size: 15px;
+}
+
+.copper-formula-variables {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 14px;
+}
+
+.copper-formula-variables p {
+    display: grid;
+    grid-template-columns: minmax(88px, auto) 1fr;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    margin: 0;
+}
+
+.copper-formula-variables code {
+    justify-self: start;
+    border-radius: 7px;
+    padding: 4px 7px;
+    background: #e8f2f7;
+    color: #245b76;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.copper-formula-variables span,
+.copper-formula-help small {
+    color: #68778a;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.65;
+}
+
+.copper-bar-count-editor {
+    display: grid;
+    grid-template-columns: minmax(180px, .75fr) minmax(0, 1.6fr);
+    align-items: center;
+    gap: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.copper-bar-count-heading {
+    display: grid;
+    gap: 3px;
+}
+
+.copper-bar-count-heading strong {
+    color: var(--primary);
+    font-size: 16px;
+}
+
+.copper-bar-count-heading span {
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.copper-bar-count-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    min-width: 0;
+}
+
+.copper-bar-count-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 30px;
+}
+
+.copper-bar-count-chips>span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 28px;
+    border: 1px solid #cbdde7;
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: var(--primary);
+    background: var(--surface-soft);
+    font-size: 13px;
+}
+
+.copper-bar-count-chips button {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    padding: 0;
+    color: #b42318;
+    background: transparent;
+    cursor: pointer;
+}
+
+.copper-bar-count-add {
+    display: grid;
+    flex: 0 1 190px;
+    grid-template-columns: minmax(72px, 1fr) auto;
+    gap: 6px;
+}
+
+.copper-bar-count-add input {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 9px;
+    font: inherit;
+    background: var(--surface);
+}
+
+.copper-bar-count-add button {
+    min-height: 34px;
+    border: 0;
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #fff;
+    background: var(--primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.copper-catalog-list {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.copper-catalog-item {
+    grid-template-columns: minmax(130px, 1.2fr) repeat(3, minmax(115px, 1fr)) auto;
+}
+
+.copper-amperage-name {
+    display: grid;
+    align-self: stretch;
+    gap: 6px;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.copper-amperage-name strong {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+    font-size: 15px;
+}
+
+.copper-catalog-settings {
+    margin-top: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.copper-catalog-settings>summary {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 15px 17px;
+    color: var(--primary);
+    cursor: pointer;
+    list-style: none;
+}
+
+.copper-catalog-settings>summary::-webkit-details-marker {
+    display: none;
+}
+
+.copper-catalog-settings>summary svg {
+    flex: 0 0 auto;
+    width: 19px;
+    height: 19px;
+    transition: transform .2s ease;
+}
+
+.copper-catalog-settings[open]>summary svg {
+    transform: rotate(180deg);
+}
+
+.copper-catalog-settings>summary div {
+    display: grid;
+    gap: 3px;
+}
+
+.copper-catalog-settings>summary strong {
+    font-size: 16px;
+}
+
+.copper-catalog-settings>summary span {
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.copper-catalog-settings-body {
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.copper-section-save {
+    justify-self: start;
+    min-width: 190px;
+    border-color: #2f718d !important;
+    color: #fff !important;
+    background: linear-gradient(135deg, #397b96, #285d76) !important;
+    box-shadow: 0 8px 18px rgba(40, 93, 118, .18);
+    font-weight: 900;
+}
+
+.copper-section-save:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 11px 22px rgba(40, 93, 118, .24);
+}
+
+.copper-section-save:disabled {
+    opacity: .62;
+    box-shadow: none;
+}
+
+.copper-catalog-actions {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+}
+

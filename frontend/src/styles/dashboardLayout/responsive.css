@@ -1,0 +1,58 @@
+/* ===========================
+         Responsive
+=========================== */
+
+@media (max-width:1100px) {
+
+    .sidebar {
+
+        position: fixed;
+
+        left: -270px;
+
+        top: 0;
+
+        width: 270px;
+
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+
+        z-index: 999;
+
+        transition: left .22s ease;
+
+    }
+
+    .sidebar.open {
+
+        left: 0;
+
+    }
+
+    .dashboard-content {
+
+        padding: 20px;
+
+    }
+
+}
+
+@media (max-width:650px) {
+
+    .topbar {
+
+        padding: 0 18px;
+
+    }
+
+    .user-info h4,
+    .user-info span {
+
+        display: none;
+
+    }
+
+}
+

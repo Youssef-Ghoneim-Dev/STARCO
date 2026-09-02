@@ -1,0 +1,903 @@
+/* Production Manager dashboard */
+.production-manager-dashboard {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+    color: var(--text);
+}
+
+.production-manager-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.production-manager-header h1 {
+    margin: 0;
+    font-size: clamp(25px, 2.2vw, 34px);
+}
+
+.production-manager-header p {
+    margin: 8px 0 0;
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+.production-date-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.production-date-tools>button,
+.production-date-tools>label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 0 14px;
+    color: var(--primary);
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.production-date-tools>button:disabled {
+    opacity: .7;
+    cursor: wait;
+}
+
+.production-date-tools>label {
+    position: relative;
+    color: var(--text-light);
+}
+
+.production-date-tools>label svg {
+    color: var(--primary);
+    pointer-events: none;
+}
+
+.production-date-tools input {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.production-date-tools input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.production-date-tools>div {
+    position: relative;
+    z-index: 25;
+    width: 120px;
+}
+
+.production-date-tools .app-select-trigger {
+    min-height: 44px;
+    border-radius: 11px;
+    font-size: 14px;
+}
+
+.production-date-tools .app-select-trigger>span {
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.production-manager-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.production-manager-metric {
+    --metric-color: #4b79dd;
+    --metric-bg: #eaf0ff;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 17px;
+    min-width: 0;
+    min-height: 126px;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 20px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .035);
+}
+
+.production-manager-metric::after {
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    content: "";
+    background: var(--metric-color);
+}
+
+.production-manager-metric>div {
+    display: grid;
+    place-items: center;
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border-radius: 17px;
+    color: var(--metric-color);
+    background: var(--metric-bg);
+    font-size: 27px;
+}
+
+.production-manager-metric section {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.production-manager-metric span {
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.production-manager-metric strong {
+    font-size: 32px;
+    line-height: 1.05;
+}
+
+.production-manager-metric small {
+    margin-top: 5px;
+    overflow: hidden;
+    color: #28a55f;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.production-manager-metric.red {
+    --metric-color: #df5260;
+    --metric-bg: #fff0f1;
+}
+
+.production-manager-metric.amber {
+    --metric-color: #dda12e;
+    --metric-bg: #fff6df;
+}
+
+.production-manager-metric.violet {
+    --metric-color: #825ed0;
+    --metric-bg: #f2edff;
+}
+
+.production-manager-metric.green {
+    --metric-color: #2aa969;
+    --metric-bg: #e9f8ef;
+}
+
+.production-manager-metric.indigo {
+    --metric-color: #566fce;
+    --metric-bg: #edf0ff;
+}
+
+.production-manager-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+.production-manager-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 22px;
+    background: var(--surface);
+    box-shadow: 0 5px 18px rgba(31, 41, 55, .03);
+}
+
+.production-manager-card h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+}
+
+.production-card-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 43px;
+    box-sizing: border-box;
+    margin-top: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--primary);
+    background: var(--surface-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.production-empty {
+    display: grid;
+    flex: 1;
+    min-height: 100px;
+    place-items: center;
+    color: var(--text-light);
+}
+
+.production-delay-reasons,
+.production-stage-status,
+.production-delayed-list,
+.production-stage-progress {
+    grid-column: span 6;
+    min-height: 390px;
+}
+
+.production-current-stages {
+    grid-column: span 12;
+}
+
+.production-waiting,
+.production-pdf-today {
+    grid-column: span 6;
+    min-height: 310px;
+}
+
+.production-alerts {
+    grid-column: span 12;
+    min-height: 180px;
+}
+
+.production-ready-files,
+.production-new-orders {
+    grid-column: span 6;
+}
+
+.production-stage-status-body,
+.production-delay-reasons>div {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    align-items: center;
+    gap: 28px;
+}
+
+.production-stage-donut,
+.production-reasons-donut {
+    display: grid;
+    width: 190px;
+    height: 190px;
+    place-items: center;
+    border-radius: 50%;
+    transform: rotate(-90deg);
+}
+
+.production-stage-donut>div,
+.production-reasons-donut>div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--surface);
+    transform: rotate(90deg);
+}
+
+.production-stage-donut strong,
+.production-reasons-donut strong {
+    font-size: 34px;
+}
+
+.production-stage-donut span,
+.production-reasons-donut span {
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.production-stage-status-body>div:last-child,
+.production-delay-reasons section {
+    display: grid;
+    gap: 9px;
+}
+
+.production-delay-reasons .production-empty-reasons {
+    display: grid;
+    min-height: 150px;
+    place-items: center;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--text-light);
+    background: var(--surface-muted);
+    text-align: center;
+}
+
+.production-stage-status-body p,
+.production-delay-reasons section p {
+    display: grid;
+    grid-template-columns: 11px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 11px;
+    margin: 0;
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.production-stage-status-body p i,
+.production-delay-reasons section p i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+}
+
+.production-stage-status-body p strong,
+.production-delay-reasons section p strong {
+    color: var(--text);
+    font-size: 15px;
+}
+
+.production-stage-status-body p small,
+.production-delay-reasons section p small {
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.production-stage-status .production-card-link,
+.production-delay-reasons .production-card-link {
+    margin-top: auto;
+}
+
+.production-delayed-list>div {
+    display: grid;
+    gap: 9px;
+    margin-bottom: 15px;
+}
+
+.production-delayed-list>div a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #f2dadd;
+    border-radius: 11px;
+    padding: 11px 12px;
+    color: var(--text);
+    background: #fff8f8;
+    text-decoration: none;
+}
+
+.production-delayed-list a span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.production-delayed-list a strong {
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.production-delayed-list a small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.production-delayed-list a b {
+    flex: 0 0 auto;
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: #d84c58;
+    background: #ffe9eb;
+    font-size: 10px;
+}
+
+.production-stage-progress>div {
+    display: grid;
+    grid-template-columns: 82px 34px minmax(80px, 1fr) 42px;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 0;
+}
+
+.production-stage-progress>div span {
+    color: #596878;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.production-stage-progress>div strong {
+    font-size: 15px;
+}
+
+.production-stage-progress>div>i {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf1f4;
+}
+
+.production-stage-progress>div>i b {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    border-radius: inherit;
+}
+
+.production-stage-progress>div em {
+    color: var(--text-light);
+    font-size: 13px;
+    font-style: normal;
+}
+
+.production-current-stages>div {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 28px;
+    padding-inline: 8px;
+}
+
+.production-current-stages article {
+    position: relative;
+    display: grid;
+    min-height: 150px;
+    place-items: center;
+    align-content: center;
+    gap: 5px;
+    border: 1px solid color-mix(in srgb, var(--stage-color) 24%, white);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--stage-color) 8%, white);
+}
+
+.production-current-stages article span {
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.production-current-stages article strong {
+    color: var(--stage-color);
+    font-size: 31px;
+}
+
+.production-current-stages article small {
+    color: var(--text-light);
+    font-size: 11px;
+}
+
+.production-current-stages article>b {
+    position: absolute;
+    top: 50%;
+    left: -23px;
+    z-index: 2;
+    transform: translateY(-50%);
+    color: #93a0ad;
+    font-size: 29px;
+}
+
+.production-waiting {
+    gap: 0;
+}
+
+.production-waiting>a {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    border-bottom: 1px solid var(--border);
+    padding: 11px 0;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.production-waiting>a>i {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 10px;
+    color: #dda12e;
+    background: #fff5dd;
+}
+
+.production-waiting>a span {
+    display: grid;
+    gap: 2px;
+}
+
+.production-waiting>a strong {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.production-waiting>a small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.production-waiting>a b {
+    border-radius: 7px;
+    padding: 5px 8px;
+    color: #af7820;
+    background: #fff2d2;
+    font-size: 10px;
+}
+
+.production-pdf-today>div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin: 18px 0;
+}
+
+.production-pdf-today>div>svg {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px;
+    padding: 14px;
+    color: #825ed0;
+    background: #f1ecff;
+}
+
+.production-pdf-today>div span {
+    display: grid;
+}
+
+.production-pdf-today>div strong {
+    font-size: 34px;
+}
+
+.production-pdf-today>div small,
+.production-pdf-today>p {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.production-pdf-today>p {
+    margin: 0 0 15px;
+    text-align: center;
+}
+
+.production-alerts>p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+}
+
+.production-alerts>p>svg {
+    flex: 0 0 auto;
+    color: #dda12e;
+    font-size: 21px;
+}
+
+.production-alerts>p.danger>svg {
+    color: #de5360;
+}
+
+.production-alerts>p.info>svg {
+    color: #4b79dd;
+}
+
+.production-alerts>p span {
+    display: grid;
+    gap: 3px;
+}
+
+.production-alerts>p strong {
+    font-size: 12px;
+}
+
+.production-alerts>p small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.production-table-card {
+    min-height: 330px;
+    overflow: hidden;
+}
+
+.production-table-card h2 {
+    min-height: 52px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+}
+
+.production-table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.production-manager-card table {
+    width: 100%;
+    min-width: 540px;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: right;
+}
+
+.production-manager-card th {
+    padding: 12px;
+    color: #5d6c7d;
+    background: var(--surface-soft);
+    white-space: nowrap;
+}
+
+.production-manager-card td {
+    border-bottom: 1px solid var(--border);
+    padding: 13px 12px;
+    white-space: nowrap;
+}
+
+.production-manager-card td svg {
+    color: #825ed0;
+    font-size: 18px;
+}
+
+.production-clickable-row {
+    outline: 0;
+    cursor: pointer;
+    transition: background-color .18s ease, box-shadow .18s ease;
+}
+
+.production-clickable-row:hover,
+.production-clickable-row:focus-visible {
+    background: var(--surface-muted);
+    box-shadow: inset -3px 0 var(--primary);
+}
+
+.production-table-empty {
+    display: grid;
+    min-height: 95px;
+    margin: 0;
+    place-items: center;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+.production-ready-files .production-card-link,
+.production-new-orders .production-card-link {
+    margin-top: 14px;
+}
+
+.production-manager-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: var(--surface);
+}
+
+.production-manager-kpis>div {
+    display: grid;
+    grid-template-columns: 43px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 11px;
+    min-height: 94px;
+    padding: 16px 20px;
+    border-inline-start: 1px solid var(--border);
+}
+
+.production-manager-kpis>div:first-child {
+    border-inline-start: 0;
+}
+
+.production-manager-kpis svg {
+    grid-row: 1 / 3;
+    width: 22px;
+    height: 22px;
+    border-radius: 13px;
+    padding: 10px;
+    color: var(--primary);
+    background: var(--surface-soft);
+}
+
+.production-manager-kpis span {
+    align-self: end;
+    color: #687687;
+    font-size: 12px;
+}
+
+.production-manager-kpis strong {
+    align-self: start;
+    font-size: 17px;
+}
+
+@media (max-width: 1450px) {
+
+    .production-delay-reasons,
+    .production-delayed-list,
+    .production-stage-progress,
+    .production-stage-status {
+        grid-column: span 6;
+    }
+
+    .production-current-stages {
+        grid-column: span 12;
+    }
+
+    .production-waiting,
+    .production-pdf-today {
+        grid-column: span 6;
+    }
+
+    .production-alerts {
+        grid-column: span 12;
+    }
+
+    .production-ready-files,
+    .production-new-orders {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width: 1000px) {
+    .production-manager-header {
+        flex-direction: column;
+    }
+
+    .production-manager-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .production-date-tools {
+        flex-wrap: wrap;
+    }
+
+    .production-waiting,
+    .production-pdf-today,
+    .production-alerts,
+    .production-ready-files,
+    .production-new-orders {
+        grid-column: span 12;
+    }
+
+    .production-manager-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .production-manager-kpis>div {
+        border-bottom: 1px solid var(--border);
+    }
+}
+
+@media (max-width: 700px) {
+    .production-manager-dashboard {
+        gap: 14px;
+    }
+
+    .production-manager-header h1 {
+        font-size: 23px;
+    }
+
+    .production-manager-header p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .production-date-tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+        width: 100%;
+        gap: 9px;
+    }
+
+    .production-date-tools>button {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+
+    .production-date-tools>label,
+    .production-date-tools>div {
+        width: 100%;
+    }
+
+    .production-date-tools>label {
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .production-date-tools input {
+        width: 100%;
+    }
+
+    .production-date-tools .app-select-trigger {
+        width: 100%;
+    }
+
+    .production-manager-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .production-manager-metric {
+        min-height: 98px;
+        padding: 15px;
+    }
+
+    .production-manager-metric>div {
+        flex-basis: 48px;
+        width: 48px;
+        height: 48px;
+    }
+
+    .production-manager-metric strong {
+        font-size: 27px;
+    }
+
+    .production-manager-card {
+        grid-column: span 12;
+        padding: 16px;
+    }
+
+    .production-manager-card h2 {
+        font-size: 18px;
+    }
+
+    .production-stage-status-body,
+    .production-delay-reasons>div {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+
+    .production-stage-status-body>div:last-child,
+    .production-delay-reasons section {
+        width: 100%;
+    }
+
+    .production-current-stages>div {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .production-current-stages article>b {
+        display: none;
+    }
+
+    .production-manager-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .production-manager-kpis>div {
+        border-inline-start: 0;
+    }
+
+    .production-table-scroll {
+        margin-inline: -4px;
+    }
+}

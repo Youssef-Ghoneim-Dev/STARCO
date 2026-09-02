@@ -1,0 +1,92 @@
+.configuration-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.configuration-loading {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 14px;
+    min-height: 440px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-light);
+    font-weight: 700;
+}
+
+.configuration-loading p {
+    margin: 0;
+}
+
+.configuration-loading-spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: configuration-spin .75s linear infinite;
+}
+
+@keyframes configuration-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.configuration-heading {
+    margin-bottom: 24px;
+}
+
+.configuration-heading h1 {
+    color: var(--primary);
+    font-size: 30px;
+}
+
+.configuration-heading p,
+.template-note {
+    color: var(--text-light);
+    margin-top: 8px;
+}
+
+.template-form {
+    display: grid;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    border-radius: var(--radius);
+}
+
+.template-form label {
+    color: var(--text);
+    font-size: 17px;
+}
+
+.template-form textarea {
+    min-height: 180px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font: 500 16px/1.8 "Tajawal", sans-serif;
+    direction: rtl;
+}
+
+.template-form button {
+    justify-self: start;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px 22px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.template-form button:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+

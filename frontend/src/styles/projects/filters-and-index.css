@@ -1,0 +1,368 @@
+.projects-header-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+.projects-search,
+.projects-filter {
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 14px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    background: var(--surface);
+
+    color: var(--text-light);
+
+}
+
+.projects-search input,
+.projects-filter select {
+
+    min-width: 150px;
+
+    border: 0;
+
+    outline: 0;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font: inherit;
+
+}
+
+.projects-filter {
+    min-width: 205px;
+}
+
+.projects-filter .app-select {
+    position: relative;
+    width: 100%;
+}
+
+.projects-filter .app-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 46px;
+    border: 0;
+    padding: 0;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.projects-filter .app-select-trigger:focus {
+    outline: 0;
+}
+
+.projects-filter .app-select-chevron {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    color: var(--primary);
+}
+
+.projects-filter .app-select-menu {
+    position: absolute;
+    z-index: 80;
+    top: calc(100% + 8px);
+    right: -14px;
+    left: -14px;
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    background: var(--surface);
+    box-shadow: 0 16px 34px rgba(20, 54, 72, .18);
+}
+
+.projects-filter .app-select-menu button {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 11px;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.projects-filter .app-select-menu button:hover {
+    background: var(--surface-soft);
+}
+
+.projects-filter .app-select-menu button.is-selected {
+    color: #fff;
+    background: var(--primary);
+}
+
+.panels-index-grid {
+    align-items: stretch;
+}
+
+.panel-index-card {
+    position: relative;
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    min-height: 300px;
+    padding: 24px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: linear-gradient(145deg, #fff 0%, #fff 70%, #f1f7fa 100%);
+    box-shadow: 0 8px 24px rgba(34, 72, 94, .06);
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.panel-index-card::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: #376d88;
+}
+
+.panel-index-card:hover {
+    transform: translateY(-4px);
+    border-color: #a9c6d5;
+    box-shadow: 0 16px 34px rgba(34, 72, 94, .12);
+}
+
+.panel-index-card:focus-visible {
+    outline: 3px solid rgba(55, 109, 136, .24);
+    outline-offset: 3px;
+}
+
+.panel-index-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.panel-index-card-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    color: #376d88;
+    background: #e8f2f7;
+    font-size: 27px;
+}
+
+.panel-index-card-title {
+    display: grid;
+    gap: 7px;
+}
+
+.panel-index-card-title h3 {
+    margin: 0;
+    color: #112b3f;
+    font-size: clamp(1.2rem, 2vw, 1.55rem);
+    line-height: 1.45;
+}
+
+.panel-index-card-title code {
+    width: fit-content;
+    max-width: 100%;
+    color: #46708a;
+    direction: ltr;
+    font-family: inherit;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.panel-index-card-project {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 13px 14px;
+    border-radius: 14px;
+    color: #41657b;
+    background: var(--surface-muted);
+}
+
+.panel-index-card-project>svg {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+}
+
+.panel-index-card-project>div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.panel-index-card-project span {
+    color: #748591;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.panel-index-card-project strong {
+    overflow: hidden;
+    color: #203f53;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-index-card-dates {
+    display: grid;
+    gap: 9px;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+    color: #697b88;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.panel-index-card-dates>div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-index-card-dates svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: #52778d;
+}
+
+@media (max-width: 600px) {
+
+    .projects-header {
+
+        gap: 14px;
+
+        margin-bottom: 20px;
+
+    }
+
+    .projects-header-actions {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: 9px;
+
+    }
+
+    .new-project-link {
+        grid-column: 1 / -1;
+        width: 100%;
+
+    }
+
+    .new-project-btn {
+        width: 100%;
+
+        padding: 10px 14px;
+
+        border-radius: 10px;
+
+        font-size: 13px;
+
+    }
+
+    .projects-search {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        width: 100%;
+        min-width: 0;
+
+        padding-inline: 10px;
+
+    }
+
+    .projects-filter {
+        grid-column: 2;
+        grid-row: 2;
+        width: 100%;
+        min-width: 0;
+        padding-inline: 10px;
+
+    }
+
+    .projects-filter svg {
+
+        pointer-events: none;
+
+    }
+
+    .projects-filter>svg {
+        display: block;
+        flex: 0 0 auto;
+    }
+
+    .projects-refresh-btn {
+        grid-column: 1;
+        grid-row: 2;
+        width: 48px;
+        min-width: 48px;
+        padding: 0;
+    }
+
+    .projects-refresh-btn span {
+        display: none;
+    }
+
+    .projects-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+
+}
+
+.projects-refresh-btn {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.projects-refresh-btn:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+

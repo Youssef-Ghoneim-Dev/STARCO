@@ -51,7 +51,7 @@
 
 .users-table-header {
 
-    background: #f8fafc;
+    background: var(--surface-muted);
 
     font-weight: 700;
 
@@ -64,6 +64,7 @@
 }
 
 @media (min-width:901px) {
+
     .users-table-header,
     .users-row {
         column-gap: clamp(12px, 1.2vw, 18px);
@@ -71,11 +72,22 @@
         padding: 16px 28px;
     }
 
-    .users-actions { min-width: 0; gap: 10px; }
-    .users-actions > button,
-    .users-actions > a,
-    .role-save-btn { width: 40px; height: 40px; flex-basis: 40px; }
-    .role-editor { padding-right: 8px; }
+    .users-actions {
+        min-width: 0;
+        gap: 10px;
+    }
+
+    .users-actions>button,
+    .users-actions>a,
+    .role-save-btn {
+        width: 40px;
+        height: 40px;
+        flex-basis: 40px;
+    }
+
+    .role-editor {
+        padding-right: 8px;
+    }
 }
 
 .users-actions {
@@ -190,53 +202,231 @@
     align-items: center;
     transition: .2s;
 }
-.whatsapp-btn { background: #16a34a; color: white; text-decoration: none; }
-.restore-btn { background: #2563eb; color: white; }
-.role-save-btn { width: 32px; height: 32px; background: #e8f1ff; color: #1463c3; }
-.whatsapp-btn:hover, .restore-btn:hover, .role-save-btn:hover { transform: translateY(-2px); }
-.role-editor { display: flex; align-items: center; gap: 8px; padding-right: 18px; box-sizing: border-box; }
-.role-editor select { min-width: 0; width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 9px; padding: 0 8px; background: var(--surface); color: var(--text); }
-.role-editor .app-select-trigger { min-height: 38px; height: 38px; border-radius: 9px; padding-inline: 8px; }
-.role-editor .app-select-menu { z-index: 100; }
-.phone-value { direction: ltr; text-align: left; }
-.users-actions { min-width: 154px; gap: 12px; }
-.users-actions > button, .users-actions > a { width: 42px; height: 42px; flex: 0 0 42px; }
-.role-save-btn { width: 42px; height: 42px; flex: 0 0 42px; }
-.edit-user-btn { background: #e8f1ff; color: #1463c3; border: none; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.current-user-badge { display: block; margin-top: 5px; color: var(--primary); font-size: 12px; font-weight: 600; }
 
-.user-edit-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, .42); }
-.user-edit-modal { width: min(100%, 420px); background: var(--surface); border-radius: 18px; padding: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
-.user-edit-modal h2 { margin: 0; color: var(--text); }
-.user-edit-modal p { margin: 7px 0 18px; color: var(--text-light); font-size: 14px; }
-.user-edit-modal label { display: grid; gap: 7px; margin-top: 13px; color: var(--text); font-weight: 600; font-size: 14px; }
-.user-edit-modal input { height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; font: inherit; }
-.user-edit-modal > div:last-child { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-.edit-cancel-btn, .edit-save-btn { border: 0; border-radius: 10px; padding: 11px 15px; cursor: pointer; font: inherit; font-weight: 600; }
-.edit-cancel-btn { background: #eef2f7; color: var(--text); }.edit-save-btn { background: var(--primary); color: #fff; }
+.whatsapp-btn {
+    background: #16a34a;
+    color: white;
+    text-decoration: none;
+}
+
+.restore-btn {
+    background: #2563eb;
+    color: white;
+}
+
+.role-save-btn {
+    width: 32px;
+    height: 32px;
+    background: #e8f1ff;
+    color: #1463c3;
+}
+
+.whatsapp-btn:hover,
+.restore-btn:hover,
+.role-save-btn:hover {
+    transform: translateY(-2px);
+}
+
+.role-editor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 18px;
+    box-sizing: border-box;
+}
+
+.role-editor select {
+    min-width: 0;
+    width: 100%;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 0 8px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.role-editor .app-select-trigger {
+    min-height: 38px;
+    height: 38px;
+    border-radius: 9px;
+    padding-inline: 8px;
+}
+
+.role-editor .app-select-menu {
+    z-index: 100;
+}
+
+.phone-value {
+    direction: ltr;
+    text-align: left;
+}
+
+.users-actions {
+    min-width: 154px;
+    gap: 12px;
+}
+
+.users-actions>button,
+.users-actions>a {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+}
+
+.role-save-btn {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+}
+
+.edit-user-btn {
+    background: #e8f1ff;
+    color: #1463c3;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.current-user-badge {
+    display: block;
+    margin-top: 5px;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.user-edit-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .42);
+}
+
+.user-edit-modal {
+    width: min(100%, 420px);
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
+}
+
+.user-edit-modal h2 {
+    margin: 0;
+    color: var(--text);
+}
+
+.user-edit-modal p {
+    margin: 7px 0 18px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.user-edit-modal label {
+    display: grid;
+    gap: 7px;
+    margin-top: 13px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.user-edit-modal input {
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font: inherit;
+}
+
+.user-edit-modal>div:last-child {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.edit-cancel-btn,
+.edit-save-btn {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 15px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+}
+
+.edit-cancel-btn {
+    background: var(--surface-soft);
+    color: var(--text);
+}
+
+.edit-save-btn {
+    background: var(--primary);
+    color: #fff;
+}
 
 @media(max-width:1300px) {
-    .users-row > span::before,
-    .users-row > .role-editor::before { display: block; color: var(--text-light); font-size: 12px; margin-bottom: 3px; }
-    .users-row > span:nth-child(1)::before { content: "Name"; }
-    .users-row > span:nth-child(2)::before { content: "Email"; }
-    .users-row > span:nth-child(3)::before { content: "Phone"; }
-    .users-row > .role-editor::before { content: "Role"; }
+
+    .users-row>span::before,
+    .users-row>.role-editor::before {
+        display: block;
+        color: var(--text-light);
+        font-size: 12px;
+        margin-bottom: 3px;
+    }
+
+    .users-row>span:nth-child(1)::before {
+        content: "Name";
+    }
+
+    .users-row>span:nth-child(2)::before {
+        content: "Email";
+    }
+
+    .users-row>span:nth-child(3)::before {
+        content: "Phone";
+    }
+
+    .users-row>.role-editor::before {
+        content: "Role";
+    }
 }
 
 /* At wide desktop widths all actions fit inside their own grid column, so do
    not reserve a pointless horizontal scrollbar under a one-row table. */
 @media(min-width:1301px) {
-    .users-table { overflow-x: hidden; }
+    .users-table {
+        overflow-x: hidden;
+    }
+
     .users-table-header,
     .users-row {
         column-gap: clamp(12px, 1.2vw, 18px);
         min-width: 0;
         padding: 16px 28px;
     }
-    .users-actions { min-width: 0; gap: 10px; }
-    .users-actions > button,
-    .users-actions > a,
-    .role-save-btn { width: 40px; height: 40px; flex: 0 0 40px; }
-    .role-editor { padding-right: 8px; }
+
+    .users-actions {
+        min-width: 0;
+        gap: 10px;
+    }
+
+    .users-actions>button,
+    .users-actions>a,
+    .role-save-btn {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+    }
+
+    .role-editor {
+        padding-right: 8px;
+    }
 }

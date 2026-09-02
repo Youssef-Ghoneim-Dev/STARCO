@@ -19,10 +19,10 @@
 }
 
 :root[data-theme="dark"] {
-    --primary: #8FC1D8;
-    --primary-hover: #ADD5E6;
+    --primary: #355f7a;
+    --primary-hover: #1c5b84;
     --secondary: #F3F8FB;
-    --acade: #73A9C1;
+    --acade: #a1cada;
     --success: #55D68A;
     --danger: #FF8585;
     --background: #172A35;
@@ -94,13 +94,11 @@ html[data-theme="dark"] :where(.dashboard-layout, .dashboard-content) {
     background-color: var(--background);
 }
 
-html[data-theme="dark"] :where(
-    .topbar, .sidebar, .project-card, .panel-index-card, .marketing-panel,
+html[data-theme="dark"] :where(.topbar, .sidebar, .project-card, .panel-index-card, .marketing-panel,
     .marketing-metric, .dashboard-card, .profile-card, .management-card,
     .configuration-card, .auth-card, .notification-popover,
     .account-switcher-popover, .account-modal, .mobile-bottom-nav,
-    .app-select-menu, .logout-confirm-card
-) {
+    .app-select-menu, .logout-confirm-card) {
     color: var(--text);
     border-color: var(--border);
     background: var(--surface);
@@ -111,34 +109,29 @@ html[data-theme="dark"] :where(
  * dashboard surface genuinely dark without having to duplicate each page's
  * component rules, while leaving status chips and primary actions untouched.
  */
-html[data-theme="dark"] .dashboard-content :where(
-    [class$="-card"], [class*="-card "],
+html[data-theme="dark"] .dashboard-content :where([class$="-card"], [class*="-card "],
     [class$="-panel"], [class*="-panel "],
     .copper-quick-settings,
     .client-execution-panel-switcher,
     .panel-delivery-date-picker,
-    .skip-execution-btn
-) {
+    .skip-execution-btn) {
     color: var(--text);
     border-color: var(--border);
     background: var(--surface) !important;
 }
 
-html[data-theme="dark"] .dashboard-content :where(
-    .marketer-link,
+html[data-theme="dark"] .dashboard-content :where(.marketer-link,
     .marketer-actions a:not(:first-child),
     .marketing-card-link,
     .marketing-production article,
     .marketer-projects th,
-    .marketing-team th
-) {
+    .marketing-team th) {
     color: var(--text-light);
     border-color: var(--border);
     background: var(--surface-muted);
 }
 
-html[data-theme="dark"] .dashboard-content :where(
-    .marketer-date-tools > label,
+html[data-theme="dark"] .dashboard-content :where(.marketer-date-tools > label,
     .marketer-metric span,
     .marketer-production > div span,
     .marketer-production > div > strong,
@@ -149,36 +142,29 @@ html[data-theme="dark"] .dashboard-content :where(
     .marketing-production article span,
     .marketing-status-body p,
     .marketing-alerts p,
-    th
-) {
+    th) {
     color: var(--text-light);
 }
 
-html[data-theme="dark"] .dashboard-content :where(
-    h1, h2, h3, h4, h5, h6,
+html[data-theme="dark"] .dashboard-content :where(h1, h2, h3, h4, h5, h6,
     .route-loading,
     .empty-state,
     .empty-projects,
     .users-loading,
     .management-empty,
-    .configuration-loading
-) {
+    .configuration-loading) {
     color: var(--text) !important;
 }
 
-html[data-theme="dark"] .dashboard-content :where(
-    [class$="-card"], [class*="-card "],
-    [class$="-panel"], [class*="-panel "]
-) :where(h1, h2, h3, h4, h5, h6, p, label, legend, span, strong, small, b, td, th) {
+html[data-theme="dark"] .dashboard-content :where([class$="-card"], [class*="-card "],
+    [class$="-panel"], [class*="-panel "]) :where(h1, h2, h3, h4, h5, h6, p, label, legend, span, strong, small, b, td, th) {
     color: var(--text) !important;
 }
 
-html[data-theme="dark"] .dashboard-content :where(
-    .marketer-link,
+html[data-theme="dark"] .dashboard-content :where(.marketer-link,
     .marketing-card-link,
     .engineer-more-link,
-    .production-card-link
-) {
+    .production-card-link) {
     color: var(--text) !important;
 }
 
@@ -188,24 +174,93 @@ html[data-theme="dark"] :where(input, textarea, select, .app-select-trigger) {
     background-color: var(--surface-muted);
 }
 
-html[data-theme="dark"] :where(input, textarea)::placeholder { color: #7F91A0; }
-html[data-theme="dark"] :where(.topbar, .sidebar, .mobile-bottom-nav) { box-shadow: 0 1px 0 var(--border); }
-html[data-theme="dark"] :where(.notification-item, .account-switcher-list > button) { color: var(--text); background: var(--surface); }
-html[data-theme="dark"] :where(.notification-item:hover, .account-switcher-list > button:hover) { background: var(--surface-muted); }
-html[data-theme="dark"] .account-switcher-popover > footer { border-color: var(--border); background: var(--surface-muted); }
-html[data-theme="dark"] .account-switcher-list :where(strong, small) { color: var(--text) !important; }
-html[data-theme="dark"] .account-switcher-list em { color: var(--text); background: var(--surface-soft); }
-html[data-theme="dark"] .account-switcher-list > button.is-active { color: var(--text); border-color: var(--border); background: var(--surface-soft); opacity: 1; }
-html[data-theme="dark"] .account-switcher-popover > footer button:not(.account-add-btn) { color: var(--text); border-color: var(--border); background: var(--surface); }
-html[data-theme="dark"] .account-modal > header { border-color: var(--border); background: var(--surface-muted); }
-html[data-theme="dark"] .account-modal :where(h2, p, label) { color: var(--text) !important; }
-html[data-theme="dark"] .account-modal > header button { color: var(--text); background: var(--surface-soft); }
-html[data-theme="dark"] .account-modal form input { color: var(--text); border-color: var(--border); background: var(--surface-muted); }
-html[data-theme="dark"] :where(.auth-tabs, .auth-container) { background-color: var(--surface-muted); }
-html[data-theme="dark"] .auth-card { background: var(--surface); }
-html[data-theme="dark"] .auth-tabs a { color: var(--text-light); }
-html[data-theme="dark"] .auth-tabs a.active-tab { color: #fff; }
-html[data-theme="dark"] :where(.auth-btn, .google-login-visual) { color: #fff !important; }
+html[data-theme="dark"] :where(input, textarea)::placeholder {
+    color: #7F91A0;
+}
+
+html[data-theme="dark"] :where(.topbar, .sidebar, .mobile-bottom-nav) {
+    box-shadow: 0 1px 0 var(--border);
+}
+
+html[data-theme="dark"] :where(.notification-item, .account-switcher-list > button) {
+    color: var(--text);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] :where(.notification-item:hover, .account-switcher-list > button:hover) {
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .account-switcher-popover>footer {
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .account-switcher-list :where(strong, small) {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .account-switcher-list em {
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .account-switcher-list>button.is-active {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-soft);
+    opacity: 1;
+}
+
+html[data-theme="dark"] .account-switcher-popover>footer button:not(.account-add-btn) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .account-modal>header {
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .account-modal :where(h2, p, label) {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .account-modal>header button {
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .account-modal form input {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] :where(.auth-tabs, .auth-container) {
+    background-color: var(--surface-muted);
+}
+
+html[data-theme="dark"] .auth-card {
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .auth-tabs a {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .auth-tabs a.active-tab {
+    color: #fff;
+}
+
+html[data-theme="dark"] :where(.auth-btn, .google-login-visual) {
+    color: #fff !important;
+}
+
+html[data-theme="dark"] .auth-switch button {
+    color: #fff;
+}
 
 /* Production Manager: replace fixed light surfaces while preserving the
    deliberately colored stage tiles. */
@@ -214,52 +269,76 @@ html[data-theme="dark"] .production-manager-dashboard :where(.production-card-li
     border-color: var(--border);
     background: var(--surface-muted) !important;
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-manager-metric span,
-html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div span,
-html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div em,
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress>div span,
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress>div em,
 html[data-theme="dark"] .production-manager-dashboard .production-manager-kpis span {
     color: var(--text-light);
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-manager-card th {
     color: var(--text) !important;
     border-color: var(--border);
     background: var(--surface-soft);
 }
+
 html[data-theme="dark"] .production-manager-dashboard :where(.production-table-scroll, .production-manager-card td, .production-alerts > p, .production-waiting > a, .production-manager-kpis > div) {
     border-color: var(--border);
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-clickable-row:hover,
 html[data-theme="dark"] .production-manager-dashboard .production-clickable-row:focus-visible {
     background: var(--surface-soft);
 }
-html[data-theme="dark"] .production-manager-dashboard .production-delayed-list > div a {
+
+html[data-theme="dark"] .production-manager-dashboard .production-delayed-list>div a {
     border-color: rgba(222, 83, 96, .34);
     background: rgba(222, 83, 96, .08);
 }
-html[data-theme="dark"] .production-manager-dashboard .production-stage-progress > div > i {
+
+html[data-theme="dark"] .production-manager-dashboard .production-stage-progress>div>i {
     background: var(--surface-soft);
 }
-html[data-theme="dark"] .production-manager-dashboard .production-waiting > a > i {
+
+html[data-theme="dark"] .production-manager-dashboard .production-waiting>a>i {
     background: rgba(221, 161, 46, .13);
 }
-html[data-theme="dark"] .production-manager-dashboard .production-pdf-today > div > svg {
+
+html[data-theme="dark"] .production-manager-dashboard .production-pdf-today>div>svg {
     background: rgba(130, 94, 208, .15);
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-manager-kpis svg {
     background: var(--surface-soft);
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-current-stages article {
     border-color: color-mix(in srgb, var(--stage-color) 30%, white);
     background: color-mix(in srgb, var(--stage-color) 10%, white);
 }
+
 html[data-theme="dark"] .production-manager-dashboard .production-current-stages article :where(span, strong, small) {
     color: #17212b !important;
 }
-html[data-theme="dark"] .theme-toggle-btn { color: #F4C95D; background: rgba(244, 201, 93, .1); }
-html[data-theme="dark"] .logout-btn { color: #FF9A9A; }
-html[data-theme="dark"] .logout-btn:hover { color: #FFD0D0; background: rgba(255, 154, 154, .1); }
 
-.theme-toggle-btn { color: var(--primary); }
+html[data-theme="dark"] .theme-toggle-btn {
+    color: #F4C95D;
+    background: rgba(244, 201, 93, .1);
+}
+
+html[data-theme="dark"] .logout-btn {
+    color: #FF9A9A;
+}
+
+html[data-theme="dark"] .logout-btn:hover {
+    color: #FFD0D0;
+    background: rgba(255, 154, 154, .1);
+}
+
+.theme-toggle-btn {
+    color: var(--primary);
+}
 
 input,
 textarea,
@@ -275,7 +354,7 @@ option,
     text-align: right !important;
 }
 
-.starco-toast > div:last-child {
+.starco-toast>div:last-child {
     min-width: 0;
     direction: rtl;
     unicode-bidi: plaintext;
@@ -314,7 +393,7 @@ textarea {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--surface-soft);
 }
 
 ::-webkit-scrollbar-track:hover {
