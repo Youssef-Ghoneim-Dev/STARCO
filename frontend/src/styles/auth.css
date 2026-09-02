@@ -1130,7 +1130,7 @@
     box-shadow: none;
     font-size: 21px;
     cursor: pointer;
-    opacity: 0 !important;
+    opacity: 1;
 }
 
 .auth-theme-toggle:focus,
