@@ -271,7 +271,7 @@ html[data-theme="dark"] :where(.engineer-date-tools, .marketing-date-tools, .mar
     color: #fff;
 }
 
-html[data-theme="dark"] .owner-dashboard :where(.owner-card-link, .performance-report-button, .owner-table-card>h2 svg) {
+html[data-theme="dark"] .owner-dashboard :where(.owner-card-link, .owner-table-card>h2 svg) {
     color: var(--acade) !important;
 }
 
@@ -299,6 +299,17 @@ html[data-theme="dark"] .owner-dashboard .production-average span {
 html[data-theme="dark"] .owner-dashboard .performance-icon {
     color: var(--performance-color);
     background: color-mix(in srgb, var(--performance-color) 17%, var(--surface));
+}
+
+html[data-theme="dark"] .owner-dashboard .performance-title p {
+    color: var(--performance-color) !important;
+    border-color: color-mix(in srgb, var(--performance-color) 42%, var(--border));
+    background: color-mix(in srgb, var(--performance-color) 14%, var(--surface));
+}
+
+html[data-theme="dark"] .owner-dashboard .performance-title p :where(strong, span),
+html[data-theme="dark"] .owner-dashboard .performance-report-button {
+    color: var(--performance-color) !important;
 }
 
 html[data-theme="dark"] .app-select-menu button:hover,
@@ -343,10 +354,16 @@ html[data-theme="dark"] .configuration-page :where(.configuration-secondary, .ad
     background: var(--surface-soft);
 }
 
-html[data-theme="dark"] .configuration-page :where(.configuration-delete, .additional-part-card>button, .additional-part-chip button, .copper-bar-count-chips button) {
+html[data-theme="dark"] .configuration-page :where(.configuration-delete, .additional-part-card>button, .additional-part-chip button) {
     color: var(--danger);
     border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
     background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+
+html[data-theme="dark"] .configuration-page .copper-bar-count-chips button {
+    color: var(--danger);
+    border: 0;
+    background: transparent;
 }
 
 html[data-theme="dark"] .configuration-page :where(.copper-quick-settings, .additional-part-card, .additional-part-add-grid) {

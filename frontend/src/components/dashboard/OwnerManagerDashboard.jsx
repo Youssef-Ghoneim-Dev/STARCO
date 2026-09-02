@@ -115,7 +115,7 @@ function ProductionOverview({ stages, averages }) {
 
 function PerformanceCard({ data, onReport }) {
   return <article className={`performance-card ${data.tone}`}>
-    <div className="performance-heading"><div className="performance-icon"><HiOutlineChartBar /></div><div><h3>{data.title}</h3><strong>{data.value}</strong><span>{data.unit}</span></div></div>
+    <div className="performance-heading"><div className="performance-icon"><HiOutlineChartBar /></div><div className="performance-title"><h3>{data.title}</h3><p><strong>{data.value}</strong><span>{data.unit}</span></p></div></div>
     <div className="performance-values">{data.items.map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
     <button type="button" className="performance-report-button" onClick={() => onReport(data)}>عرض التقرير <HiOutlineExternalLink /></button>
   </article>;

@@ -64,13 +64,13 @@
 
 .management-row .permanent-delete-btn,
 .management-confirmation-actions .permanent-delete-btn {
-    background: #b42318;
+    background: #c6535d;
     color: #fff;
 }
 
 .management-row .permanent-delete-btn:hover,
 .management-confirmation-actions .permanent-delete-btn:hover {
-    background: #8f1c13;
+    background: #ad444d;
 }
 
 .recycle-bin-tabs {
