@@ -366,3 +366,17 @@
     cursor: wait;
 }
 
+.projects-refresh-btn .is-spinning {
+    animation: projects-refresh-spin .75s linear infinite;
+}
+
+.projects-refresh-btn:not(:disabled):active {
+    transform: translateY(1px) scale(.98);
+}
+
+@keyframes projects-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+

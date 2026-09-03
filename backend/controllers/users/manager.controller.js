@@ -9,6 +9,24 @@ const managedRole = (manager) => manager.role === "MarketingManager"
 const canManageTarget = (manager, targetUser) => manager.role === "OwnerManager"
     || Boolean(targetUser && managedRole(manager) === targetUser.role);
 
+const includeLinkedAccountCreators = async (userList) => {
+    const creatorIds = [...new Set(userList.map((user) => String(user.accountCreatedBy || "")).filter(Boolean))];
+    if (!creatorIds.length) return userList;
+    const creators = await models.selectall({ _id: { $in: creatorIds } });
+    const creatorMap = new Map(creators.map((creator) => [String(creator._id), {
+        id: creator._id,
+        name: creator.name,
+        role: creator.role
+    }]));
+    return userList.map((user) => {
+        const plainUser = typeof user.toObject === "function" ? user.toObject() : { ...user };
+        return {
+            ...plainUser,
+            linkedAccountCreator: creatorMap.get(String(user.accountCreatedBy || "")) || null
+        };
+    });
+};
+
 const getUsers = async (req, res, next) => {
     try {
         const user = req.user;
@@ -16,13 +34,13 @@ const getUsers = async (req, res, next) => {
             const users = await models.selectall({
                 isDeleted: false
             })
-            return res.status(200).json(users)
+            return res.status(200).json(await includeLinkedAccountCreators(users))
         } else if (managedRole(user)) {
             const users = await models.selectall({
                 isDeleted: false,
                 role: managedRole(user)
             })
-            return res.status(200).json(users)
+            return res.status(200).json(await includeLinkedAccountCreators(users))
         } else {
             return res.status(403).json({
                 status: "error",
@@ -42,14 +60,14 @@ const getDeletedUsers = async (req, res, next) => {
             const users = await models.selectall({
                 isDeleted: true
             })
-            return res.status(200).json(users)
+            return res.status(200).json(await includeLinkedAccountCreators(users))
         } else if (managedRole(user)) {
             const users = await models.selectall({
                 role: managedRole(user),
                 isDeleted: true,
                 deletedBy: user._id
             })
-            return res.status(200).json(users)
+            return res.status(200).json(await includeLinkedAccountCreators(users))
         } else {
             return res.status(403).json({
                 status: "error",

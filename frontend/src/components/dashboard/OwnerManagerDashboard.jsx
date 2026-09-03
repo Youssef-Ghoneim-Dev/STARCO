@@ -235,11 +235,11 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
   const delayedRows = delayedPanels.slice(0, 5).map((panel, index) => [index + 1, <DashboardName key={panel._id}>{itemName(panel)}</DashboardName>, panelStatusMeta(panel).label, <span className="delay-value" key={panel._id}>{daysLate(panel, today)} يوم</span>]);
   const engineers = users.filter((person) => person.role === "Engineer");
   const marketers = users.filter((person) => person.role === "Marketer");
-  const engineerRows = engineers.map((person, index) => {
+  const engineerRows = engineers.slice(0, 3).map((person, index) => {
     const owned = panels.filter((panel) => String(panel.engineerId?._id || panel.engineerId || "") === String(person._id));
     return [index + 1, person.name, owned.filter((panel) => ["pendingPricing", "pricing", "quoteCompleted"].includes(panel.status)).length, owned.filter((panel) => panel.executionPdf?.readyAt).length, owned.filter((panel) => (panel.manufacturing?.files || []).length).length];
   });
-  const marketerRows = marketers.map((person, index) => {
+  const marketerRows = marketers.slice(0, 3).map((person, index) => {
     const owned = projects.filter((project) => String(project.marketingId?._id || project.marketingId || project.createdBy?._id || project.createdBy || "") === String(person._id));
     return [index + 1, person.name, owned.filter((project) => sameDay(project.createdAt, selectedDate)).length, owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.requestedAt)).length, owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.confirmedAt)).length];
   });

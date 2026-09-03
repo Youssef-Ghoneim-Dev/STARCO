@@ -261,6 +261,38 @@
     text-align: left;
 }
 
+.linked-account-origin {
+    display: grid;
+    justify-items: start;
+    gap: 2px;
+    direction: rtl;
+    text-align: right;
+}
+
+.linked-account-origin small {
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.linked-account-origin strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.linked-account-origin em {
+    width: fit-content;
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: var(--primary);
+    background: var(--surface-soft);
+    font-size: 9px;
+    font-style: normal;
+}
+
+html[data-theme="dark"] .linked-account-origin em {
+    color: var(--acade);
+}
+
 .users-actions {
     min-width: 154px;
     gap: 12px;
