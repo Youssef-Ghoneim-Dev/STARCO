@@ -239,7 +239,7 @@ function Configuration() {
       <h2>إعدادات التصنيع للمشاريع غير المحددة النوع</h2>
       <div className="configuration-grid">{priceFields.map(([key, label]) => <NumberField key={key} label={label} value={config.prices[key]} onChange={(value) => setConfig((current) => ({ ...current, prices: { ...current.prices, [key]: value } }))} />)}</div>
       <h2>الكرسي والأوميجا</h2>
-      <div className="configuration-grid two-columns">{partSettings.map(([part, title]) => <fieldset className="part-settings" key={part}><legend>{title}</legend>{partFields.map(([key, label]) => <NumberField key={key} label={label} value={config.parts[part][key]} onChange={(value) => setConfig((current) => ({ ...current, parts: { ...current.parts, [part]: { ...current.parts[part], [key]: value } } }))} />)}</fieldset>)}</div>
+      <div className="configuration-grid two-columns legacy-parts-grid">{partSettings.map(([part, title]) => <fieldset className="part-settings" key={part}><legend>{title}</legend>{partFields.map(([key, label]) => <NumberField key={key} label={label} value={config.parts[part][key]} onChange={(value) => setConfig((current) => ({ ...current, parts: { ...current.parts, [part]: { ...current.parts[part], [key]: value } } }))} />)}</fieldset>)}</div>
       <button type="submit" disabled={loading || savingPricing}>{savingPricing ? "جاري الحفظ..." : "حفظ إعدادات التسعير"}</button>
     </form>
     </>}

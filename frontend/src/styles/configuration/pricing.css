@@ -26,12 +26,16 @@
 
 .configuration-number-field {
     display: grid;
+    min-width: 0;
     gap: 7px;
     color: var(--text);
     font-size: 15px;
 }
 
 .configuration-number-field input {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     min-height: 44px;
     box-sizing: border-box;
     border: 1px solid var(--border);
@@ -66,9 +70,24 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: 12px;
+}
+
+/* Chair and Omega must respond to the available content width (including the
+   sidebar), not only to the browser viewport width. */
+.configuration-grid.legacy-parts-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+}
+
+.legacy-parts-grid .part-settings .configuration-number-field,
+.legacy-parts-grid .part-settings input {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .part-settings legend {
@@ -95,4 +114,3 @@
     direction: rtl;
     color: var(--danger);
 }
-
