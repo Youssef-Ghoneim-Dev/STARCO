@@ -1,13 +1,31 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { IoChevronDown } from "react-icons/io5";
+import { IoCheckmark, IoChevronDown } from "react-icons/io5";
 
-function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel, direction = "rtl" }) {
+function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel, direction = "rtl", multiple = false }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const ref = useRef(null);
   const menuRef = useRef(null);
-  const selected = options.find((option) => String(option.value) === String(value));
+  const values = multiple ? (Array.isArray(value) ? value.map(String) : []) : [String(value)];
+  const selectedOptions = options.filter((option) => values.includes(String(option.value)));
+  const selected = selectedOptions[0];
+  const triggerLabel = multiple
+    ? selectedOptions.length === 0 ? (options.find((option) => option.value === "all")?.label || placeholder) : selectedOptions.length === 1 ? selected.label : `${selectedOptions.length} statuses selected`
+    : selected?.label || placeholder;
+  const selectOption = (optionValue) => {
+    if (!multiple) {
+      onChange(optionValue);
+      setOpen(false);
+      return;
+    }
+    if (String(optionValue) === "all") {
+      onChange([]);
+      return;
+    }
+    const stringValue = String(optionValue);
+    onChange(values.includes(stringValue) ? values.filter((entry) => entry !== stringValue) : [...values, stringValue]);
+  };
 
   useEffect(() => {
     const close = (event) => {
@@ -45,10 +63,10 @@ function StyledSelect({ value, options, placeholder = "اختر", onChange, disa
 
   return <div className={`app-select${disabled ? " is-disabled" : ""}`} ref={ref} dir={direction}>
     <button type="button" className="app-select-trigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
-      <span className={selected ? "" : "app-select-placeholder"}>{selected?.label || placeholder}</span><IoChevronDown className="app-select-chevron" aria-hidden="true" />
+      <span className={selected ? "" : "app-select-placeholder"}>{triggerLabel}</span><IoChevronDown className="app-select-chevron" aria-hidden="true" />
     </button>
-    {open && menuPosition && createPortal(<div ref={menuRef} className={`app-select-menu app-select-menu-portal${direction === "ltr" ? " is-ltr" : ""}`} dir={direction} role="listbox" style={menuPosition}>
-      {options.map((option) => <button type="button" key={option.value} role="option" aria-selected={String(option.value) === String(value)} className={String(option.value) === String(value) ? "is-selected" : ""} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
+    {open && menuPosition && createPortal(<div ref={menuRef} className={`app-select-menu app-select-menu-portal${direction === "ltr" ? " is-ltr" : ""}${multiple ? " is-multiple" : ""}`} dir={direction} role="listbox" aria-multiselectable={multiple || undefined} style={menuPosition}>
+      {options.map((option) => { const optionSelected = multiple ? (option.value === "all" ? values.length === 0 : values.includes(String(option.value))) : String(option.value) === String(value); return <button type="button" key={option.value} role="option" aria-selected={optionSelected} className={optionSelected ? "is-selected" : ""} onClick={() => selectOption(option.value)}>{multiple && <IoCheckmark aria-hidden="true" />}{option.label}</button>; })}
     </div>, document.body)}
   </div>;
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import DashboardLayout from "../components/layout/DashboardLayout";
 
@@ -11,11 +12,12 @@ import { matchesSearchText } from "../utils/textSearch";
 import "../styles/projects.css";
 
 function Projects() {
+  const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(() => (searchParams.get("statuses") || "").split(",").filter(Boolean));
   const [deletingProjectId, setDeletingProjectId] = useState("");
 
   const fetchProjects = useCallback(async () => {
@@ -31,6 +33,7 @@ function Projects() {
   }, []);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  useEffect(() => { setStatus((searchParams.get("statuses") || "").split(",").filter(Boolean)); }, [searchParams]);
 
   const filteredProjects = useMemo(() => {
     const statusPriority = {
@@ -58,7 +61,7 @@ function Projects() {
         (!query.trim() ||
           matchesSearchText(clientName, query) ||
           matchesSearchText(panelNames, query)) &&
-        (status === "all" || project.status === status)
+        (!status.length || status.includes(project.status))
       );
     }).sort((firstProject, secondProject) => {
       const statusDifference =

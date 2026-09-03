@@ -1716,6 +1716,23 @@
     text-align: left;
 }
 
+.app-select-menu.is-multiple button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-select-menu.is-multiple button>svg {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    color: transparent;
+}
+
+.app-select-menu.is-multiple button.is-selected>svg {
+    color: var(--primary);
+}
+
 .copper-entry-card {
     margin-top: 18px;
     padding: 16px;

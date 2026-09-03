@@ -225,12 +225,12 @@
 
 .marketer-actions {
     grid-column: span 4;
-    min-height: 390px;
+    min-height: 340px;
 }
 
 .marketer-status {
     grid-column: span 8;
-    min-height: 390px;
+    min-height: 340px;
 }
 
 .marketer-production,
@@ -270,6 +270,12 @@
 .marketer-link.danger {
     color: #cc4552;
     background: #fff8f8;
+}
+
+.marketer-table-empty {
+    padding-block: 28px !important;
+    color: var(--text-light);
+    text-align: center;
 }
 
 .marketer-empty {
@@ -732,6 +738,15 @@
         font-size: 18px;
     }
 
+    .marketer-actions,
+    .marketer-status {
+        min-height: auto;
+    }
+
+    .marketer-projects .marketer-link {
+        margin-top: 16px;
+    }
+
     .marketer-status>div {
         grid-template-columns: 1fr;
         justify-items: center;
@@ -752,4 +767,3 @@
         border-top: 1px solid var(--border);
     }
 }
-

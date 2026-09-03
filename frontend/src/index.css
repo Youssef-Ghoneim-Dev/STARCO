@@ -253,7 +253,7 @@ html[data-theme="dark"] .mobile-bottom-nav a {
 }
 
 html[data-theme="dark"] .mobile-bottom-nav a.active {
-    color: var(--acade);
+    color: #fff;
 }
 
 html[data-theme="dark"] .owner-kpi-strip svg {
@@ -320,6 +320,10 @@ html[data-theme="dark"] .app-select-menu button:hover {
 html[data-theme="dark"] .app-select-menu button.is-selected:not(:hover) {
     color: var(--text);
     background: transparent;
+}
+
+html[data-theme="dark"] .app-select-menu.is-multiple button.is-selected>svg {
+    color: #fff;
 }
 
 html[data-theme="dark"] .app-select-chevron {
@@ -402,6 +406,11 @@ html[data-theme="dark"] .engineer-performance-card>div span:nth-child(4) {
 
 html[data-theme="dark"] .engineer-performance-card>div span strong {
     color: currentColor !important;
+}
+
+html[data-theme="dark"] .marketer-dashboard .marketer-link.danger,
+html[data-theme="dark"] .marketer-dashboard .marketer-link.danger svg {
+    color: #ffb45f !important;
 }
 
 /* Configuration uses the same primary actions as the light theme, but on the

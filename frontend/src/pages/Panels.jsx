@@ -30,15 +30,13 @@ const panelStatuses = [
 ];
 
 export default function Panels() {
-  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [panels, setPanels] = useState([]); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [status, setStatus] = useState(() => searchParams.get("statuses")?.split(",").filter(Boolean).length === 1 ? searchParams.get("statuses") : "all");
+  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [panels, setPanels] = useState([]); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [status, setStatus] = useState(() => (searchParams.get("statuses") || "").split(",").filter(Boolean));
   const load = async () => { setLoading(true); try { const { data } = await getAllPanels(); setPanels(data || []); } catch (error) { toast.error(error.response?.data?.message || "تعذر تحميل اللوحات."); } finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
   const view = searchParams.get("view") || "";
   const requestedStatuses = useMemo(() => new Set((searchParams.get("statuses") || "").split(",").filter(Boolean)), [searchParams]);
   useEffect(() => {
-    const [onlyStatus] = [...requestedStatuses];
-    if (requestedStatuses.size === 1 && panelStatuses.some((option) => option.value === onlyStatus)) setStatus(onlyStatus);
-    if (!requestedStatuses.size) setStatus("all");
+    setStatus([...requestedStatuses].filter((value) => panelStatuses.some((option) => option.value === value)));
   }, [requestedStatuses]);
   const requestedDate = searchParams.get("date");
   const requestedDateEnd = useMemo(() => {
@@ -54,7 +52,6 @@ export default function Panels() {
     return localValue === requestedDate;
   };
   const matchesDashboardView = (panel) => {
-    if (requestedStatuses.size > 1 && !requestedStatuses.has(panel.status)) return false;
     if (searchParams.get("delayed") === "true") {
       if (!isDelayed(panel, requestedDateEnd || new Date())) return false;
     }
@@ -71,7 +68,7 @@ export default function Panels() {
     return true;
   };
   const visible = useMemo(() => panels.filter((panel) => {
-    const matchesStatus = status === "all" || panel.status === status;
+    const matchesStatus = !status.length || status.includes(panel.status);
     const searchable = `${panel.panelName || ""} ${panel.panelCode || ""} ${panel.project?.projectCode || ""} ${panel.project?.client?.name || ""}`;
     return matchesDashboardView(panel) && matchesStatus && (!query.trim() || matchesSearchText(searchable, query));
   // searchParams represents the dashboard filter URL and intentionally refreshes this list.
