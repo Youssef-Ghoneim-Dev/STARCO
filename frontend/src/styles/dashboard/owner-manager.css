@@ -653,6 +653,11 @@
     overflow-wrap: anywhere;
 }
 
+.owner-kpi-strip strong.owner-delay-result {
+    font-size: 14px;
+    line-height: 1.35;
+}
+
 .owner-report-backdrop {
     position: fixed;
     inset: 0;
@@ -1433,9 +1438,9 @@
         padding: 0;
     }
 
-    .owner-kpi-strip>div:nth-child(2) strong {
+    .owner-kpi-strip strong.owner-delay-result {
         max-width: 100%;
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.4;
     }
 

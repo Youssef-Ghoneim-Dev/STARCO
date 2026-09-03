@@ -312,10 +312,14 @@ html[data-theme="dark"] .owner-dashboard .performance-report-button {
     color: var(--performance-color) !important;
 }
 
-html[data-theme="dark"] .app-select-menu button:hover,
-html[data-theme="dark"] .app-select-menu button.is-selected {
+html[data-theme="dark"] .app-select-menu button:hover {
     color: #fff;
     background: #416f84;
+}
+
+html[data-theme="dark"] .app-select-menu button.is-selected:not(:hover) {
+    color: var(--text);
+    background: transparent;
 }
 
 html[data-theme="dark"] .app-select-chevron {
@@ -338,7 +342,7 @@ html[data-theme="dark"] .sidebar-link:hover {
 }
 
 html[data-theme="dark"] :where(.projects-search, .projects-filter, .projects-refresh-btn) {
-    color: #fff;
+    color: #fff !important;
     border-color: var(--border);
     background: var(--surface);
 }
@@ -353,8 +357,51 @@ html[data-theme="dark"] .projects-search input::placeholder {
 }
 
 html[data-theme="dark"] .projects-filter :where(.app-select-trigger, .app-select-chevron) {
-    color: #fff;
+    color: #fff !important;
     background: transparent;
+}
+
+html[data-theme="dark"] :where(.engineer-date-tools, .marketing-date-tools, .marketer-date-tools, .production-date-tools, .dashboard-date-tools) :where(button, label, input, .app-select-trigger, .app-select-chevron, svg) {
+    color: #fff !important;
+}
+
+html[data-theme="dark"] :where(.owner-kpi-strip, .engineer-kpi-strip, .production-manager-kpis) svg {
+    color: var(--acade) !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .engineer-quick-actions a:not(.primary) {
+    color: var(--text) !important;
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .engineer-quick-actions a:not(.primary) svg {
+    color: var(--acade) !important;
+}
+
+html[data-theme="dark"] .engineer-performance-card>div span:nth-child(1) {
+    color: #8fc5f1 !important;
+    background: rgba(79, 139, 194, .17) !important;
+}
+
+html[data-theme="dark"] .engineer-performance-card>div span:nth-child(2) {
+    color: #83d9aa !important;
+    background: rgba(48, 168, 104, .16) !important;
+}
+
+html[data-theme="dark"] .engineer-performance-card>div span:nth-child(3) {
+    color: #c0a8ef !important;
+    background: rgba(125, 91, 190, .18) !important;
+}
+
+html[data-theme="dark"] .engineer-performance-card>div span:nth-child(4) {
+    color: #efc679 !important;
+    background: rgba(205, 145, 44, .17) !important;
+}
+
+html[data-theme="dark"] .engineer-performance-card>div span strong {
+    color: currentColor !important;
 }
 
 /* Configuration uses the same primary actions as the light theme, but on the

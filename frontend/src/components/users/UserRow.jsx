@@ -56,7 +56,7 @@ function UserRow({ user, reload, mode }) {
       <span>{user.name}{isCurrentUser && <small className="current-user-badge">This is you</small>}</span>
 
       <span>{user.email}</span>
-      <span className="phone-value">{user.phoneNumber || (user.linkedAccountCreator ? <span className="linked-account-origin"><small>حساب إضافي تابع لـ</small><strong>{user.linkedAccountCreator.name}</strong><em>{user.linkedAccountCreator.role}</em></span> : "بدون رقم هاتف")}</span>
+      <span className="phone-value">{user.phoneNumber || (user.linkedAccountCreator ? <span className="linked-account-origin"><small>Additional Account From</small><strong>{user.linkedAccountCreator.name}</strong><em>{user.linkedAccountCreator.role}</em></span> : "No phone number")}</span>
       <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
 
       <div className="users-actions">

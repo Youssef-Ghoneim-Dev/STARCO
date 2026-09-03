@@ -265,8 +265,8 @@
     display: grid;
     justify-items: start;
     gap: 2px;
-    direction: rtl;
-    text-align: right;
+    direction: ltr;
+    text-align: left;
 }
 
 .linked-account-origin small {

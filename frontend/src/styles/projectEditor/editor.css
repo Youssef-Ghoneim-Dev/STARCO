@@ -1707,8 +1707,13 @@
 }
 
 .app-select-menu button.is-selected {
-    color: #fff;
-    background: var(--primary);
+    color: var(--text);
+    background: transparent;
+}
+
+.app-select-menu.is-ltr button {
+    direction: ltr;
+    text-align: left;
 }
 
 .copper-entry-card {

@@ -16,6 +16,7 @@ import StyledSelect from "../common/StyledSelect";
 import DashboardName from "./DashboardName";
 import DashboardDonut from "./DashboardDonut";
 import DashboardAverage from "./DashboardAverage";
+import DashboardTasksModal from "./DashboardTasksModal";
 import { currentAction, daysLate, isDelayed, itemName, realDelayReasons, statusLabel, workflowAverages } from "../../utils/dashboardData";
 
 const dateValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -76,6 +77,7 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
   const minimumDate = useMemo(() => { const date = new Date(today); date.setDate(date.getDate() - 29); return date; }, [today]);
   const yesterday = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1), [today]);
   const [selectedValue, setSelectedValue] = useState(dateValue(today));
+  const [showAllTasks, setShowAllTasks] = useState(false);
   const dateRef = useRef(null);
   const selectedDate = fromDateValue(selectedValue);
   const selectedDateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
@@ -100,7 +102,8 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
   const scheduleRequests = productionItems.filter((panel) => sameDay(panel.deliverySchedule?.requestedAt, selectedDate)).length;
   const delayed = sorted.filter((panel) => isDelayed(panel, selectedDateEnd));
   const delayedCount = delayed.length;
-  const waiting = sorted.filter((project) => currentAction(project, "ProductionManager")).slice(0, 4);
+  const allWaiting = sorted.filter((project) => currentAction(project, "ProductionManager"));
+  const waiting = allWaiting.slice(0, 4);
   const readyFiles = sorted.filter((project) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(project.status)).slice(0, 5);
   const newOrders = [...productionItems].sort((a, b) => updatedAt(b) - updatedAt(a)).filter((panel) => sameDay(panel.executionPdf?.confirmedAt, selectedDate)).slice(0, 5);
   const delayReasons = realDelayReasons(productionItems.map((panel) => ({ ...panel, manufacturing: { ...(panel.manufacturing || {}), productionStages: (panel.manufacturing?.productionStages || []).filter((stage) => sameDay(stage.delayedAt, selectedDate)) } })));
@@ -113,7 +116,7 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
   const delta = selectedProjects.length - previousProjects.length;
   const averages = workflowAverages(productionItems);
 
-  return <div className="production-manager-dashboard" dir="rtl">
+  return <><div className="production-manager-dashboard" dir="rtl">
     <header className="production-manager-header"><div><h1>لوحة التحكم - Production Manager</h1><p>مرحبًا {name || "بك"}، تابع جميع مراحل الإنتاج والتنفيذ في الوقت الفعلي.</p></div><div className="production-date-tools"><button type="button" onClick={onRefresh} disabled={loading}><HiOutlineRefresh className={loading ? "dashboard-refresh-spinning" : ""} />{loading ? "جاري التحديث..." : "تحديث"}</button><label onClick={openPicker}><HiOutlineCalendar /><input ref={dateRef} type="date" inputMode="none" value={selectedValue} min={dateValue(minimumDate)} max={dateValue(today)} onKeyDown={(event) => event.preventDefault()} onBeforeInput={(event) => event.preventDefault()} onPaste={(event) => event.preventDefault()} onChange={(event) => setSelectedValue(event.target.value)} /></label><div><StyledSelect value={preset} onChange={changePreset} options={[{ value: "today", label: "اليوم" }, { value: "yesterday", label: "أمس" }, ...(preset === "custom" ? [{ value: "custom", label: "تاريخ محدد" }] : [])]} /></div></div></header>
 
     <section className="production-manager-metrics"><ProductionMetric tone="blue" icon={<HiOutlineViewGrid />} title={`لوحات وصلت للتنفيذ (${label})`} value={loading ? "—" : selectedProjects.length} note="من تاريخ تأكيد التنفيذ" /><ProductionMetric tone="red" icon={<HiOutlineCalendar />} title={`طلبات مواعيد جديدة (${label})`} value={loading ? "—" : scheduleRequests} note="تحتاج قرار مدير التنفيذ" /><ProductionMetric tone="amber" icon={<HiOutlineClock />} title={`لوحات متأخرة (${label})`} value={loading ? "—" : delayedCount} note="تجاوزت موعد التسليم المعتمد" /><ProductionMetric tone="violet" icon={<HiOutlineDocumentText />} title={`نشاط مرحلة الإنتاج (${label})`} value={loading ? "—" : productionTotal} note={`${delta >= 0 ? "+" : ""}${delta} أوامر مقارنة باليوم السابق`} /><ProductionMetric tone="green" icon={<HiOutlineCheckCircle />} title={`أوامر تنفيذ جديدة (${label})`} value={loading ? "—" : executionToday} note="تم تأكيدها في هذا التاريخ" /><ProductionMetric tone="indigo" icon={<HiOutlineFolder />} title={`طلبات PDF تنفيذ (${label})`} value={loading ? "—" : pdfReady} note="طُلبت فعليًا في هذا التاريخ" /></section>
@@ -125,7 +128,7 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
       <section className="production-manager-card production-stage-progress"><h2>تقدم مراحل الإنتاج</h2>{stages.slice(1, 5).map((stage) => { const percent = productionItems.length ? Math.round((stageCounts[stage.key] / productionItems.length) * 100) : 0; return <div key={stage.key}><span>{stage.label.replace("في ", "")}</span><strong>{stageCounts[stage.key]}</strong><i><b style={{ width: `${percent}%`, background: stage.color }} /></i><em>{percent}%</em></div>; })}<Link to="/panels?view=production&production=true" className="production-card-link">عرض التفاصيل <HiOutlineExternalLink /></Link></section>
 
       <section className="production-manager-card production-current-stages"><h2>المشاريع في كل مرحلة الآن</h2><div>{stages.map((stage, index) => <article key={stage.key} style={{ "--stage-color": stage.color }}><span>{stage.label}</span><strong>{stageCounts[stage.key]}</strong><small>مشروع</small>{index < stages.length - 1 && <b>‹</b>}</article>)}</div></section>
-      <section className="production-manager-card production-waiting"><h2>اللوحات التي تنتظر إجراءك</h2>{waiting.map((project, index) => <Link to={itemLink(project)} key={project._id || index}><i><HiOutlineClock /></i><span><strong><DashboardName>{projectName(project)}</DashboardName></strong><small>{currentAction(project, "ProductionManager")}</small></span><b>عرض</b></Link>)}{!waiting.length && <p className="production-empty">لا توجد لوحات تنتظر إجراءً</p>}<Link to="/panels?view=productionTasks" className="production-card-link">عرض كل المهام <HiOutlineExternalLink /></Link></section>
+      <section className="production-manager-card production-waiting"><h2>اللوحات التي تنتظر إجراءك</h2>{waiting.map((project, index) => <Link to={itemLink(project)} key={project._id || index}><i><HiOutlineClock /></i><span><strong><DashboardName>{projectName(project)}</DashboardName></strong><small>{currentAction(project, "ProductionManager")}</small></span><b>عرض</b></Link>)}{!waiting.length && <p className="production-empty">لا توجد لوحات تنتظر إجراءً</p>}<button type="button" onClick={() => setShowAllTasks(true)} className="production-card-link">عرض كل المهام <HiOutlineExternalLink /></button></section>
       <section className="production-manager-card production-pdf-today"><h2>ملفات PDF التنفيذ ({label})</h2><div><HiOutlineDocumentText /><span><strong>{pdfReady}</strong><small>ملفات جديدة</small></span></div><p>من إجمالي {productionItems.reduce((sum, project) => sum + panelsCount(project), 0)} ملف هذا الأسبوع</p><Link to="/panels?view=executionPdfs&statuses=executionPdfRequested,executionPdfReady" className="production-card-link">عرض جميع ملفات PDF <HiOutlineExternalLink /></Link></section>
 
       <section className="production-manager-card production-alerts"><h2>تنبيهات هامة</h2>{delayedCount ? <p className="danger"><HiOutlineExclamation /><span><strong>{delayedCount} لوحات متأخرة {label}</strong><small>تجاوزت موعد التسليم المعتمد ولم تكتمل</small></span></p> : <p className="info"><HiOutlineCheckCircle /><span><strong>لا توجد لوحات متأخرة {label}</strong><small>كل اللوحات داخل الموعد المعتمد</small></span></p>}<Link to={`/panels?view=delayed&production=true&delayed=true&date=${selectedValue}`} className="production-card-link">عرض اللوحات <HiOutlineExternalLink /></Link></section>
@@ -134,7 +137,7 @@ function ProductionManagerDashboard({ name, panels = [], loading, onRefresh }) {
     </section>
 
     <section className="production-manager-kpis"><div><HiOutlineExclamation /><span>اللوحات المتأخرة {label}</span><strong>{delayedCount} لوحة</strong></div><div><HiOutlineViewGrid /><span>متوسط وقت مرحلة التجميع</span><DashboardAverage result={averages.stage("assembly")} /></div><div><HiOutlineTrendingUp /><span>متوسط وقت مرحلة الرش</span><DashboardAverage result={averages.stage("painting")} /></div><div><HiOutlineClock /><span>متوسط وقت مرحلة التصنيع</span><DashboardAverage result={averages.stage("manufacturing")} /></div><div><HiOutlineCheckCircle /><span>متوسط وقت مرحلة الليزر</span><DashboardAverage result={averages.stage("laser")} /></div></section>
-  </div>;
+  </div>{showAllTasks && <DashboardTasksModal title="كل مهام مدير الإنتاج" subtitle="اللوحات التي تحتاج اعتماد موعد أو تحديد موعد بديل أو تحديثًا في مرحلة الإنتاج." items={allWaiting.map((panel) => ({ panel, action: currentAction(panel, "ProductionManager") }))} onClose={() => setShowAllTasks(false)} />}</>;
 }
 
 export default ProductionManagerDashboard;

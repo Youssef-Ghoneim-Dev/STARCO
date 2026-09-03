@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronDown } from "react-icons/io5";
 
-function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel }) {
+function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel, direction = "rtl" }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const ref = useRef(null);
@@ -43,11 +43,11 @@ function StyledSelect({ value, options, placeholder = "اختر", onChange, disa
     };
   }, [open]);
 
-  return <div className={`app-select${disabled ? " is-disabled" : ""}`} ref={ref}>
+  return <div className={`app-select${disabled ? " is-disabled" : ""}`} ref={ref} dir={direction}>
     <button type="button" className="app-select-trigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
       <span className={selected ? "" : "app-select-placeholder"}>{selected?.label || placeholder}</span><IoChevronDown className="app-select-chevron" aria-hidden="true" />
     </button>
-    {open && menuPosition && createPortal(<div ref={menuRef} className="app-select-menu app-select-menu-portal" role="listbox" style={menuPosition}>
+    {open && menuPosition && createPortal(<div ref={menuRef} className={`app-select-menu app-select-menu-portal${direction === "ltr" ? " is-ltr" : ""}`} dir={direction} role="listbox" style={menuPosition}>
       {options.map((option) => <button type="button" key={option.value} role="option" aria-selected={String(option.value) === String(value)} className={String(option.value) === String(value) ? "is-selected" : ""} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
     </div>, document.body)}
   </div>;

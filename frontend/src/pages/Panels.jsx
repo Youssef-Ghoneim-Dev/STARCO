@@ -30,11 +30,16 @@ const panelStatuses = [
 ];
 
 export default function Panels() {
-  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [panels, setPanels] = useState([]); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all");
+  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [panels, setPanels] = useState([]); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [status, setStatus] = useState(() => searchParams.get("statuses")?.split(",").filter(Boolean).length === 1 ? searchParams.get("statuses") : "all");
   const load = async () => { setLoading(true); try { const { data } = await getAllPanels(); setPanels(data || []); } catch (error) { toast.error(error.response?.data?.message || "تعذر تحميل اللوحات."); } finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
   const view = searchParams.get("view") || "";
   const requestedStatuses = useMemo(() => new Set((searchParams.get("statuses") || "").split(",").filter(Boolean)), [searchParams]);
+  useEffect(() => {
+    const [onlyStatus] = [...requestedStatuses];
+    if (requestedStatuses.size === 1 && panelStatuses.some((option) => option.value === onlyStatus)) setStatus(onlyStatus);
+    if (!requestedStatuses.size) setStatus("all");
+  }, [requestedStatuses]);
   const requestedDate = searchParams.get("date");
   const requestedDateEnd = useMemo(() => {
     if (!requestedDate) return null;
@@ -49,7 +54,7 @@ export default function Panels() {
     return localValue === requestedDate;
   };
   const matchesDashboardView = (panel) => {
-    if (requestedStatuses.size && !requestedStatuses.has(panel.status)) return false;
+    if (requestedStatuses.size > 1 && !requestedStatuses.has(panel.status)) return false;
     if (searchParams.get("delayed") === "true") {
       if (!isDelayed(panel, requestedDateEnd || new Date())) return false;
     }

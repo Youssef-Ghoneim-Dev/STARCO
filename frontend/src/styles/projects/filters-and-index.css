@@ -117,8 +117,8 @@
 }
 
 .projects-filter .app-select-menu button.is-selected {
-    color: #fff;
-    background: var(--primary);
+    color: var(--text);
+    background: transparent;
 }
 
 .panels-index-grid {

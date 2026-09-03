@@ -446,8 +446,8 @@
 
     height: 100%;
 
-    color: var(--text);
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    color: #f7fbfd;
+    background: #172a35;
     backdrop-filter: blur(9px);
     display: flex;
 
@@ -472,8 +472,8 @@
 .spinner {
     width: 50px;
     height: 50px;
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid var(--primary);
+    border: 6px solid #456878;
+    border-top: 6px solid #a1cada;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 20px;
