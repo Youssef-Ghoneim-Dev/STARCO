@@ -168,6 +168,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
   const [storedStatistics, setStoredStatistics] = useState(null);
   const [activeReport, setActiveReport] = useState(null);
   const [showDelayedPanels, setShowDelayedPanels] = useState(false);
+  const [peopleModal, setPeopleModal] = useState(null);
   const selectedDate = useMemo(() => {
     const [year, month, day] = selectedDateValue.split("-").map(Number);
     return new Date(year, month - 1, day);
@@ -275,14 +276,23 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
     <section className="owner-tables-grid">
       <DataTable title="آخر المشاريع المضافة" icon={<HiOutlineFolder />} columns={["#", "اسم المشروع", "المهندس", "تاريخ الإنشاء"]} rows={latestRows} linkLabel="عرض جميع المشاريع" />
       <DataTable title="أكثر اللوحات تأخرًا في التنفيذ" icon={<HiOutlineExclamation />} columns={["#", "اسم اللوحة", "المرحلة الحالية", "متأخر منذ"]} rows={delayedRows.length ? delayedRows : [["—", "لا توجد لوحات متأخرة", "—", "—"]]} linkLabel="عرض اللوحات المتأخرة" onAction={() => setShowDelayedPanels(true)} />
-      <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" to="/users" />
-      <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" to="/users" />
+      <DataTable title="أداء المهندسين" icon={<HiOutlineUserGroup />} columns={["#", "المهندس", "تسعير", "PDF تنفيذ", "طلبات تصنيع"]} rows={engineerRows.length ? engineerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المهندسين" onAction={() => setPeopleModal("engineers")} />
+      <DataTable title="أداء المندوبين" icon={<HiOutlineUsers />} columns={["#", "المندوب", "مشروع جديد", "أمر تنفيذ", "تأكيدات"]} rows={marketerRows.length ? marketerRows : [["—", "لا توجد بيانات", "—", "—", "—"]]} linkLabel="عرض جميع المندوبين" onAction={() => setPeopleModal("marketers")} />
     </section>
     <section className="owner-kpi-strip"><div><HiOutlineChartBar /><span>المشاريع المكتملة هذا الشهر</span><strong>{completedThisMonth}</strong></div><div><HiOutlineExclamation /><span>أكثر سبب تأخير</span><strong>{delayReasons[0]?.[0] || "لا يوجد"}</strong></div><div><HiOutlineCalendar /><span>متوسط تجهيز PDF التنفيذ</span><DashboardAverage result={averages.executionPdf} /></div><div><HiOutlineClock /><span>متوسط وقت التسعير</span><DashboardAverage result={averages.quote} /></div><div><HiOutlineCheckCircle /><span>نسبة الإنجاز الكلية</span><strong>{projects.length ? `${Math.round((statusCounts.completed / projects.length) * 100)}%` : "0%"}</strong></div></section>
   </div>
   {activeReport && <PerformanceReport data={activeReport} selectedLabel={selectedLabel} onClose={() => setActiveReport(null)} />}
   {showDelayedPanels && <OwnerDashboardModal title="اللوحات المتأخرة فعليًا" subtitle="لوحات غير مكتملة تجاوزت موعد التسليم المعتمد" onClose={() => setShowDelayedPanels(false)}>
     <div className="owner-delayed-modal-list">{delayedPanels.length ? delayedPanels.map((panel) => <article key={panel._id}><div><DashboardName>{itemName(panel)}</DashboardName><span>{panelStatusMeta(panel).label}</span></div><div><small>موعد التسليم</small><strong>{deliveryDate(panel)?.toLocaleDateString("ar-EG") || "غير محدد"}</strong></div><b>{daysLate(panel, today)} يوم</b></article>) : <p className="owner-report-empty">لا توجد لوحات متأخرة عن موعد التسليم حاليًا.</p>}</div>
+  </OwnerDashboardModal>}
+  {peopleModal && <OwnerDashboardModal title={peopleModal === "engineers" ? "جميع المهندسين" : "جميع المندوبين"} subtitle={peopleModal === "engineers" ? `${engineers.length} مهندس مسجل مع ملخص العمل الحالي` : `${marketers.length} مندوب مسجل مع ملخص نشاط ${selectedLabel}`} onClose={() => setPeopleModal(null)}>
+    <div className="owner-people-modal-list">{peopleModal === "engineers" ? (engineers.length ? engineers.map((person) => {
+      const owned = panels.filter((panel) => String(panel.engineerId?._id || panel.engineerId || "") === String(person._id));
+      return <article key={person._id}><div className="owner-person-avatar">{person.name?.trim()?.charAt(0) || "م"}</div><div className="owner-person-identity"><strong>{person.name || "مهندس بدون اسم"}</strong><span>{person.email || "لا يوجد بريد إلكتروني"}</span></div><div className="owner-person-stats"><span><b>{owned.filter((panel) => ["pendingPricing", "pricing", "quoteCompleted"].includes(panel.status)).length}</b> تسعير</span><span><b>{owned.filter((panel) => panel.executionPdf?.readyAt).length}</b> PDF تنفيذ</span><span><b>{owned.filter((panel) => (panel.manufacturing?.files || []).length).length}</b> ملفات تصنيع</span></div></article>;
+    }) : <p className="owner-report-empty">لا يوجد مهندسون مسجلون.</p>) : (marketers.length ? marketers.map((person) => {
+      const owned = projects.filter((project) => String(project.marketingId?._id || project.marketingId || project.createdBy?._id || project.createdBy || "") === String(person._id));
+      return <article key={person._id}><div className="owner-person-avatar">{person.name?.trim()?.charAt(0) || "م"}</div><div className="owner-person-identity"><strong>{person.name || "مندوب بدون اسم"}</strong><span>{person.email || "لا يوجد بريد إلكتروني"}</span></div><div className="owner-person-stats"><span><b>{owned.filter((project) => sameDay(project.createdAt, selectedDate)).length}</b> مشروع جديد</span><span><b>{owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.requestedAt)).length}</b> أمر تنفيذ</span><span><b>{owned.filter((project) => projectPanels(project).some((panel) => panel.executionPdf?.confirmedAt)).length}</b> تأكيد</span></div></article>;
+    }) : <p className="owner-report-empty">لا يوجد مندوبون مسجلون.</p>)}</div>
   </OwnerDashboardModal>}
   </>;
 }

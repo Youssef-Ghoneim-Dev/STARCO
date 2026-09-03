@@ -337,6 +337,26 @@ html[data-theme="dark"] .sidebar-link:hover {
     background: var(--surface-soft);
 }
 
+html[data-theme="dark"] :where(.projects-search, .projects-filter, .projects-refresh-btn) {
+    color: #fff;
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .projects-search input {
+    color: #fff;
+    background: transparent;
+}
+
+html[data-theme="dark"] .projects-search input::placeholder {
+    color: #a9bdc7;
+}
+
+html[data-theme="dark"] .projects-filter :where(.app-select-trigger, .app-select-chevron) {
+    color: #fff;
+    background: transparent;
+}
+
 /* Configuration uses the same primary actions as the light theme, but on the
    navy surface they need a lighter action tone and neutral readable labels. */
 html[data-theme="dark"] .configuration-page :where(.configuration-heading h1, .pricing-form h2, .configuration-subheading h2, .part-settings legend, .panel-type-settings>summary, .additional-part-card strong, .additional-part-chip, .copper-catalog-settings>summary) {

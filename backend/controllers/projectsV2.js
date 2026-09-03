@@ -110,7 +110,7 @@ const getProject = async (req, res, next) => { try {
     res.json(await hydrate(project, false, req.user));
 } catch (error) { next(error); } };
 const createProject = async (req, res, next) => { try {
-    if (!isMarketer(req.user) && !isOwner(req.user)) return res.status(403).json({ status: "error", message: "إنشاء المشاريع متاح للمندوب وOwner Manager فقط." });
+    if (!isMarketer(req.user)) return res.status(403).json({ status: "error", message: "إنشاء المشاريع متاح للمندوب فقط." });
     const client = { id: req.body?.client?.id || null, name: String(req.body?.client?.name || "").trim(), type: req.body?.client?.type || "", profitPercentage: req.body?.client?.profitPercentage ?? null };
     if (!client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
     // The source is derived from the authenticated workflow, never from a

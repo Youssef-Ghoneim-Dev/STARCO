@@ -103,7 +103,7 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/projects" element={<Projects />} />
-          <Route path="/new-project" element={<RoleRoute allowedRoles={["OwnerManager", "Marketer"]}><NewProject /></RoleRoute>} />
+          <Route path="/new-project" element={<RoleRoute allowedRoles={["Marketer"]}><NewProject /></RoleRoute>} />
           <Route path="/projects/:id" element={<ProjectFolder />} />
           <Route path="/projects/:id/panels/:panelId" element={<EditProject />} />
           <Route path="/panels" element={<Panels />} />

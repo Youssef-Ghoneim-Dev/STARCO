@@ -30,7 +30,7 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefres
           <FiFilter />
           <StyledSelect value={status} onChange={onStatusChange} options={statusOptions} />
         </div>
-        {showCreate && ["OwnerManager", "Marketer"].includes(user?.role) && <NavLink to="/new-project" className="new-project-link">
+        {showCreate && user?.role === "Marketer" && <NavLink to="/new-project" className="new-project-link">
           <button className="new-project-btn"><FiPlus />New Project</button>
         </NavLink>}
       </div>
