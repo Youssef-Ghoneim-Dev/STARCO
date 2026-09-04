@@ -1,8 +1,13 @@
 .project-create-backdrop {
     min-height: calc(100vh - 120px);
+    min-height: calc(100dvh - 120px);
     display: grid;
     place-items: center;
     padding: 24px
+}
+
+.dashboard-content.project-create-content {
+    padding-bottom: 30px;
 }
 
 .project-create-dialog {
@@ -461,11 +466,52 @@
     }
 
     .project-create-dialog {
-        padding: 22px
+        width: 100%;
+        max-width: 520px;
+        padding: 20px;
+        border-radius: 18px
+    }
+
+    .project-create-backdrop {
+        min-height: 0;
+        place-items: start center;
+        padding: 12px 0 28px;
+    }
+
+    .dashboard-content.project-create-content {
+        padding-bottom: 14px;
+    }
+
+    .project-create-dialog h1 {
+        font-size: clamp(28px, 9vw, 38px);
+    }
+
+    .project-create-dialog p {
+        margin-bottom: 20px;
+        font-size: 14px;
+        line-height: 1.55;
+    }
+
+    .project-create-actions {
+        gap: 10px;
+        margin-top: 22px;
+    }
+
+    .project-create-actions button {
+        min-width: 0;
+        padding-inline: 8px;
     }
 
     .project-client-results {
         width: 100%
+    }
+}
+
+@media (min-width: 701px) and (max-width: 1100px) {
+    .project-create-backdrop {
+        min-height: 0;
+        place-items: start center;
+        padding-block: clamp(24px, 6vh, 54px) 36px;
     }
 }
 

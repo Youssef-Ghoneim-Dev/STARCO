@@ -41,7 +41,7 @@ function NewProject() {
       } else toast.error(error.response?.data?.message || "تعذر إنشاء المشروع.");
     } finally { setSaving(false); }
   };
-  return <DashboardLayout notAllowed={false}><div className="project-create-backdrop" dir="rtl"><form className="project-create-dialog" onSubmit={submit}>
+  return <DashboardLayout notAllowed={false} contentClassName="project-create-content"><div className="project-create-backdrop" dir="rtl"><form className="project-create-dialog" onSubmit={submit}>
     <h1>مشروع جديد</h1><p>أنشئ فولدر المشروع أولًا، ثم أضف اللوحات داخله.</p>
     <label>اسم العميل<input ref={nameInputRef} autoFocus value={name} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? "new-project-client-error" : undefined} onChange={(event) => { setName(event.target.value); setSelectedClient(null); if (nameError) setNameError(""); }} placeholder="ابحث باسم العميل أو اكتب اسمًا جديدًا" />{nameError && <small id="new-project-client-error" className="form-field-error">{nameError}</small>}</label>
     {(searching || results.length > 0) && <div className="project-client-results">{searching && <span>جاري البحث...</span>}{results.map((client) => <button type="button" key={client._id} onClick={() => { setSelectedClient(client); setName(client.name); setNameError(""); setResults([]); }}>{client.name}<small>{client.type === "company" ? "شركة" : "فرد"}</small></button>)}</div>}

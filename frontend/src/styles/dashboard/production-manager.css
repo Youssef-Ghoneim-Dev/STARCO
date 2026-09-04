@@ -881,6 +881,12 @@
         width: 100%;
     }
 
+    .production-stage-status .production-card-link,
+    .production-delay-reasons .production-card-link {
+        flex-shrink: 0;
+        margin-top: 18px;
+    }
+
     .production-current-stages>div {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -4,7 +4,7 @@ import Topbar from "./Topbar";
 import { useAuth } from "../../context/AuthContext";
 import "../../styles/dashboard.css";
 
-function DashboardLayout({ children, notAllowed, pending = false }) {
+function DashboardLayout({ children, notAllowed, pending = false, contentClassName = "" }) {
   const { pending: accountPending } = useAuth();
   const isPending = pending || accountPending;
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -50,7 +50,7 @@ function DashboardLayout({ children, notAllowed, pending = false }) {
           pending={isPending}
         />
 
-        <main className="dashboard-content">{children}</main>
+        <main className={`dashboard-content${contentClassName ? ` ${contentClassName}` : ""}`}>{children}</main>
       </div>
     </div>
   );
