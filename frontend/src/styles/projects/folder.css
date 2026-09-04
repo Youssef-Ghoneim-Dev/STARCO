@@ -503,15 +503,24 @@
     }
 
     .project-client-results {
-        width: 100%
+        width: 100%;
+        max-height: 112px
     }
 }
 
 @media (min-width: 701px) and (max-width: 1100px) {
+    .dashboard-content.project-create-content {
+        overflow-y: hidden;
+    }
+
     .project-create-backdrop {
         min-height: 0;
         place-items: start center;
         padding-block: clamp(24px, 6vh, 54px) 36px;
+    }
+
+    .project-client-results {
+        max-height: 120px;
     }
 }
 
@@ -605,5 +614,87 @@
 .project-folder-setup>button:disabled {
     cursor: wait;
     opacity: .65;
+}
+
+html[data-theme="dark"] .project-folder-back {
+    color: #d9edf6;
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .project-folder-header>div:first-child>p {
+    color: var(--text-light) !important;
+}
+
+html[data-theme="dark"] .project-folder-actions button:not(.primary):not(.submit),
+html[data-theme="dark"] .empty-panel-folder button {
+    color: #d9edf6;
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .project-folder-actions :where(.primary, .submit) {
+    color: #fff !important;
+}
+
+html[data-theme="dark"] .project-panels-toolbar label {
+    color: #d9edf6;
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .project-panels-toolbar input {
+    color: var(--text);
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .project-panels-toolbar input::placeholder {
+    color: #9fb4c0;
+}
+
+html[data-theme="dark"] .project-submit-reminder {
+    color: #f0d488;
+    border-color: rgba(226, 178, 67, .38);
+    background: rgba(226, 178, 67, .12);
+}
+
+html[data-theme="dark"] .panel-folder-card code,
+html[data-theme="dark"] .panel-folder-card dt {
+    color: #9fb4c0 !important;
+}
+
+html[data-theme="dark"] .panel-folder-card dl div {
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .panel-folder-card-top>button {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .panel-folder-status.draft {
+    color: #445765 !important;
+    background: #e7edf1 !important;
+}
+
+html[data-theme="dark"] .panel-folder-status.pending {
+    color: #775800 !important;
+    background: #fff0bd !important;
+}
+
+html[data-theme="dark"] .panel-folder-status.working {
+    color: #1f5e9d !important;
+    background: #dcecff !important;
+}
+
+html[data-theme="dark"] .panel-folder-status.ready,
+html[data-theme="dark"] .panel-folder-status.complete {
+    color: #126c3b !important;
+    background: #dff5e8 !important;
+}
+
+html[data-theme="dark"] .panel-folder-status.editing {
+    color: #743b8e !important;
+    background: #f2ddfb !important;
 }
 
