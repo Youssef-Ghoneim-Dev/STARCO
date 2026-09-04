@@ -355,6 +355,35 @@
     color: #52778d;
 }
 
+html[data-theme="dark"] .panel-index-card-icon {
+    color: #b8ddec !important;
+    background: rgba(73, 139, 169, .22) !important;
+}
+
+html[data-theme="dark"] .panel-index-card-title code {
+    color: #8fc2d9;
+}
+
+html[data-theme="dark"] .panel-index-card-project {
+    color: #9bc8db;
+    border: 1px solid var(--border);
+    background: var(--surface-muted) !important;
+}
+
+html[data-theme="dark"] .panel-index-card-project>svg,
+html[data-theme="dark"] .panel-index-card-dates svg {
+    color: #8fc2d9;
+}
+
+html[data-theme="dark"] .panel-index-card-project span,
+html[data-theme="dark"] .panel-index-card-dates {
+    color: var(--text-light) !important;
+}
+
+html[data-theme="dark"] .panel-index-card-project strong {
+    color: var(--text) !important;
+}
+
 @media (max-width: 600px) {
 
     .projects-header {

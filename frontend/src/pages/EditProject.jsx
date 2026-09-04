@@ -55,9 +55,7 @@ function QuoteEditor({
               {canStartPanelEditing && (
                 <StartEditingButton />
               )}
-              <button type="button" onClick={() => setOpenedPanel(null)}>
-                العودة إلى اللوحات
-              </button>
+              <PanelBackButton onClose={() => setOpenedPanel(null)} />
             </div>
           </div>
           <PanelEditSummary panel={panel} />
@@ -82,6 +80,26 @@ function StartEditingButton() {
   const { beginEditing, project, activePanel } = useProject();
   const panel = project?.panels?.[activePanel];
   return <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel?._id || panel?.panelId, options)} className="panel-inline-edit-btn" />;
+}
+
+function PanelBackButton({ onClose }) {
+  const { panelId } = useParams();
+  const navigate = useNavigate();
+  const { project } = useProject();
+
+  const handleBack = () => {
+    if (panelId) {
+      navigate(project?._id ? `/projects/${project._id}` : "/projects");
+      return;
+    }
+    onClose?.();
+  };
+
+  return (
+    <button type="button" onClick={handleBack}>
+      العودة إلى اللوحات
+    </button>
+  );
 }
 
 const formatExactDate = (value) =>
@@ -186,9 +204,7 @@ function CompletedMarketingProject({ message, showExecution }) {
               {panelMarketingEditableStatuses.has(panel?.status) && (
                 <StartEditingButton />
               )}
-              <button type="button" onClick={() => setOpenedPanel(null)}>
-                العودة إلى اللوحات
-              </button>
+              <PanelBackButton onClose={() => setOpenedPanel(null)} />
             </div>
           </div>
           <PanelEditSummary panel={panel} />
@@ -211,7 +227,9 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     ) || project?.panels?.[0];
   const isWhatsappProject = ["whatsapp", "marketing"].includes(project?.source);
   const isCompleted = project?.status === "completed";
-  const isQuoteCompleted = activePanel?.status === "quoteCompleted";
+  const quoteHasBeenPublished = Boolean(project?.previewGeneratedAt);
+  const isQuoteCompleted =
+    activePanel?.status === "quoteCompleted" && quoteHasBeenPublished;
   const hasPanelExecution = (project?.panels || []).some(
     (panel) =>
       (panel.executionPdf?.status &&
@@ -258,6 +276,8 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
     const message = isQuoteCompleted
       ? ""
+      : (activePanel?.status === "quoteCompleted" || activePanel?.quotePublicationPending) && !quoteHasBeenPublished
+        ? "اكتمل تسعير هذه اللوحة داخليًا، وسيظهر عرض السعر بعد اعتماد المشروع وإرساله من المهندس."
       : isExecutionPhase
         ? ""
         : isCompleted

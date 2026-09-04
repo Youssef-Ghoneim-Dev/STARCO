@@ -25,7 +25,7 @@ function CopperSelect({ value, options, placeholder, onChange }) {
       <span className={selected ? "" : "copper-select-placeholder"}>{selected?.label || placeholder}</span><IoChevronDown className="copper-select-chevron" aria-hidden="true" />
     </button>
     {isOpen && <div className="copper-select-menu" role="listbox">
-      {options.map((option) => <button type="button" role="option" aria-selected={String(option.value) === String(value)} className={String(option.value) === String(value) ? "is-selected" : ""} key={option.value} onClick={() => { onChange(option.value); setIsOpen(false); }}>{option.label}</button>)}
+      {options.map((option) => <button type="button" role="option" aria-selected={String(option.value) === String(value)} key={option.value} onClick={() => { onChange(option.value); setIsOpen(false); }}>{option.label}</button>)}
     </div>}
   </div>;
 }
@@ -37,6 +37,13 @@ function CopperCalculator() {
   const configuration = resolveCopperConfiguration(systemConfig?.copperConfiguration);
   const copper = panel.copper || { enabled: false, main: {}, branches: [] };
   const isVisible = Boolean(panel.hasCopper || copper.enabled);
+  const marketerCopperDetails = panel.marketerData?.copperDetails || panel.copperDetails || {};
+  const marketerSpecifiedCopper = panel.marketerData?.hasCopper === true || Boolean(
+    marketerCopperDetails.switches
+    || marketerCopperDetails.mainKey
+    || marketerCopperDetails.main
+    || marketerCopperDetails.branchGroups?.length,
+  );
   const barCounts = configuration.barCounts?.length ? configuration.barCounts : [1, 3];
   const totals = getCopperCalculation(panel, configuration);
   const optionFor = (key) => configuration.catalog?.find((item) => item.key === key);
@@ -105,7 +112,7 @@ function CopperCalculator() {
   if (!isVisible) return <div className="copper-add-action"><button type="button" onClick={() => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: current.pricePerKg === "" || current.pricePerKg == null ? defaultCopperPrice : current.pricePerKg }))}>+ إضافة نحاس للوحة</button></div>;
 
   return <section className="copper-calculator" dir="rtl">
-    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => ["whatsapp", "marketing"].includes(project?.source) && panel.hasCopper ? setConfirmRemove(true) : removeCopper()}>حذف النحاس</button></div>
+    <div className="copper-calculator-heading"><div><h3>حساب النحاس</h3></div><button type="button" className="copper-remove" onClick={() => marketerSpecifiedCopper ? setConfirmRemove(true) : removeCopper()}>حذف النحاس</button></div>
     <div className="copper-cost-fields">
       <label>سعر النحاس<input type="number" min="0" step="any" value={copper.pricePerKg ?? configuration.pricePerKg ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, pricePerKg: event.target.value }))} /></label>
       <label>سعر الإرث والأرضي<input type="number" min="0" step="any" value={copper.earthPrice ?? ""} onChange={(event) => updateCopper((current) => ({ ...current, enabled: true, earthPrice: event.target.value, groundPrice: 0 }))} /></label>
@@ -126,7 +133,7 @@ function CopperCalculator() {
       {optionInfo(branch.optionKey) && <div className="copper-readonly"><span>المقاس</span><strong>{optionInfo(branch.optionKey)}</strong></div>}
     </div></div>)}
     <div className="copper-total"><span>وزن النحاس: <strong>{totals.weight.toFixed(3)} كجم</strong></span><span>إجمالي النحاس: <strong>{totals.total.toFixed(2)} ج.م</strong></span></div>
-    {confirmRemove && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog media-delete-dialog"><h3>حذف النحاس</h3><p>المندوب حدّد أن هذه اللوحة تحتوي على نحاس. هل أنت متأكد من حذف بيانات النحاس؟</p><div className="media-delete-actions"><button type="button" onClick={() => setConfirmRemove(false)}>إلغاء</button><button type="button" className="media-delete-confirm" onClick={removeCopper}>نعم، حذف النحاس</button></div></div></div>}
+    {confirmRemove && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog media-delete-dialog"><h3>حذف النحاس</h3><p>المندوب سجّل هذه اللوحة على أنها تحتوي على نحاس. هل أنت متأكد من حذف بيانات النحاس؟</p><div className="media-delete-actions"><button type="button" onClick={() => setConfirmRemove(false)}>إلغاء</button><button type="button" className="media-delete-confirm" onClick={removeCopper}>نعم، حذف النحاس</button></div></div></div>}
   </section>;
 }
 

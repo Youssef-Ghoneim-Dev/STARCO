@@ -1051,6 +1051,18 @@
 
 }
 
+html[data-theme="dark"] .add-part-btn {
+    color: #d9edf6;
+    border-color: #668fa2;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .add-part-btn:hover {
+    color: #fff;
+    border-color: #9fc4d4;
+    background: var(--surface-soft);
+}
+
 .add-part-menu {
     position: relative;
     display: inline-block;
@@ -1743,6 +1755,42 @@
 .media-delete-actions .media-delete-confirm {
     background: #dc2626;
     color: #fff;
+}
+
+html[data-theme="dark"] .media-choice-backdrop {
+    background: rgb(3 13 21 / 72%);
+    backdrop-filter: blur(4px);
+}
+
+html[data-theme="dark"] .media-choice-dialog {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 24px 70px rgb(0 0 0 / 48%);
+}
+
+html[data-theme="dark"] .media-choice-dialog h3 {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .media-choice-dialog p {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .media-delete-actions button:not(.media-delete-confirm) {
+    color: #d9edf6;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .media-delete-actions button:not(.media-delete-confirm):hover {
+    color: #fff;
+    border-color: #729caf;
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .media-delete-actions .media-delete-confirm {
+    color: #fff;
+    background: #c94b55;
 }
 
 .marketing-save-actions {
@@ -2905,4 +2953,3 @@
     font-size: .78rem;
     direction: ltr;
 }
-

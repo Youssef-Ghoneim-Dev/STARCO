@@ -599,7 +599,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
       if (!part) return;
 
-      const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === project.panels[activePanel]?.panelTypeKey);
+      const panelType = (systemConfig?.panelTypes || []).find(
+        (type) => String(type.key) === String(project.panels[activePanel]?.panelTypeKey),
+      );
       const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
       const step = Number(configuredPart?.quantityStep) || (part.name === "الكرسي" ? (systemConfig?.parts?.chair?.quantityStep ?? 2) : (systemConfig?.parts?.omega?.quantityStep ?? 1));
 
@@ -614,7 +616,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
 
       if (!part) return;
 
-      const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === project.panels[activePanel]?.panelTypeKey);
+      const panelType = (systemConfig?.panelTypes || []).find(
+        (type) => String(type.key) === String(project.panels[activePanel]?.panelTypeKey),
+      );
       const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
       const config = configuredPart || (part.name === "الكرسي" ? systemConfig?.parts?.chair : systemConfig?.parts?.omega);
 
@@ -672,9 +676,21 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       };
     });
   }, [activePanel, systemConfig?.copperConfiguration?.pricePerKg, updatePanel]);
-  const applyPanelType = useCallback((typeKey) => {
-    const selectedType = (systemConfig?.panelTypes || []).find((type) => type.key === typeKey);
-    if (!selectedType) return;
+  const applyPanelType = useCallback(async (typeKey) => {
+    let latestConfig = systemConfig;
+    try {
+      const { data } = await getSystemConfiguration();
+      if (data) {
+        latestConfig = data;
+        setSystemConfig(data);
+      }
+    } catch {
+      // Keep the already loaded configuration as an offline fallback.
+    }
+    const selectedType = (latestConfig?.panelTypes || []).find(
+      (type) => String(type.key) === String(typeKey),
+    );
+    if (!selectedType) return { success: false };
     updatePanel(activePanel, (panel) => ({
       ...panel,
       panelTypeKey: selectedType.key,
@@ -682,6 +698,7 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       parts: buildTypeParts(selectedType, panel.dimensions),
       prices: { ...panel.prices, ...selectedType.prices },
     }));
+    return { success: true };
   }, [activePanel, systemConfig, updatePanel]);
 
   const updatePanelDimensions = useCallback((field, value) => {
@@ -699,7 +716,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         panelName = `${automaticName}${currentName.slice(previousAutomaticName.length)}`;
       }
 
-      const selectedType = (systemConfig?.panelTypes || []).find((type) => type.key === panel.panelTypeKey);
+      const selectedType = (systemConfig?.panelTypes || []).find(
+        (type) => String(type.key) === String(panel.panelTypeKey),
+      );
       return { ...panel, dimensions, panelName, ...(selectedType ? { parts: mergeRecalculatedParts(panel.parts, selectedType, dimensions) } : {}) };
     });
   }, [activePanel, systemConfig, updatePanel]);
@@ -707,7 +726,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     try {
       const { data: savedConfig } = await getSystemConfiguration();
       const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
-      const selectedType = (savedConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
+      const selectedType = (savedConfig?.panelTypes || []).find(
+        (type) => String(type.key) === String(currentPanel?.panelTypeKey),
+      );
       if (!selectedType) return { success: false, message: "اختر نوع اللوحة أولًا لإعادة حساب الأجزاء." };
       setSystemConfig(savedConfig);
       updatePanel(activePanel, (panel) => ({ ...panel, parts: mergeRecalculatedParts(panel.parts, selectedType, panel.dimensions) }));
@@ -832,7 +853,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   }, [activePanel, project.panels, projectId]);
   const canDeletePart = (part, parts) => {
     const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
-    const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === currentPanel?.panelTypeKey);
+    const panelType = (systemConfig?.panelTypes || []).find(
+      (type) => String(type.key) === String(currentPanel?.panelTypeKey),
+    );
     const isOriginalPart = (panelType?.parts || []).some((item) => item?.name === part.name);
     const isConfiguredAdditionalPart = (panelType?.additionalParts || [])
       .map((item) => typeof item === "string" ? item : item?.name)

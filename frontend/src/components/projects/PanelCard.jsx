@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getPanelNameDirection } from "../../utils/panelNameDirection";
 import PanelEditAction from "./PanelEditAction";
 const states = { draft: ["مسودة", "draft"], pendingPricing: ["بانتظار التسعير", "pending"], pricing: ["قيد التسعير", "working"], quoteCompleted: ["عرض السعر جاهز", "ready"], editing: ["قيد التعديل", "editing"], executionPdfRequested: ["مطلوب PDF تنفيذ", "pending"], executionPdfReady: ["PDF التنفيذ جاهز", "ready"], executionConfirmed: ["تم تأكيد التنفيذ", "working"], manufacturingFilesPending: ["بانتظار ملفات التصنيع", "pending"], manufacturingFilesReady: ["ملفات التصنيع جاهزة", "ready"], pendingLaserDownload: ["بانتظار تنزيل الليزر", "pending"], laser: ["مرحلة الليزر", "working"], manufacturing: ["مرحلة التصنيع", "working"], painting: ["مرحلة الرش", "working"], assembly: ["مرحلة التجميع", "working"], completed: ["مكتملة", "complete"] };
-export default function PanelCard({ panel, onOpen, onDelete, canDelete, onEdit }) {
+export default function PanelCard({ panel, quotePublished = false, onOpen, onDelete, canDelete, onEdit }) {
   const { user } = useAuth();
   const [menu, setMenu] = useState(false);
   const menuRef = useRef(null);
@@ -14,7 +14,13 @@ export default function PanelCard({ panel, onOpen, onDelete, canDelete, onEdit }
     document.addEventListener("pointerdown", closeMenu);
     return () => document.removeEventListener("pointerdown", closeMenu);
   }, [menu]);
-  const [label, tone] = panel.marketingEditSession?.active
+  const quoteWaitingForProjectApproval =
+    user?.role === "Marketer" &&
+    (panel.status === "quoteCompleted" || panel.quotePublicationPending) &&
+    !quotePublished;
+  const [label, tone] = quoteWaitingForProjectApproval
+    ? ["بانتظار اعتماد المشروع", "working"]
+    : panel.marketingEditSession?.active
     ? ["قيد تعديل المندوب", "editing"]
     : panel.status === "draft" && panel.marketerSaved
     ? ["مسودة محفوظة", "ready"]

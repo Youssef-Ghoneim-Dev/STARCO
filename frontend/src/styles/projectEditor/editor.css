@@ -380,6 +380,22 @@
     color: #795617;
 }
 
+html[data-theme="dark"] .panel-type-confirmation {
+    color: #efd18f;
+    border-color: rgba(215, 164, 55, .42);
+    background: rgba(126, 87, 15, .2) !important;
+}
+
+html[data-theme="dark"] .panel-type-confirmation :where(strong, p) {
+    color: #efd18f !important;
+}
+
+html[data-theme="dark"] .panel-type-confirmation .secondary-button {
+    color: #efd18f;
+    border-color: rgba(215, 164, 55, .5);
+    background: rgba(126, 87, 15, .12);
+}
+
 .project-gallery-backdrop {
     position: fixed;
     z-index: 1000;
@@ -863,6 +879,31 @@
     background: #e4f7ec;
 }
 
+html[data-theme="dark"] .panel-card-status {
+    color: #405463 !important;
+    background: #e5edf2 !important;
+}
+
+html[data-theme="dark"] .panel-card-status.pending {
+    color: #7e5700 !important;
+    background: #ffefb8 !important;
+}
+
+html[data-theme="dark"] .panel-card-status.working {
+    color: #245b78 !important;
+    background: #dceef7 !important;
+}
+
+html[data-theme="dark"] .panel-card-status.editing {
+    color: #85430b !important;
+    background: #ffe4c7 !important;
+}
+
+html[data-theme="dark"] .panel-card-status.completed {
+    color: #09683a !important;
+    background: #d9f3e4 !important;
+}
+
 .panels-card-grid .delete-panel-btn {
     position: absolute;
     top: 11px;
@@ -933,6 +974,56 @@
 .panel-detail-heading .panel-inline-edit-btn:disabled {
     opacity: .65;
     cursor: wait;
+}
+
+html[data-theme="dark"] .panel-detail-heading {
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .panel-detail-heading h2 {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .panel-detail-heading button:not(.panel-inline-edit-btn) {
+    color: #d9edf6;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .panel-detail-heading button:not(.panel-inline-edit-btn):hover {
+    color: #fff;
+    border-color: #6e9caf;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .marketing-upload-control {
+    color: #d9edf6;
+    border-color: #6e9caf;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .marketing-upload-control:hover:not(:disabled) {
+    color: #fff;
+    border-color: var(--acade);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] :where(.project-media-refresh, .project-section-refresh) {
+    color: #d9edf6;
+    border-color: #587f92;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] :where(.project-media-refresh, .project-section-refresh):hover:not(:disabled) {
+    color: #fff;
+    border-color: var(--acade);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .whatsapp-media-accordions summary b {
+    color: #d9edf6 !important;
+    background: var(--surface-soft);
 }
 
 .part-quantity {
@@ -1083,8 +1174,14 @@
     border: 1px solid #fecdca;
     border-radius: 12px;
     background: #fff5f4;
-    color: #b42318;
+    color: #a93d35;
     line-height: 1.8;
+}
+
+html[data-theme="dark"] .save-validation-list {
+    color: #efa09a;
+    border-color: rgba(219, 102, 94, .4);
+    background: rgba(139, 47, 42, .18) !important;
 }
 
 .pdf-choice-backdrop {
@@ -1502,11 +1599,6 @@
     background: #e8f3f6;
 }
 
-.copper-select-menu button.is-selected {
-    color: #fff;
-    background: var(--primary);
-}
-
 .project-read-only-fieldset {
     display: flex;
     flex-direction: column;
@@ -1612,6 +1704,18 @@
     animation: project-refresh-spin .8s linear infinite;
 }
 
+html[data-theme="dark"] .project-icon-refresh {
+    color: #d9edf6;
+    border-color: #668fa2;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .project-icon-refresh:hover:not(:disabled) {
+    color: #fff;
+    border-color: #9fc4d4;
+    background: var(--surface-soft);
+}
+
 .project-read-only-notice {
     margin: 0 0 16px;
     border: 1px solid #f3d28c;
@@ -1620,6 +1724,12 @@
     color: #805a17;
     background: #fff8e8;
     font-weight: 700;
+}
+
+html[data-theme="dark"] .project-read-only-notice {
+    color: #f0d18a !important;
+    border-color: rgba(221, 171, 64, .42);
+    background: rgba(130, 91, 18, .2);
 }
 
 .app-select {
@@ -1761,6 +1871,51 @@
     border-radius: 10px;
     background: #e9f5f5;
     color: #174c61;
+}
+
+html[data-theme="dark"] .copper-calculator-collapse>summary,
+html[data-theme="dark"] .copper-branches-bulk>strong {
+    color: #d9edf6;
+}
+
+html[data-theme="dark"] .copper-select-chevron {
+    color: #d9edf6;
+}
+
+html[data-theme="dark"] .copper-select-menu button:hover {
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .copper-bulk-group button {
+    color: #c5d9e2;
+    background: transparent;
+}
+
+html[data-theme="dark"] .copper-bulk-group button:hover {
+    color: #fff;
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .copper-bulk-group button.is-active {
+    color: #fff;
+    background: #477f9a;
+}
+
+html[data-theme="dark"] .copper-total {
+    color: #d9edf6;
+    border: 1px solid var(--border);
+    background: var(--surface-soft) !important;
+}
+
+html[data-theme="dark"] .copper-total :where(span, strong) {
+    color: #d9edf6 !important;
+}
+
+html[data-theme="dark"] :where(.copper-remove, .copper-branch-title button) {
+    color: #efa09a;
+    border: 1px solid rgba(219, 102, 94, .35);
+    background: rgba(139, 47, 42, .16);
 }
 
 @media (max-width: 600px) {

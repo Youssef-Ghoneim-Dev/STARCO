@@ -588,6 +588,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const targetProject = await loadProjectWithPanels({ _id: command.projectId, isDeleted: false });
         const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
         if (!targetProject || !ownsProject) return "لم يتم العثور على مشروع بهذا ID تابع لك.";
+        if (!targetProject.previewGeneratedAt) return "عرض السعر لم يُعتمد أو يُرسل من المهندس بعد. انتظر إشعار جاهزية المشروع أولًا.";
         if (!command.panelNumber || command.panelNumber > targetProject.panels.length) {
             return `رقم اللوحة غير صحيح. هذا المشروع يحتوي على ${targetProject.panels.length} لوحة.`;
         }

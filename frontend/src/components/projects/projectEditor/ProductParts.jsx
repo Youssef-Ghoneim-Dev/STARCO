@@ -23,7 +23,9 @@ function ProductParts() {
   const [showModal, setShowModal] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const panel = project.panels[activePanel] || project.panels[0];
-  const panelType = (systemConfig?.panelTypes || []).find((type) => type.key === panel.panelTypeKey);
+  const panelType = (systemConfig?.panelTypes || []).find(
+    (type) => String(type.key) === String(panel.panelTypeKey),
+  );
   const additionalParts = (panelType?.additionalParts || legacyAddOptions).map(normalizeAdditionalPart);
   const addOptions = additionalParts.map((part) => ({ id: part.name, label: part.name, config: part }));
   const getQuantityConfig = (partName) => additionalParts.find((part) => partName === part.name || partName.startsWith(`${part.name} `));

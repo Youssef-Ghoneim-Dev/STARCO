@@ -55,16 +55,30 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const marketerCopper = value.marketerData?.copperDetails || {};
         const copper = Object.keys(pricingCopper).length ? pricingCopper : { enabled: Boolean(value.marketerData?.hasCopper), main: { optionKey: marketerCopper.mainKey || "" }, branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) })) };
         const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: viewerOwnsPanelDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
+        if (isMarketer(viewer) && !object.previewGeneratedAt && value.status === "quoteCompleted" && !viewerOwnsPanelDraft) {
+            const hidden = {
+                ...withEngineer,
+                status: "pricing",
+                quoteStatus: "inProgress",
+                quotePublicationPending: true,
+                quoteCompletedAt: null,
+                executionPdf: { status: "notRequested", files: [] },
+                manufacturing: { status: "notStarted", files: [], productionStages: [], productionHistory: [] }
+            };
+            ["pricing", "dimensions", "parts", "prices", "copper", "statusHistory"].forEach((key) => delete hidden[key]);
+            return hidden;
+        }
         if (viewer?.role !== "ProductionManager") return withEngineer;
         const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
     });
     return {
         ...object,
+        ...(isMarketer(viewer) && !object.previewGeneratedAt ? { clientPreviewToken: null } : {}),
         marketingRepresentative: marketer ? { _id: marketer._id, name: marketer.name } : null,
         panels: visiblePanels,
         panelIds: projectPanels.map((panel) => panel._id), panelCount: projectPanels.length,
-        quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : ""
+        quotePreviewUrl: object.previewGeneratedAt && object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : ""
     };
 };
 const nextProjectCode = async () => {

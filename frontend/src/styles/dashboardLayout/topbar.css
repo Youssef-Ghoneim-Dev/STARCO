@@ -72,6 +72,25 @@
 
 }
 
+.notification-btn[aria-expanded="true"] {
+    color: var(--primary);
+    background: rgba(55, 109, 136, .12);
+}
+
+.notification-btn:focus-visible {
+    outline: 2px solid rgba(55, 109, 136, .5);
+    outline-offset: 2px;
+}
+
+html[data-theme="dark"] .notification-btn[aria-expanded="true"] {
+    color: #fff;
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .notification-btn:focus-visible {
+    outline-color: #8db8ca;
+}
+
 .topbar-right {
 
     display: flex;
@@ -81,5 +100,4 @@
     gap: 20px;
 
 }
-
 

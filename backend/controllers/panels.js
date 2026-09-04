@@ -127,6 +127,21 @@ const publicPanel = (panel, useMarketingDraft = false) => {
     };
     return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: useMarketingDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
 };
+const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false) => {
+    const result = publicPanel(panel, useMarketingDraft);
+    if (!isMarketer(viewer) || project?.previewGeneratedAt || result.status !== "quoteCompleted") return result;
+    const hidden = {
+        ...result,
+        status: "pricing",
+        quoteStatus: "inProgress",
+        quotePublicationPending: true,
+        quoteCompletedAt: null,
+        executionPdf: { status: "notRequested", files: [] },
+        manufacturing: { status: "notStarted", files: [], productionStages: [], productionHistory: [] }
+    };
+    ["pricing", "dimensions", "parts", "prices", "copper", "statusHistory"].forEach((key) => delete hidden[key]);
+    return hidden;
+};
 const refreshProjectCompletion = async (projectId) => {
     const list = await panels.find({ projectId, isDeleted: false });
     const completed = list.length > 0 && list.every((panel) => panel.status === "completed");
@@ -197,7 +212,7 @@ const listAllPanels = async (req, res, next) => { try {
     });
     res.json(list.map((panel) => {
         const project = projectMap.get(String(panel.projectId));
-        return { ...publicPanel(panel), project: { _id: project._id, projectCode: project.projectCode, client: project.client, status: project.status, source: project.source } };
+        return { ...publicPanelForViewer(panel, project, req.user), project: { _id: project._id, projectCode: project.projectCode, client: project.client, status: project.status, source: project.source, previewGeneratedAt: project.previewGeneratedAt } };
     }));
 } catch (error) { next(error); } };
 
@@ -207,7 +222,7 @@ const listPanels = async (req, res, next) => { try {
     const condition = { projectId: project._id, isDeleted: false };
     if (req.user.role === "ProductionManager") condition.status = { $in: executionStatuses };
     const list = await panels.find(condition);
-    res.json(list.map((panel) => publicPanel(panel, (isMarketer(req.user) || isOwner(req.user)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id))));
+    res.json(list.map((panel) => publicPanelForViewer(panel, project, req.user, (isMarketer(req.user) || isOwner(req.user)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id))));
 } catch (error) { next(error); } };
 const getPanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
@@ -215,7 +230,7 @@ const getPanel = async (req, res, next) => { try {
     if (req.user.role === "ProductionManager" && !executionStatuses.includes(panel.status)) return res.status(403).json({ status: "error", message: "اللوحة لم تصل إلى مرحلة التنفيذ بعد." });
     const useMarketingDraft = (isMarketer(req.user) || isOwner(req.user)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id);
     if (useMarketingDraft && panel.marketingDraftDeleted) return res.status(404).json({ status: "error", message: "اللوحة محذوفة من مسودة التعديل." });
-    res.json(publicPanel(panel, useMarketingDraft));
+    res.json(publicPanelForViewer(panel, project, req.user, useMarketingDraft));
 } catch (error) { next(error); } };
 const createPanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
@@ -283,6 +298,7 @@ const completeQuote = async (req, res, next) => { try {
 const openEditing = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (!isOwner(req.user) && !marketerOwns(req, project, panel)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تعديل اللوحة." });
+    if (isMarketer(req.user) && panel.status === "quoteCompleted" && !project.previewGeneratedAt) return res.status(409).json({ status: "error", code: "PROJECT_QUOTE_NOT_PUBLISHED", message: "عرض السعر ما زال بانتظار اعتماد المشروع وإرساله من المهندس." });
     if (!marketingEditableStatuses.includes(panel.status)) return res.status(409).json({ status: "error", code: "PANEL_EDITING_CLOSED", message: "لا يمكن تعديل اللوحة بعد تأكيد PDF التنفيذ أو دخولها مرحلة الإنتاج." });
     if (panel.marketingEditSession?.active) {
         if (sameId(panel.marketingEditSession.openedBy, req.user._id)) return res.json({ status: "ok", project: await projectResponse(project), panel: publicPanel(panel, true) });
@@ -380,10 +396,12 @@ const transition = async (req, res, next, { from, to, roles, extra = {}, notify,
 } catch (error) { next(error); } };
 const requestExecutionPdf = async (req, res, next) => { try {
     const panel = await loadPanel(req.params.projectId, req.params.panelId);
+    const project = await loadProject(req.params.projectId);
     const selectedThickness = Number(req.body?.steelThickness);
     const quotedThicknessSource = panel?.pricing?.thickness?.length ? panel.pricing.thickness : panel?.marketerData?.thickness || [];
     const quotedThicknesses = quotedThicknessSource.map(Number).filter(Number.isFinite);
-    if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    if (!panel || !project) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    if (!project.previewGeneratedAt) return res.status(409).json({ status: "error", code: "PROJECT_QUOTE_NOT_PUBLISHED", message: "يجب حفظ المشروع وإرساله للمندوب قبل إصدار أمر PDF التنفيذ." });
     if (!Number.isFinite(selectedThickness) || !quotedThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
         return res.status(400).json({ status: "error", message: "اختر سمكًا معتمدًا ضمن عرض السعر." });
     }

@@ -13,13 +13,11 @@ const convertedGroup = (branches, template, direction) => {
   const cleanTemplate = branchWithoutFixedLength(template);
   if (direction === "one") return [{ ...cleanTemplate, direction: "one", quantity: totalPieces }];
 
-  const pairedQuantity = Math.floor(totalPieces / 2);
-  const remainder = totalPieces % 2;
-  const converted = pairedQuantity > 0
-    ? [{ ...cleanTemplate, direction: "two", quantity: pairedQuantity }]
-    : [];
-  if (remainder) converted.push({ ...cleanTemplate, branchId: `branch-${Date.now()}-${Math.random().toString(36).slice(2)}`, direction: "one", quantity: 1 });
-  return converted;
+  // Choosing two directions is an explicit user decision. An odd piece count
+  // must not silently turn the last item (or a single item) back into one
+  // direction, otherwise both the select and the bulk control appear broken.
+  const pairedQuantity = Math.max(1, Math.ceil(totalPieces / 2));
+  return [{ ...cleanTemplate, direction: "two", quantity: pairedQuantity }];
 };
 
 export const convertCopperBranchDirection = (branches = [], index, direction) => {

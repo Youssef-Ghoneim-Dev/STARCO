@@ -27,7 +27,9 @@ const formatDate = (value) => {
 };
 
 export default function PanelIndexCard({ panel, onOpen }) {
-  const [statusLabel, statusClass] = statusDetails[panel.status] || [panel.status || "Unknown", "pending"];
+  const [statusLabel, statusClass] = panel.quotePublicationPending
+    ? ["Pending project approval", "pending"]
+    : (statusDetails[panel.status] || [panel.status || "Unknown", "pending"]);
   const name = panel.panelName || panel.panelCode || "Panel";
   const clientName = panel.project?.client?.name || "Client not specified";
   return <article className="panel-index-card" onClick={onOpen} role="button" tabIndex="0" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen(); }}>
