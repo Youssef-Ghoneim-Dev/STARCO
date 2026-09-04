@@ -53,9 +53,12 @@
 
 .engineer-status-card .engineer-more-link,
 .marketing-status .marketing-card-link,
-.marketer-status .marketer-link,
-.production-stage-status .production-card-link {
+.marketer-status .marketer-link {
     margin-top: 24px;
+}
+
+.production-stage-status .production-card-link {
+    margin-top: auto;
 }
 
 .engineer-metric,

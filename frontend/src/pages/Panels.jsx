@@ -74,19 +74,8 @@ export default function Panels() {
   // searchParams represents the dashboard filter URL and intentionally refreshes this list.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [panels, query, status, searchParams]);
-  const viewCopy = {
-    engineerTasks: ["المهام التي تنتظر إجراءك", "اللوحات التي تحتاج إجراءً هندسيًا منك الآن."],
-    requests: ["طلبات التاريخ المحدد", "كل الطلبات المسجلة في التاريخ الذي اخترته من لوحة التحكم."],
-    production: ["تفاصيل مراحل الإنتاج", "كل اللوحات التي دخلت دورة الإنتاج الفعلية."],
-    delayed: ["اللوحات المتأخرة", "اللوحات غير المكتملة التي تجاوزت موعد التسليم المعتمد فعليًا."],
-    readyFiles: ["ملفات جاهزة للإنتاج", "اللوحات التي أصبحت ملفات تصنيعها جاهزة ولم تبدأ الإنتاج بعد."],
-    executionOrders: ["أوامر التنفيذ", "أوامر التنفيذ المطابقة للفترة والحالة المختارتين."],
-    executionPdfs: ["ملفات PDF التنفيذ", "اللوحات الموجودة في مرحلة PDF التنفيذ."],
-    manufacturingFiles: ["ملفات التصنيع", "اللوحات التي تنتظر رفع ملفات التصنيع أو أصبحت ملفاتها جاهزة."],
-    productionTasks: ["مهام مدير الإنتاج", "اللوحات التي تنتظر إجراءً منك الآن."],
-  }[view];
   return <DashboardLayout notAllowed>
-    <ProjectsHeader query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} onRefresh={load} refreshing={loading} title={viewCopy?.[0] || "Panels"} subtitle={viewCopy?.[1] || "Manage all your panels in one place."} searchPlaceholder="Search by panel name..." statusOptions={panelStatuses} showCreate={false} />
+    <ProjectsHeader query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} onRefresh={load} refreshing={loading} title="Panels" subtitle="Manage all your panels in one place." searchPlaceholder="Search by panel name..." statusOptions={panelStatuses} showCreate={false} />
     {loading ? <div className="empty-projects">Loading...</div> : visible.length ? <section className="projects-grid panels-index-grid">{visible.map((panel) => <PanelIndexCard key={panel._id} panel={panel} onOpen={() => navigate(`/projects/${panel.project?._id || panel.projectId}/panels/${panel._id}`)} />)}</section> : <div className="empty-projects">No panels found</div>}
   </DashboardLayout>;
 }

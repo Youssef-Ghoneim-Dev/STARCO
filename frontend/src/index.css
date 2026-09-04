@@ -523,12 +523,16 @@ html[data-theme="dark"] .production-manager-dashboard .production-manager-kpis s
 }
 
 html[data-theme="dark"] .production-manager-dashboard .production-current-stages article {
-    border-color: color-mix(in srgb, var(--stage-color) 30%, white);
-    background: color-mix(in srgb, var(--stage-color) 10%, white);
+    border-color: color-mix(in srgb, var(--stage-color) 42%, var(--border));
+    background: color-mix(in srgb, var(--stage-color) 16%, var(--surface));
 }
 
-html[data-theme="dark"] .production-manager-dashboard .production-current-stages article :where(span, strong, small) {
-    color: #17212b !important;
+html[data-theme="dark"] .production-manager-dashboard .production-current-stages article :where(span, small) {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .production-manager-dashboard .production-current-stages article strong {
+    color: color-mix(in srgb, var(--stage-color) 64%, #fff) !important;
 }
 
 html[data-theme="dark"] .theme-toggle-btn {

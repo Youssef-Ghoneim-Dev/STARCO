@@ -57,7 +57,7 @@ function UserRow({ user, reload, mode }) {
 
       <span>{user.email}</span>
       <span className="phone-value">{user.phoneNumber || (user.linkedAccountCreator ? <span className="linked-account-origin"><small>Additional Account From</small><strong>{user.linkedAccountCreator.name}</strong><em>{user.linkedAccountCreator.role}</em></span> : "No phone number")}</span>
-      <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
+      <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" direction="ltr" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
 
       <div className="users-actions">
         {!user.isDeleted && !isCurrentUser && <button type="button" className="edit-user-btn" onClick={() => setEditing(true)} aria-label="Edit user"><HiOutlinePencil /></button>}

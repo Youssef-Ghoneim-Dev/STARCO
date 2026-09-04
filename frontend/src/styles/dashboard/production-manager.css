@@ -891,10 +891,19 @@
 
     .production-manager-kpis {
         grid-template-columns: 1fr;
+        gap: 8px;
+        overflow: visible;
+        border: 0;
+        background: transparent;
     }
 
-    .production-manager-kpis>div {
-        border-inline-start: 0;
+    .production-manager-kpis>div,
+    .production-manager-kpis>div:nth-child(n) {
+        min-height: 76px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 11px 14px;
+        background: var(--surface);
     }
 
     .production-table-scroll {

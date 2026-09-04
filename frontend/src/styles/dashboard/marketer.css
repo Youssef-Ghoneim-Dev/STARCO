@@ -757,13 +757,70 @@
     }
 
     .marketer-summary>div:last-child {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0;
+        overflow: hidden;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--primary) 4%, var(--surface));
     }
 
     .marketer-summary>div:last-child span {
-        min-height: 72px;
-        justify-content: center;
-        border-top: 1px solid var(--border);
+        place-items: center;
+        gap: 5px;
+        min-height: 78px;
+        border: 0;
+        border-inline-start: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+        border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+        padding: 10px 8px;
+        background: transparent;
+        text-align: center;
+    }
+
+    .marketer-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 14px;
+        background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 7%, var(--surface)), var(--surface) 58%);
+        box-shadow: 0 8px 24px rgba(20, 54, 72, .07);
+    }
+
+    .marketer-summary>div:first-child {
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr) auto;
+        min-height: 62px;
+        border: 0;
+        border-radius: 0;
+        padding: 2px 4px 12px;
+        background: transparent;
+    }
+
+    .marketer-summary>div:first-child>svg {
+        grid-row: 1;
+        width: 24px;
+        height: 24px;
+        padding: 9px;
+        background: color-mix(in srgb, #4b79dd 14%, var(--surface));
+    }
+
+    .marketer-summary>div:first-child span {
+        display: grid;
+        grid-column: 2 / 4;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        font-size: 15px;
+    }
+
+    .marketer-summary>div:first-child strong,
+    .marketer-summary>div:last-child strong {
+        font-size: 21px;
+    }
+
+    .marketer-summary>div:last-child span:nth-child(odd) {
+        border-inline-start: 0;
     }
 }

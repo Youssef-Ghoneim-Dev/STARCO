@@ -28,7 +28,7 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefres
         </label>
         <div className="projects-filter">
           <FiFilter />
-          <StyledSelect value={status} onChange={onStatusChange} options={statusOptions} direction="ltr" multiple={multipleStatus} />
+          <StyledSelect value={status} onChange={onStatusChange} options={statusOptions} direction="ltr" multiple={multipleStatus} menuMatchParent />
         </div>
         {showCreate && user?.role === "Marketer" && <NavLink to="/new-project" className="new-project-link">
           <button className="new-project-btn"><FiPlus />New Project</button>

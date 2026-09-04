@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IoCheckmark, IoChevronDown } from "react-icons/io5";
 
-function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel, direction = "rtl", multiple = false }) {
+function StyledSelect({ value, options, placeholder = "اختر", onChange, disabled = false, ariaLabel, direction = "rtl", multiple = false, menuMatchParent = false }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const ref = useRef(null);
@@ -40,15 +40,16 @@ function StyledSelect({ value, options, placeholder = "اختر", onChange, disa
     const updatePosition = () => {
       const rect = ref.current?.getBoundingClientRect();
       if (!rect) return;
+      const menuRect = menuMatchParent ? ref.current?.parentElement?.getBoundingClientRect() || rect : rect;
       const availableBelow = window.innerHeight - rect.bottom - 12;
       const availableAbove = rect.top - 12;
       const opensAbove = availableBelow < 180 && availableAbove > availableBelow;
       const maxHeight = Math.max(120, Math.min(260, opensAbove ? availableAbove : availableBelow));
       setMenuPosition({
-        left: rect.left,
+        left: Math.max(12, Math.min(menuRect.left, window.innerWidth - menuRect.width - 12)),
         top: opensAbove ? undefined : rect.bottom + 6,
         bottom: opensAbove ? window.innerHeight - rect.top + 6 : undefined,
-        width: rect.width,
+        width: Math.min(menuRect.width, window.innerWidth - 24),
         maxHeight,
       });
     };
@@ -59,7 +60,7 @@ function StyledSelect({ value, options, placeholder = "اختر", onChange, disa
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open]);
+  }, [menuMatchParent, open]);
 
   return <div className={`app-select${disabled ? " is-disabled" : ""}`} ref={ref} dir={direction}>
     <button type="button" className="app-select-trigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>
