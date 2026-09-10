@@ -6,7 +6,7 @@ const googleDrive = require("../services/googleDrive");
 // CheckUserToken refreshes req.user from MongoDB. Using the JWT role here made
 // permissions stale after a user's role was edited by Owner Manager.
 const isOwnerManager = (req) => req.user?.role === "OwnerManager";
-const canManagePricing = (req) => ["OwnerManager", "Engineer"].includes(req.user?.role);
+const canManagePricing = (req) => ["OwnerManager", "Engineer", "FullEngineer"].includes(req.user?.role);
 const canManageWhatsappTemplates = (req) => ["OwnerManager", "MarketingManager"].includes(req.user?.role);
 
 const sanitizeEngineerPanelTypes = (currentTypes = [], requestedTypes = []) => {

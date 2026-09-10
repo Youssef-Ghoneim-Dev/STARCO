@@ -10,12 +10,25 @@ const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendNewProjectAssigned, sendProjectCompletedPreview } = require("../services/projectWhatsappNotifications");
 const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
 const { createInternalNotifications } = require("../services/internalNotifications");
+const {
+    DRAWING_ENGINEER_ROLES,
+    PRODUCTION_CONTROL_ROLES,
+    SUPERVISOR_STAGE_BY_ROLE,
+    isDrawingEngineer,
+    isProductionController,
+    isProductionViewer,
+    isProductionSupervisor,
+} = require("../utils/roles");
 
 const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
-const isEngineer = (user) => user?.role === "Engineer";
+const isEngineer = (user) => isDrawingEngineer(user);
 const isMarketer = (user) => user?.role === "Marketer";
 const productionVisibleStatuses = ["executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
+const productionStatusesFor = (user) => isProductionController(user)
+    ? productionVisibleStatuses
+    : (SUPERVISOR_STAGE_BY_ROLE[user?.role] || null);
+const isProductionRestrictedViewer = (user) => isProductionViewer(user) && user?.role !== "FullEngineer";
 const whatsappFailureReason = (row) => {
     const error = row?.rawPayload?.errors?.[0];
     if (!error) return "لم ترسل Meta سببًا تفصيليًا.";
@@ -27,7 +40,9 @@ const canSeeProject = (user, project) => isOwner(user) || (isMarketer(user) ? sa
 const hydrate = async (project, includeDeleted = false, viewer = null) => {
     const object = project.toObject ? project.toObject() : project;
     const allProjectPanels = await panels.find({ projectId: project._id, ...(includeDeleted ? {} : { isDeleted: false }) });
+    const allowedProductionStatuses = isProductionRestrictedViewer(viewer) ? productionStatusesFor(viewer) : null;
     const projectPanels = allProjectPanels.filter((panel) => {
+        if (allowedProductionStatuses && !allowedProductionStatuses.includes(panel.status)) return false;
         const viewerOwnsPanelDraft = (isMarketer(viewer) || isOwner(viewer)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, viewer?._id);
         if (viewerOwnsPanelDraft && panel.marketingDraftDeleted) return false;
         if (panel.status === "draft" && object.status !== "draft" && !viewerOwnsPanelDraft) return false;
@@ -69,17 +84,51 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
             ["pricing", "dimensions", "parts", "prices", "copper", "statusHistory"].forEach((key) => delete hidden[key]);
             return hidden;
         }
-        if (viewer?.role !== "ProductionManager") return withEngineer;
-        const executionVisible = productionVisibleStatuses.includes(value.status);
-        return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
+        if (!isProductionSupervisor(viewer)) return withEngineer;
+        const allowedStageKeys = new Set((SUPERVISOR_STAGE_BY_ROLE[viewer.role] || []).map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
+        return {
+            _id: value._id,
+            projectId: value.projectId,
+            panelCode: value.panelCode,
+            sequence: value.sequence,
+            panelName: value.panelName,
+            status: value.status,
+            assignedEngineer: withEngineer.assignedEngineer,
+            deliverySchedule: value.deliverySchedule,
+            executionPdf: { status: executionStatus, readyAt: value.executionPdf?.readyAt },
+            manufacturing: {
+                status: manufacturingStatus,
+                currentStage: productionStages.find((stage) => stage.status === "active")?.key || "",
+                files: viewer.role === "LaserSupervisor" ? (value.manufacturing?.files || []) : [],
+                engineerNotes: viewer.role === "LaserSupervisor" ? (value.manufacturing?.engineerNotes || "") : "",
+                productionNotes: value.manufacturing?.productionNotes || "",
+                productionStages: productionStages.filter((stage) => allowedStageKeys.has(stage.key)),
+                productionHistory: productionHistory.filter((entry) => allowedStageKeys.has(entry.stageKey)),
+            },
+            createdAt: value.createdAt,
+            updatedAt: value.updatedAt,
+        };
     });
-    return {
+    const response = {
         ...object,
         ...(isMarketer(viewer) && !object.previewGeneratedAt ? { clientPreviewToken: null } : {}),
         marketingRepresentative: marketer ? { _id: marketer._id, name: marketer.name } : null,
         panels: visiblePanels,
         panelIds: projectPanels.map((panel) => panel._id), panelCount: projectPanels.length,
         quotePreviewUrl: object.previewGeneratedAt && object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : ""
+    };
+    if (!isProductionSupervisor(viewer)) return response;
+    return {
+        _id: response._id,
+        projectCode: response.projectCode,
+        status: response.status,
+        client: { name: response.client?.name || "" },
+        marketingRepresentative: response.marketingRepresentative,
+        panels: response.panels,
+        panelIds: response.panelIds,
+        panelCount: response.panelCount,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
     };
 };
 const nextProjectCode = async () => {
@@ -111,8 +160,8 @@ const getProjects = async (req, res, next) => { try {
     if (isMarketer(req.user)) condition.marketingId = req.user._id;
     else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
     let result = await projects.find(condition);
-    if (req.user.role === "ProductionManager") {
-        const executionPanels = await panels.find({ isDeleted: false, status: { $in: productionVisibleStatuses } });
+    if (isProductionRestrictedViewer(req.user)) {
+        const executionPanels = await panels.find({ isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
         const ids = new Set(executionPanels.map((panel) => String(panel.projectId)));
         result = result.filter((project) => ids.has(String(project._id)));
     }
@@ -122,6 +171,10 @@ const getProject = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
     if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
     if (!canSeeProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذا المشروع." });
+    if (isProductionRestrictedViewer(req.user)) {
+        const visiblePanel = await panels.findOne({ projectId: project._id, isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
+        if (!visiblePanel) return res.status(403).json({ status: "error", message: "لا توجد لوحة في مرحلة الإنتاج المتاحة لهذا الحساب." });
+    }
     res.json(await hydrate(project, false, req.user));
 } catch (error) { next(error); } };
 const createProject = async (req, res, next) => { try {
@@ -187,7 +240,7 @@ const submitProject = async (req, res, next) => { try {
     await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
     const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
     await createInternalNotifications({
-        roles: ["Engineer", "OwnerManager"],
+        roles: [...DRAWING_ENGINEER_ROLES, "OwnerManager"],
         excludeUserId: req.user._id,
         project: saved,
         type: "projectPendingPricing",
@@ -195,7 +248,7 @@ const submitProject = async (req, res, next) => { try {
         body: `${saved.projectCode} — ${saved.client?.name || "عميل غير محدد"}`,
         actor: req.user,
     });
-    const recipients = await users.selectall({ role: { $in: ["Engineer", "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+    const recipients = await users.selectall({ role: { $in: [...DRAWING_ENGINEER_ROLES, "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
     const notifications = await Promise.allSettled(recipients.map((recipient) => sendNewProjectAssigned(recipient.phoneNumber, notificationProject, req.user.name || "غير محدد")));
     const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);

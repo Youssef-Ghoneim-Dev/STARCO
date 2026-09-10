@@ -8,7 +8,7 @@ const serializeNote = (note) => ({
 });
 
 const ensureEngineer = (req, res) => {
-    if (req.user?.role !== "Engineer") {
+    if (!["Engineer", "FullEngineer"].includes(req.user?.role)) {
         res.status(403).json({ status: "error", message: "الملاحظات السريعة متاحة للمهندس فقط." });
         return false;
     }

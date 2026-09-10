@@ -13,7 +13,7 @@ const safeAccount = (account, currentId) => ({
 });
 
 const allowedRoles = {
-    OwnerManager: ["Engineer", "Marketer", "MarketingManager", "ProductionManager"],
+    OwnerManager: ["Engineer", "Marketer", "MarketingManager", "ProductionManager", "ProductionEngineer", "FullEngineer", "LaserSupervisor", "ManufacturingSupervisor", "PaintingSupervisor", "AssemblySupervisor"],
     MarketingManager: ["Marketer"],
     ProductionManager: ["Engineer", "Marketer"],
 };

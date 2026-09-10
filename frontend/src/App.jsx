@@ -108,11 +108,11 @@ function App() {
           <Route path="/projects/:id/panels/:panelId" element={<EditProject />} />
           <Route path="/panels" element={<Panels />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/pending-users" element={<PendingUsers />} />
-          <Route path="/configuration" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "MarketingManager"]}><Configuration /></RoleRoute>} />
+          <Route path="/users" element={<RoleRoute allowedRoles={["OwnerManager", "MarketingManager", "ProductionManager"]}><Users /></RoleRoute>} />
+          <Route path="/pending-users" element={<RoleRoute allowedRoles={["OwnerManager", "MarketingManager", "ProductionManager"]}><PendingUsers /></RoleRoute>} />
+          <Route path="/configuration" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"]}><Configuration /></RoleRoute>} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/clients" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "MarketingManager"]}><Clients /></RoleRoute>} />
+          <Route path="/clients" element={<RoleRoute allowedRoles={["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"]}><Clients /></RoleRoute>} />
           <Route path="/deleted-projects" element={<DeletedProjects />} />
         </Route>
 

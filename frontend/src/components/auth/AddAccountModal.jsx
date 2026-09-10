@@ -6,14 +6,20 @@ import { createLinkedAccount } from "../../services/linkedAccountsAPI";
 
 const roleOptions = {
   OwnerManager: [
-    { value: "Engineer", label: "Engineer" },
+    { value: "Engineer", label: "Drawing Engineer" },
     { value: "Marketer", label: "Marketer" },
     { value: "MarketingManager", label: "Marketing Manager" },
     { value: "ProductionManager", label: "Production Manager" },
+    { value: "ProductionEngineer", label: "Production Engineer" },
+    { value: "FullEngineer", label: "Full Engineer" },
+    { value: "LaserSupervisor", label: "Laser Supervisor" },
+    { value: "ManufacturingSupervisor", label: "Manufacturing Supervisor" },
+    { value: "PaintingSupervisor", label: "Painting Supervisor" },
+    { value: "AssemblySupervisor", label: "Assembly Supervisor" },
   ],
   MarketingManager: [{ value: "Marketer", label: "Marketer" }],
   ProductionManager: [
-    { value: "Engineer", label: "Engineer" },
+    { value: "Engineer", label: "Drawing Engineer" },
     { value: "Marketer", label: "Marketer" },
   ],
 };

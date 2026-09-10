@@ -17,7 +17,13 @@ const userSchema = new mongoose.Schema({
             "Engineer",
             "Marketer",
             "MarketingManager",
-            "ProductionManager"
+            "ProductionManager",
+            "ProductionEngineer",
+            "FullEngineer",
+            "LaserSupervisor",
+            "ManufacturingSupervisor",
+            "PaintingSupervisor",
+            "AssemblySupervisor"
         ], required: true
     },
     approved: { type: Boolean, default: false, required: true },

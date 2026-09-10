@@ -305,6 +305,29 @@
     background: var(--production-surface-active);
 }
 
+.production-files-content .manufacturing-download-all:disabled {
+    border-color: var(--production-border);
+    background: var(--production-surface-active);
+    color: var(--production-text-muted);
+    cursor: wait;
+    opacity: 1;
+}
+
+.manufacturing-download-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--production-border);
+    border-top-color: var(--production-accent);
+    border-radius: 50%;
+    animation: manufacturing-download-spin .75s linear infinite;
+}
+
+@keyframes manufacturing-download-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .production-files-content .manufacturing-engineer-note {
     display: grid;
     gap: 6px;

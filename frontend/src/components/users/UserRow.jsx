@@ -5,8 +5,9 @@ import { approveUser, deletePendingUser, deleteUser, restoreUser, updateUser } f
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import StyledSelect from "../common/StyledSelect";
+import { ROLE_LABELS, roleLabel } from "../../utils/roles";
 
-const roles = ["OwnerManager", "Engineer", "Marketer", "MarketingManager", "ProductionManager"];
+const roles = Object.keys(ROLE_LABELS);
 
 function UserRow({ user, reload, mode }) {
   const [role, setRole] = useState(user.role);
@@ -63,7 +64,7 @@ function UserRow({ user, reload, mode }) {
             <small>Additional account from</small>
             <span>
               <strong>{user.linkedAccountCreator.name}</strong>
-              <em>{user.linkedAccountCreator.role}</em>
+              <em>{roleLabel(user.linkedAccountCreator.role)}</em>
             </span>
           </span>
         )}
@@ -71,7 +72,7 @@ function UserRow({ user, reload, mode }) {
 
       <span>{user.email}</span>
       <span className="phone-value">{user.phoneNumber || "No phone number"}</span>
-      <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" direction="ltr" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
+      <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" direction="ltr" options={availableRoles.map((item) => ({ value: item, label: roleLabel(item) }))} /></div>
 
       <div className="users-actions">
         {!user.isDeleted && !isCurrentUser && <button type="button" className="edit-user-btn" onClick={() => setEditing(true)} aria-label="Edit user"><HiOutlinePencil /></button>}

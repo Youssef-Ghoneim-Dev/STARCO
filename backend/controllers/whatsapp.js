@@ -20,6 +20,14 @@ const { uploadFile, deleteStoredFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
 const { createInternalNotifications } = require("../services/internalNotifications");
 const {
+    DRAWING_ENGINEER_ROLES,
+    PRODUCTION_CONTROL_ROLES,
+    SUPERVISOR_STAGE_BY_ROLE,
+    isDrawingEngineer,
+    isProductionController,
+    supervisorCanAccessStatus,
+} = require("../utils/roles");
+const {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
     sendExecutionPdfRequested,
@@ -202,13 +210,8 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
     if (outbound?.type !== "production_stage_check" || !outbound.projectId || !outbound.panelId) return false;
     if (normalizePhoneNumber(outbound.recipientPhone) !== normalizePhoneNumber(senderPhone)) return false;
 
-    const responder = await users.select_one({
-        phoneNumber: normalizePhoneNumber(senderPhone),
-        role: { $in: ["OwnerManager", "ProductionManager"] },
-        approved: true,
-        isDeleted: false
-    });
-    if (!responder) {
+    const responderCandidates = await users.selectall({ phoneNumber: normalizePhoneNumber(senderPhone), approved: true, isDeleted: false });
+    if (!responderCandidates.length) {
         await sendSafeText(senderPhone, "هذا الرقم غير مربوط بحساب مدير معتمد في نظام STARCO.");
         return true;
     }
@@ -235,6 +238,16 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
     const stageName = outbound.rawPayload?.stageName || "";
     const stageKey = outbound.rawPayload?.stageKey || "";
     const waitingForEngineer = stageKey === "manufacturingFilesDueAt";
+    const responder = responderCandidates.find((candidate) => waitingForEngineer
+        ? (candidate.role === "OwnerManager" || (isDrawingEngineer(candidate) && sameId(panel.engineerId, candidate._id)))
+        : (candidate.role === "OwnerManager" || isProductionController(candidate) || supervisorCanAccessStatus(candidate, panel.status))) || responderCandidates[0];
+    const responderAllowed = waitingForEngineer
+        ? (responder.role === "OwnerManager" || (isDrawingEngineer(responder) && sameId(panel.engineerId, responder._id)))
+        : (responder.role === "OwnerManager" || isProductionController(responder) || supervisorCanAccessStatus(responder, panel.status));
+    if (!responderAllowed) {
+        await sendSafeText(senderPhone, "هذا الحساب لا يملك صلاحية تحديث المرحلة المرتبطة بهذه الرسالة.");
+        return true;
+    }
     const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
     const active = stageRows.find((stage) => stage.status === "active");
     if ((waitingForEngineer && panel.status !== "manufacturingFilesPending") || (!waitingForEngineer && (!active || active.key !== stageKey))) {
@@ -267,7 +280,7 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
         }
         const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"].map((key, index) => ({ key, status: index === 0 ? "active" : "pending", startedAt: index === 0 ? new Date() : null }));
         const saved = await panelsModel.update({ _id: panel._id }, { status: "manufacturingFilesReady", "manufacturing.stages": stages, "manufacturing.engineerReminderAt": null, "manufacturing.productionNotes": "", $push: { statusHistory: { from: panel.status, to: "manufacturingFilesReady", action: "manufacturingFilesConfirmedByWhatsapp", stageKey, actorId: responder._id, actorName: responder.name || "", actorRole: responder.role, createdAt: new Date() } } });
-        await createInternalNotifications({ roles: ["ProductionManager", "OwnerManager"], excludeUserId: responder._id, project, panel: saved, type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${panel.panelName} — برجاء تنزيل الملفات إلى الليزر`, actor: responder });
+        await createInternalNotifications({ roles: [...PRODUCTION_CONTROL_ROLES, "LaserSupervisor", "OwnerManager"], excludeUserId: responder._id, project, panel: saved, type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${panel.panelName} — برجاء تنزيل الملفات إلى الليزر`, actor: responder });
         await sendSafeText(senderPhone, `تم تأكيد جاهزية ملفات تصنيع اللوحة «${panel.panelName}». بدأت الآن متابعة تنزيل الملفات إلى الليزر.`);
         return true;
     }
@@ -284,6 +297,8 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
     const stageLabels = { pendingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
     const resultText = nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت ${stageLabels[nextStatus] || nextStatus}`;
     await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: responder._id, project, panel: saved, type: "productionStageCompleted", title: "تم تحديث مرحلة الإنتاج", body: `${panel.panelName} — ${resultText}`, actor: responder });
+    const nextSupervisorRole = Object.entries(SUPERVISOR_STAGE_BY_ROLE).find(([, statuses]) => statuses.includes(nextStatus))?.[0];
+    if (nextSupervisorRole) await createInternalNotifications({ roles: [nextSupervisorRole], excludeUserId: responder._id, project, panel: saved, type: "productionStageReady", title: "لوحة جديدة في مرحلتك", body: `${panel.panelName} — ${resultText}`, actor: responder });
     await sendSafeText(senderPhone, `تم تسجيل اكتمال «${stageName}» للوحة «${panel.panelName}». ${resultText}.`);
     return true;
 };
@@ -509,7 +524,7 @@ const notifyEngineersOfNewProject = async (project) => {
         isDeleted: false
     });
     const engineers = await users.selectall({
-        role: "Engineer",
+        role: { $in: DRAWING_ENGINEER_ROLES },
         approved: true,
         isDeleted: false,
         phoneNumber: { $nin: [null, ""] }
@@ -663,8 +678,8 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         const assignedEngineer = panel.engineerId
             ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false })
             : null;
-        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
-        const managers = await users.selectall({ role: { $in: ["OwnerManager", "ProductionManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: { $in: DRAWING_ENGINEER_ROLES }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const managers = await users.selectall({ role: "OwnerManager", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
         const recipients = [...engineers, ...managers].filter((recipient, index, all) => {
             const phone = String(recipient.phoneNumber || "").replace(/\D/g, "");
             return phone && all.findIndex((item) => String(item.phoneNumber || "").replace(/\D/g, "") === phone) === index;
@@ -692,7 +707,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             const updatedProject = targetProject;
             await Promise.allSettled(files.map((file) => deleteStoredFile(file.storageFileId)));
             const assignedEngineer = panel.engineerId ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false }) : null;
-            const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+            const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: { $in: DRAWING_ENGINEER_ROLES }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
             await Promise.allSettled(engineers.map((engineer) => sendProjectUpdatedReview(engineer.phoneNumber, updatedProject, marketer.name || "غير محدد")));
             return `تم فتح مشروع اللوحة «${panel.panelName}» للتعديل مع الاحتفاظ بجميع بيانات التسعير.`;
         }
@@ -700,7 +715,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
         await panelsModel.update({ _id: panel._id }, { status: "manufacturingFilesPending", "executionPdf.confirmedAt": new Date(), "executionPdf.confirmedBy": marketer._id });
         const updatedProject = targetProject;
         const assignedEngineer = panel.engineerId ? await users.select_one({ _id: panel.engineerId, approved: true, isDeleted: false }) : null;
-        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const engineers = assignedEngineer?.phoneNumber ? [assignedEngineer] : await users.selectall({ role: { $in: DRAWING_ENGINEER_ROLES }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
         await Promise.allSettled(engineers.map((engineer) => sendExecutionConfirmed(engineer.phoneNumber, updatedProject, panel.panelName)));
         return `تم تأكيد تنفيذ اللوحة «${panel.panelName}» وفتح مرحلة رفع ملفات التصنيع.`;
     }

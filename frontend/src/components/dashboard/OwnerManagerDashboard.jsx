@@ -233,7 +233,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
   }) : [["—", "لا توجد مشاريع بعد", "—", "—"]];
   const delayedPanels = panels.filter((panel) => isDelayed(panel, today)).sort((a, b) => daysLate(b, today) - daysLate(a, today));
   const delayedRows = delayedPanels.slice(0, 5).map((panel, index) => [index + 1, <DashboardName key={panel._id}>{itemName(panel)}</DashboardName>, panelStatusMeta(panel).label, <span className="delay-value" key={panel._id}>{daysLate(panel, today)} يوم</span>]);
-  const engineers = users.filter((person) => person.role === "Engineer");
+  const engineers = users.filter((person) => ["Engineer", "FullEngineer"].includes(person.role));
   const marketers = users.filter((person) => person.role === "Marketer");
   const engineerRows = engineers.slice(0, 3).map((person, index) => {
     const owned = panels.filter((panel) => String(panel.engineerId?._id || panel.engineerId || "") === String(person._id));
@@ -248,7 +248,7 @@ function OwnerManagerDashboard({ name, projects, panels = [], users = [], client
   const stages = stageDefinitions.map(([title, key]) => ({ title, value: panels.filter((panel) => panel.status === key).length, delayed: delayedPanels.filter((panel) => panel.status === key).length }));
   const delayReasons = realDelayReasons(panels);
   const performanceCards = [
-    { title: "أداء الإنتاج", value: users.filter((person) => person.role === "ProductionManager").length, unit: "مدراء إنتاج", tone: "purple", to: "/panels", items: stages.map((stage) => [stage.title, stage.value]) },
+    { title: "أداء الإنتاج", value: users.filter((person) => ["ProductionManager", "ProductionEngineer", "FullEngineer"].includes(person.role)).length, unit: "فريق الإنتاج", tone: "purple", to: "/panels", items: stages.map((stage) => [stage.title, stage.value]) },
     { title: "أداء التسويق", value: marketers.length, unit: "مسوقين", tone: "orange", to: "/projects", items: [["مشاريع اليوم", createdForDate], ["أوامر تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.requestedAt, selectedDate)).length], ["مكتملة", completedForDate]] },
     { title: "أداء المهندسين", value: engineers.length, unit: "مهندسين", tone: "green", to: "/panels", items: [["ملفات تصنيع", panels.filter((panel) => sameDay(panel.manufacturing?.files?.[0]?.uploadedAt, selectedDate)).length], ["PDF تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.readyAt, selectedDate)).length], ["تسعير", panels.filter((panel) => sameDay(panel.quoteCompletedAt, selectedDate)).length]] },
     { title: "أداء المندوبين", value: marketers.length, unit: "مندوبين", tone: "blue", to: "/projects", items: [["تأكيد تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.confirmedAt, selectedDate)).length], ["أمر تنفيذ", panels.filter((panel) => sameDay(panel.executionPdf?.requestedAt, selectedDate)).length], ["مشروع جديد", createdForDate]] },

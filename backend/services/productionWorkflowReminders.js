@@ -2,6 +2,7 @@ const projects = require("../models/projects");
 const panels = require("../models/panels");
 const users = require("../models/users");
 const { sendProductionStageCheck } = require("./projectWhatsappNotifications");
+const { PRODUCTION_CONTROL_ROLES, SUPERVISOR_STAGE_BY_ROLE } = require("../utils/roles");
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
@@ -9,7 +10,7 @@ const runProductionWorkflowReminders = async () => {
     const now = new Date();
     const panelsToCheck = await panels.find({ isDeleted: false, status: { $in: ["manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"] } });
     const productionRecipients = await users.selectall({
-        role: { $in: ["OwnerManager", "ProductionManager"] },
+        role: { $in: ["OwnerManager", ...PRODUCTION_CONTROL_ROLES] },
         approved: true,
         isDeleted: false,
         phoneNumber: { $nin: [null, ""] }
@@ -35,9 +36,13 @@ const runProductionWorkflowReminders = async () => {
             const marketer = project.marketingId
                 ? await users.select_one({ _id: project.marketingId, approved: true, isDeleted: false })
                 : null;
+            const supervisorRole = Object.entries(SUPERVISOR_STAGE_BY_ROLE).find(([, statuses]) => statuses.includes(panel.status))?.[0];
+            const supervisorRecipients = !waitingForEngineer && supervisorRole
+                ? await users.selectall({ role: supervisorRole, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } })
+                : [];
             const recipients = waitingForEngineer
                 ? await users.selectall({ _id: panel.engineerId, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } })
-                : productionRecipients;
+                : [...new Map([...productionRecipients, ...supervisorRecipients].map((recipient) => [String(recipient._id), recipient])).values()];
             const results = await Promise.allSettled(
                 recipients.map((recipient) => sendProductionStageCheck(recipient.phoneNumber, project, panel, stageName, marketer?.name || "غير محدد", deadlineKey))
             );

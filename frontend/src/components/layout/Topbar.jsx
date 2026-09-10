@@ -10,6 +10,7 @@ import UserAvatar from "./UserAvatar";
 import { useTheme } from "../../context/ThemeContext";
 import AddAccountModal from "../auth/AddAccountModal";
 import { getLinkedAccounts, switchLinkedAccount } from "../../services/linkedAccountsAPI";
+import { roleLabel } from "../../utils/roles";
 
 function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const { user, reloadProfile, accountStatus } = useAuth();
@@ -142,13 +143,13 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
         <div className="account-switcher-shell" ref={accountShellRef}>
           <button type="button" className={`user-info${accountOpen ? " is-open" : ""}`} onClick={() => { if (canOpenAccountMenu) { setAccountOpen((value) => !value); setNotificationOpen(false); } else navigate("/profile"); }} aria-label={canOpenAccountMenu ? "فتح قائمة الحسابات" : "فتح الملف الشخصي"} aria-expanded={canOpenAccountMenu ? accountOpen : undefined}>
             <UserAvatar name={user?.name} />
-            <div><h4>{user?.name}</h4><span>{user?.role}</span></div>
+            <div><h4>{user?.name}</h4><span>{roleLabel(user?.role)}</span></div>
             <IoChevronDown />
           </button>
           {accountOpen && <section className="account-switcher-popover" dir="rtl">
             <header><div><span>الحساب الحالي</span><strong>{user?.name}</strong><small>{user?.email}</small></div>{quickSwitchAccount ? <button type="button" className="account-quick-switch" aria-label={`التبديل إلى حساب ${quickSwitchAccount.name}`} title={`التبديل إلى ${quickSwitchAccount.name}`} disabled={Boolean(switchingId)} onClick={() => changeAccount(quickSwitchAccount)}><HiOutlineSwitchHorizontal /></button> : <HiOutlineSwitchHorizontal />}</header>
             <div className="account-switcher-list">
-              {accountsLoading ? <p className="account-list-state">جاري تحميل الحسابات...</p> : accounts.map((account) => <button type="button" key={account.id} className={account.current ? "is-active" : ""} onClick={() => changeAccount(account)} disabled={account.current || !account.approved || switchingId === String(account.id)}><UserAvatar name={account.name} /><span><strong>{account.name}</strong><small>{account.email}</small><em>{account.role}</em>{!account.approved && <i>بانتظار الموافقة</i>}</span>{account.current && <HiOutlineCheck />}</button>)}
+              {accountsLoading ? <p className="account-list-state">جاري تحميل الحسابات...</p> : accounts.map((account) => <button type="button" key={account.id} className={account.current ? "is-active" : ""} onClick={() => changeAccount(account)} disabled={account.current || !account.approved || switchingId === String(account.id)}><UserAvatar name={account.name} /><span><strong>{account.name}</strong><small>{account.email}</small><em>{roleLabel(account.role)}</em>{!account.approved && <i>بانتظار الموافقة</i>}</span>{account.current && <HiOutlineCheck />}</button>)}
             </div>
             <footer className={canAddAccount ? "" : "single-action"}><button type="button" onClick={() => { setAccountOpen(false); navigate("/profile"); }}><HiOutlineUserCircle /> الملف الشخصي</button>{canAddAccount && <button type="button" className="account-add-btn" onClick={() => { setAccountOpen(false); setAddAccountOpen(true); }}><HiOutlinePlus /> إضافة حساب</button>}</footer>
           </section>}

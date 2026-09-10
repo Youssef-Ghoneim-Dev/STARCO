@@ -42,7 +42,7 @@ const captureDashboardSnapshot = async (value = new Date()) => {
         projectModels.selectall({ isDeleted: false }),
         panelModels.find({ isDeleted: false }),
         clientModels.select_all(),
-        userModels.selectall({ role: "Engineer", approved: true, isDeleted: false }),
+        userModels.selectall({ role: { $in: ["Engineer", "FullEngineer"] }, approved: true, isDeleted: false }),
         userModels.selectall({ role: "Marketer", approved: true, isDeleted: false })
     ]);
     const statusCounts = { pricing: 0, approval: 0, production: 0, editing: 0, completed: 0 };
@@ -105,9 +105,15 @@ const captureAfterSuccessfulMutation = (req, res, next) => {
 const roleActivityField = {
     OwnerManager: "activity.ownerManagerRequests",
     Engineer: "activity.engineerRequests",
+    FullEngineer: "activity.engineerRequests",
     Marketer: "activity.marketerRequests",
     MarketingManager: "activity.marketingManagerRequests",
-    ProductionManager: "activity.productionManagerRequests"
+    ProductionManager: "activity.productionManagerRequests",
+    ProductionEngineer: "activity.productionManagerRequests",
+    LaserSupervisor: "activity.productionManagerRequests",
+    ManufacturingSupervisor: "activity.productionManagerRequests",
+    PaintingSupervisor: "activity.productionManagerRequests",
+    AssemblySupervisor: "activity.productionManagerRequests"
 };
 
 const trackDashboardRequest = (req, res, next) => {

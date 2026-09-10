@@ -1,0 +1,130 @@
+.full-engineer-workspace-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.45rem;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--surface-color);
+}
+
+.full-engineer-workspace-tabs button {
+  flex: 1;
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.full-engineer-workspace-tabs button.active {
+  color: #fff;
+  background: var(--primary-color);
+}
+
+.production-supervisor-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.production-supervisor-dashboard > header,
+.production-supervisor-tasks,
+.production-supervisor-metrics article {
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--surface-color);
+  color: var(--text-color);
+}
+
+.production-supervisor-dashboard > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.production-supervisor-dashboard h1,
+.production-supervisor-dashboard h2,
+.production-supervisor-dashboard p {
+  margin: 0;
+}
+
+.production-supervisor-dashboard > header p,
+.production-supervisor-tasks small {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+}
+
+.production-supervisor-dashboard > header button,
+.production-supervisor-tasks a b {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  background: var(--primary-color);
+  font: inherit;
+  font-weight: 800;
+}
+
+.production-supervisor-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.production-supervisor-metrics article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.6rem 0.8rem;
+  padding: 1.15rem;
+}
+
+.production-supervisor-metrics svg {
+  grid-row: span 2;
+  font-size: 2rem;
+  color: var(--primary-color);
+}
+
+.production-supervisor-metrics strong {
+  font-size: 1.5rem;
+}
+
+.production-supervisor-tasks {
+  padding: 1.25rem;
+}
+
+.production-supervisor-tasks h2 {
+  margin-bottom: 0.85rem;
+}
+
+.production-supervisor-tasks a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.production-supervisor-tasks a span {
+  display: grid;
+}
+
+@media (max-width: 720px) {
+  .production-supervisor-dashboard > header,
+  .production-supervisor-tasks a {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .production-supervisor-metrics {
+    grid-template-columns: 1fr;
+  }
+}

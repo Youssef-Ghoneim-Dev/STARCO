@@ -9,6 +9,8 @@ import EngineerDashboard from "../components/dashboard/EngineerDashboard";
 import MarketingManagerDashboard from "../components/dashboard/MarketingManagerDashboard";
 import ProductionManagerDashboard from "../components/dashboard/ProductionManagerDashboard";
 import MarketerDashboard from "../components/dashboard/MarketerDashboard";
+import FullEngineerDashboard from "../components/dashboard/FullEngineerDashboard";
+import ProductionSupervisorDashboard from "../components/dashboard/ProductionSupervisorDashboard";
 import { useAuth } from "../context/AuthContext";
 import { getAllPanels, getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
@@ -17,6 +19,7 @@ import toast from "react-hot-toast";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiRefreshCw } from "react-icons/fi";
 import "../styles/dashboardHome.css";
+import { isDrawingEngineerRole, isProductionSupervisorRole } from "../utils/roles";
 
 function Dashboard() {
   const { loading, accountStatus, user, reloadProfile, refreshing } = useAuth();
@@ -25,7 +28,7 @@ function Dashboard() {
   const [clientsCount, setClientsCount] = useState(0);
   const [users, setUsers] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
-  const canManageClients = ["OwnerManager", "Engineer", "MarketingManager"].includes(user?.role);
+  const canManageClients = ["OwnerManager", "MarketingManager"].includes(user?.role) || isDrawingEngineerRole(user?.role);
 
   const loadDashboard = useCallback(() => {
     if (loading || !user || accountStatus === "pending" || accountStatus === "whatsappPending" || accountStatus === "deleted") {
@@ -127,15 +130,23 @@ function Dashboard() {
   }
 
   if (user?.role === "Engineer") {
-    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} title="Drawing Engineer" /></DashboardLayout>;
+  }
+
+  if (user?.role === "FullEngineer") {
+    return <DashboardLayout notAllowed><FullEngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "MarketingManager") {
     return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
-  if (user?.role === "ProductionManager") {
-    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  if (["ProductionManager", "ProductionEngineer"].includes(user?.role)) {
+    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} role={user?.role} title={user?.role === "ProductionEngineer" ? "Production Engineer" : "Production Manager"} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+  }
+
+  if (isProductionSupervisorRole(user?.role)) {
+    return <DashboardLayout notAllowed><ProductionSupervisorDashboard name={user?.name} role={user?.role} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
   }
 
   if (user?.role === "Marketer") {

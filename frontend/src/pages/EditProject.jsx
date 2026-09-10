@@ -260,7 +260,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const marketerCanEdit = project?.status === "draft" || marketingPanelEditing;
   const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
   const claimedByAnotherEngineer =
-    user?.role === "Engineer" && project?.readOnlyForCurrentUser;
+    ["Engineer", "FullEngineer"].includes(user?.role) && project?.readOnlyForCurrentUser;
   const editorReadOnly =
     readOnly || claimedByAnotherEngineer || !technicalCanEdit;
   const readOnlyMessage =
@@ -269,7 +269,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       : readOnly && user?.role !== "MarketingManager"
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
-  const canViewQuoteReference = ["Engineer", "OwnerManager"].includes(user?.role);
+  const canViewQuoteReference = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
 
   if (marketingPanelEditing) return <MarketingProjectEditor />;
   if (isMarketer) {
@@ -329,7 +329,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         <ProjectPreviewLink />
         <PanelEditSummary panel={activePanel} />
         {(user?.role === "OwnerManager" ||
-          (user?.role === "Engineer" && project?.source === "manual")) && (
+          (["Engineer", "FullEngineer"].includes(user?.role) && project?.source === "manual")) && (
           <ExecutionPdfWorkspace />
         )}
         <div className="whatsapp-project-tabs" dir="rtl">
@@ -500,7 +500,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [activePanel, panelId, project?.panels, setActivePanel]);
 
   useEffect(() => {
-    if (project?.status === "created" && ["Engineer", "OwnerManager"].includes(user?.role)) navigate(`/projects/${project._id}`, { replace: true });
+    if (project?.status === "created" && ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role)) navigate(`/projects/${project._id}`, { replace: true });
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
@@ -530,7 +530,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     };
   }, [navigate, panel?._id, panel?.panelId, project?._id, user?.role]);
   useEffect(() => {
-    if (user?.role === "Engineer" && panel?.marketingEditSession?.active) {
+    if (["Engineer", "FullEngineer"].includes(user?.role) && panel?.marketingEditSession?.active) {
       toast.error("المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.", { duration: 7000 });
       navigate("/projects", { replace: true });
     }
@@ -539,7 +539,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     if (
       !panel?._id ||
       panel.status !== "pendingPricing" ||
-      !["Engineer", "OwnerManager"].includes(user?.role) ||
+      !["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role) ||
       project.status !== "inProgress" ||
       locking
     )
@@ -570,7 +570,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     user?.role,
   ]);
 
-  if (project?.status === "created" && ["Engineer", "OwnerManager"].includes(user?.role)) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
+  if (project?.status === "created" && ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role)) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
   if (!panel)
     return (
       <div className="route-loading" dir="rtl">

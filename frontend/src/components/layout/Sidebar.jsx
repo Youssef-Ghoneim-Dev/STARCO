@@ -24,10 +24,10 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const { user } = useAuth();
 
   const role = user?.role;
-  const canUseRecycleBin = Boolean(role);
+  const canUseRecycleBin = ["OwnerManager", "Engineer", "FullEngineer", "Marketer", "MarketingManager", "ProductionManager", "ProductionEngineer"].includes(role);
   const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
-  const canManageClients = ["OwnerManager", "Engineer", "MarketingManager"].includes(role);
-  const canManageConfiguration = ["OwnerManager", "Engineer", "MarketingManager"].includes(role);
+  const canManageClients = ["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"].includes(role);
+  const canManageConfiguration = ["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"].includes(role);
   const canViewProjects = true;
 
   const logout = () => {

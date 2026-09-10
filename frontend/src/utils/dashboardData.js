@@ -85,17 +85,21 @@ export const isDelayed = (panel, now = new Date()) => daysLate(panel, now) > 0;
 
 export const currentAction = (panel, role) => {
   const status = panel?.status;
-  if (role === "Engineer") {
+  if (["Engineer", "FullEngineer"].includes(role)) {
     if (["pendingPricing", "pricing", "editing"].includes(status)) return "إتمام عرض السعر";
     if (status === "executionPdfRequested") return "تجهيز PDF التنفيذ";
     if (status === "manufacturingFilesPending") return "رفع ملفات التصنيع";
   }
-  if (role === "ProductionManager") {
+  if (["ProductionManager", "ProductionEngineer", "FullEngineer"].includes(role)) {
     if (panel?.deliverySchedule?.status === "pending") return "اعتماد موعد الانتهاء";
     if (panel?.deliverySchedule?.status === "rejected") return "تحديد موعد بديل نهائي";
     if (["manufacturingFilesReady", "pendingLaserDownload"].includes(status)) return "تنزيل الملفات إلى الليزر";
     if (["laser", "manufacturing", "painting", "assembly"].includes(status)) return "تحديث مرحلة الإنتاج";
   }
+  if (role === "LaserSupervisor" && ["manufacturingFilesReady", "pendingLaserDownload", "laser"].includes(status)) return status === "laser" ? "تحديث مرحلة الليزر" : "تنزيل الملفات إلى الليزر";
+  if (role === "ManufacturingSupervisor" && status === "manufacturing") return "تحديث مرحلة التصنيع";
+  if (role === "PaintingSupervisor" && status === "painting") return "تحديث مرحلة الرش";
+  if (role === "AssemblySupervisor" && status === "assembly") return "تحديث مرحلة التجميع";
   if (["Marketer", "MarketingManager"].includes(role)) {
     if (status === "quoteCompleted") return "مراجعة عرض السعر";
     if (status === "executionPdfReady") return "مراجعة PDF التنفيذ";

@@ -26,6 +26,11 @@ import {
   updateManufacturingStage,
 } from "../../../services/projectsAPI";
 import { createExecutionPdf } from "../../../utils/executionPdf";
+import {
+  isProductionControlRole,
+  isProductionSupervisorRole,
+  supervisorCanAccessStatus,
+} from "../../../utils/roles";
 
 const quoteFinishedStatuses = [
   "quoteCompleted",
@@ -172,6 +177,7 @@ function ExecutionPdfWorkspace() {
   const [previewingExecution, setPreviewingExecution] = useState(false);
   const [uploadingManufacturing, setUploadingManufacturing] = useState(false);
   const [finishingManufacturing, setFinishingManufacturing] = useState(false);
+  const [downloadingManufacturingArchive, setDownloadingManufacturingArchive] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const executionInputRefs = useRef({});
@@ -181,6 +187,7 @@ function ExecutionPdfWorkspace() {
   const executionDesignRetryTimerRef = useRef(null);
   const executionDesignSaveInFlightRef = useRef(false);
   const manufacturingInputRef = useRef(null);
+  const manufacturingArchiveDownloadRef = useRef(false);
   const panel = project.panels?.[activePanel];
   const executionPdfState = panel?.executionPdf;
   const workflow = useMemo(() => executionPdfState || { status: "notRequested", files: [] }, [executionPdfState]);
@@ -211,17 +218,20 @@ function ExecutionPdfWorkspace() {
   const canIssueOrder = user?.role === "OwnerManager"
     || user?.role === "MarketingManager"
     || user?.role === "Marketer"
-    || (user?.role === "Engineer" && project?.source === "manual");
-  const canPreparePdf = ["Engineer", "OwnerManager"].includes(user?.role);
+    || (["Engineer", "FullEngineer"].includes(user?.role) && project?.source === "manual");
+  const canPreparePdf = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
   const canReviewPdf = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role)
-    || (project?.source === "manual" && user?.role === "Engineer");
-  const canPrepareManufacturing = ["Engineer", "OwnerManager"].includes(user?.role);
-  const canDownloadManufacturing = ["Engineer", "OwnerManager", "ProductionManager"].includes(user?.role);
-  const canManageProductionStages = ["OwnerManager", "ProductionManager"].includes(user?.role);
+    || (project?.source === "manual" && ["Engineer", "FullEngineer"].includes(user?.role));
+  const canPrepareManufacturing = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
+  const isProductionSupervisor = isProductionSupervisorRole(user?.role);
+  const canDownloadManufacturing = ["Engineer", "FullEngineer", "OwnerManager", "ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(user?.role);
+  const canManageProductionStages = user?.role === "OwnerManager"
+    || isProductionControlRole(user?.role)
+    || supervisorCanAccessStatus(user?.role, panel?.status);
   const deliveryScheduleStatuses = new Set(["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"]);
   const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
   const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["none", "pending"].includes(deliverySchedule.status || "none");
-  const canRespondDeliverySchedule = ["ProductionManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["pending", "rejected"].includes(deliverySchedule.status);
+  const canRespondDeliverySchedule = ["ProductionManager", "ProductionEngineer", "FullEngineer", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["pending", "rejected"].includes(deliverySchedule.status);
   const executionDesignStorageKey = project?._id && panel?.panelId
     ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}:${workflow.requestedAt || "initial"}`
     : "";
@@ -631,6 +641,9 @@ function ExecutionPdfWorkspace() {
   };
 
   const downloadAllManufacturingFiles = async () => {
+    if (manufacturingArchiveDownloadRef.current) return;
+    manufacturingArchiveDownloadRef.current = true;
+    setDownloadingManufacturingArchive(true);
     try {
       const { data } = await getManufacturingArchive(project._id, panel.panelId);
       const downloadDate = new Date();
@@ -644,6 +657,10 @@ function ExecutionPdfWorkspace() {
         .trim();
       saveBlob(data, `(${safePanelName}) (${formattedDate}) files.zip`);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملفات مجمعة."); }
+    finally {
+      manufacturingArchiveDownloadRef.current = false;
+      setDownloadingManufacturingArchive(false);
+    }
   };
 
   const assignmentOptions = [
@@ -664,6 +681,7 @@ function ExecutionPdfWorkspace() {
     if (stageDecision === "delayed" && delayReason === "أخرى" && !delayDetails.trim()) {
       return toast.error("اكتب سبب التأخير أولًا.");
     }
+    const submittedDecision = stageDecision;
     setBusy(true);
     try {
       const { data } = await updateManufacturingStage(project._id, {
@@ -674,7 +692,9 @@ function ExecutionPdfWorkspace() {
         details: delayDetails,
         notes: manufacturingNotes,
       });
-      setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
+      if (!(isProductionSupervisor && submittedDecision === "completed")) {
+        setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
+      }
       const savedMessage = stageDecision === "completed"
         ? "تم حفظ اكتمال المرحلة والانتقال للمرحلة التالية بنجاح."
         : stageDecision === "delayed"
@@ -684,6 +704,10 @@ function ExecutionPdfWorkspace() {
       window.clearTimeout(stageSavedTimerRef.current);
       stageSavedTimerRef.current = window.setTimeout(() => setStageSavedFeedback(null), 5000);
       toast.success("تم حفظ تحديث المرحلة بنجاح.");
+      if (isProductionSupervisor && submittedDecision === "completed") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
       setStageDecision("");
       setDelayReason("");
       setDelayDetails("");
@@ -700,6 +724,7 @@ function ExecutionPdfWorkspace() {
 
   const deliveryStatusLabels = { none: "لم يُحدد موعد", pending: "بانتظار قرار مدير التنفيذ", accepted: deliverySchedule.wasAdjusted ? "تم اعتماد موعد بديل" : "تم اعتماد الموعد", rejected: "بانتظار تحديد موعد بديل" };
   const renderDeliverySchedule = () => {
+    if (isProductionSupervisor) return null;
     if (!deliveryScheduleAvailable) return null;
     if (!canRequestDeliverySchedule && !canRespondDeliverySchedule && deliverySchedule.status === "none") return null;
     return <section className={`panel-delivery-schedule ${deliverySchedule.status || "none"}`}>
@@ -761,6 +786,7 @@ function ExecutionPdfWorkspace() {
       <div className={`production-project-facts ${canManageProductionStages ? "" : "compact"}`}>
         <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{lastProductionUpdater}</b></div>
         <div><span><HiOutlineClock /> تاريخ آخر تحديث</span><b>{formatProjectDate(lastProductionUpdateAt, true)}</b></div>
+        {isProductionSupervisor && activeProductionStage && <div><span><HiOutlineCalendar /> الموعد النهائي للمرحلة</span><b>{formatProjectDate(deliverySchedule.deadlines?.[activeProductionStage.key === "awaitingLaserDownload" ? "pendingLaserDownload" : activeProductionStage.key] || deliverySchedule.approvedDate, true)}</b></div>}
         {canManageProductionStages && <><div><span><HiOutlinePuzzle /> مرحلة المشروع</span><b className="production-phase-badge">{activeProductionStage?.title || "مكتمل"}</b></div>
         <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div></>}
       </div>
@@ -768,7 +794,7 @@ function ExecutionPdfWorkspace() {
 
     {renderDeliverySchedule()}
 
-    <details className="production-files-accordion" open>
+    {(!isProductionSupervisor || user?.role === "LaserSupervisor") && <details className="production-files-accordion" open>
       <summary><span><HiOutlineFolder /><b>ملفات التصنيع</b><small>جميع الملفات المرفوعة من قبل المهندس</small></span><IoChevronDown className="production-files-chevron" /></summary>
       <div className="production-files-content">
         <div className="manufacturing-download-grid">
@@ -784,24 +810,26 @@ function ExecutionPdfWorkspace() {
             </div>
           </article>)}
         </div>
-        {canDownloadManufacturing && <button type="button" className="manufacturing-download-all" onClick={downloadAllManufacturingFiles}><HiOutlineCloudDownload /> تحميل جميع الملفات ZIP</button>}
+        {canDownloadManufacturing && <button type="button" className={`manufacturing-download-all ${downloadingManufacturingArchive ? "is-loading" : ""}`} onClick={downloadAllManufacturingFiles} disabled={downloadingManufacturingArchive} aria-busy={downloadingManufacturingArchive}>
+          {downloadingManufacturingArchive ? <><span className="manufacturing-download-spinner" aria-hidden="true" /> جاري تجهيز وتحميل الملف...</> : <><HiOutlineCloudDownload /> تحميل جميع الملفات ZIP</>}
+        </button>}
         <aside className={`manufacturing-engineer-note ${(manufacturing.engineerNotes || manufacturing.notes) ? "" : "is-empty"}`}>
           <b>الملاحظات المرفقة من المهندس</b>
           <p>{manufacturing.engineerNotes || manufacturing.notes || "لا توجد ملاحظة محفوظة ضمن بيانات ملفات التصنيع لهذه اللوحة."}</p>
         </aside>
       </div>
-    </details>
+    </details>}
 
     {canManageProductionStages && <section className="production-stages-board production-stages-redesign">
       <header><div><h2><HiOutlineViewGrid /> مراحل الإنتاج</h2><p>المرحلة الحالية فقط متاحة للتحديث، وباقي المراحل تتحرك تلقائيًا.</p></div></header>
 
-      <div className="production-stage-stepper" aria-label="تقدم مراحل الإنتاج">
+      {!isProductionSupervisor && <div className="production-stage-stepper" aria-label="تقدم مراحل الإنتاج">
         {productionStages.map((stage, index) => <article key={stage.key} className={`production-stage-step stage-${index + 1} ${stage.status}`} aria-current={stage.status === "active" ? "step" : undefined}>
           <span className="production-stage-step-number">{stage.status === "completed" ? <HiOutlineCheckCircle /> : index + 1}</span>
           <span className="production-stage-step-icon">{stageIcon(stage.key)}</span>
           <div><b>{stage.title}</b><small>{stage.status === "completed" ? "تمت" : stage.status === "active" ? "المرحلة الحالية" : "لم تبدأ"}</small></div>
         </article>)}
-      </div>
+      </div>}
 
       {stageSavedFeedback && <div className="production-save-success" role="status"><HiOutlineCheckCircle /><div><b>تم الحفظ بنجاح</b><span>{stageSavedFeedback.message}</span></div></div>}
 
@@ -814,7 +842,7 @@ function ExecutionPdfWorkspace() {
 
           <div className="production-stage-decision-grid">
             <button type="button" aria-pressed={stageDecision === "completed"} className={stageDecision === "completed" ? "selected completed" : ""} onClick={() => { setStageDecision("completed"); setDelayReason(""); setDelayDetails(""); setStageSavedFeedback(null); }}><HiOutlineCheckCircle /><span><b>تمت المرحلة</b><small>حفظ الإتمام والانتقال للمرحلة التالية</small></span></button>
-            <button type="button" aria-pressed={stageDecision === "delayed"} className={stageDecision === "delayed" ? "selected delayed" : ""} onClick={() => { setStageDecision("delayed"); setStageSavedFeedback(null); }}><HiOutlineExclamationCircle /><span><b>لم تتم</b><small>تسجيل تأخير مع توضيح السبب</small></span></button>
+            <button type="button" aria-pressed={stageDecision === "delayed"} className={stageDecision === "delayed" ? "selected delayed" : ""} onClick={() => { setStageDecision("delayed"); setStageSavedFeedback(null); }}><HiOutlineExclamationCircle /><span><b>{isProductionSupervisor ? "الإبلاغ عن مشكلة" : "لم تتم"}</b><small>تسجيل تأخير مع توضيح السبب</small></span></button>
           </div>
 
           {stageDecision === "delayed" && activeProductionStage.key === "awaitingLaserDownload" && <div className="production-fixed-warning"><HiOutlineExclamationCircle /> برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}
@@ -833,14 +861,14 @@ function ExecutionPdfWorkspace() {
         </aside>
       </section> : <div className="production-all-complete"><HiOutlineCheckCircle /><div><h3>اكتملت جميع مراحل الإنتاج</h3><p>تم إنهاء تنفيذ هذه اللوحة بالكامل.</p></div></div>}
 
-      <details className="production-history-disclosure">
+      {!isProductionSupervisor && <details className="production-history-disclosure">
         <summary><span><HiOutlineClock /><span><b>سجل تحديثات المراحل</b><small>عرض الحالات والأسباب والملاحظات التي تم حفظها</small></span></span><span className="production-history-count">{productionHistory.length} تحديث <IoChevronDown /></span></summary>
         <div className="production-history-list">{productionHistory.length === 0 ? <p>لا توجد تحديثات مسجلة حتى الآن.</p> : [...productionHistory].reverse().map((item, index) => <article key={`${item.createdAt}-${index}`}>
           <span className={`production-history-mark ${item.action}`} />
           <div><b>{item.action === "completed" ? "تمت المرحلة" : item.action === "delayed" ? "تم تسجيل تأخير" : "تم تحديث الملاحظات"}</b><small>{productionStageTitle(item.stageKey)}</small>{(item.reason || item.details) && <p>{item.reason === "أخرى" ? item.details : item.reason || item.details}</p>}{item.notes && <p className="production-history-notes">ملاحظات: {item.notes}</p>}</div>
           <div className="production-history-meta"><span>{item.actorName || "مستخدم النظام"}</span><time>{item.createdAt ? new Date(item.createdAt).toLocaleString("ar-EG") : ""}</time></div>
         </article>)}</div>
-      </details>
+      </details>}
     </section>}
   </section>;
 

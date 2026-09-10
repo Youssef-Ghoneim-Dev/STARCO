@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import { updateProfile } from "../services/profileAPI";
+import { roleLabel } from "../utils/roles";
 import "../styles/profile.css";
 
 const emptyProfile = { name: "", email: "", phoneNumber: "" };
@@ -94,7 +95,7 @@ function Profile() {
           <p className="profile-help">اكتب الرقم بصيغة دولية، مثال: 201001234567.</p>
 
           <label htmlFor="profile-role">الدور</label>
-          <input id="profile-role" value={user?.role || ""} readOnly />
+          <input id="profile-role" value={roleLabel(user?.role)} readOnly />
 
           <div className="profile-actions">
             <button type="submit" disabled={saving || !hasChanges}>

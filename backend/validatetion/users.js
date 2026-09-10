@@ -16,7 +16,13 @@ module.exports = (req, res, next) => {
                 "Engineer",
                 "Marketer",
                 "MarketingManager",
-                "ProductionManager"
+                "ProductionManager",
+                "ProductionEngineer",
+                "FullEngineer",
+                "LaserSupervisor",
+                "ManufacturingSupervisor",
+                "PaintingSupervisor",
+                "AssemblySupervisor"
             )
         }
     ).validate(user);
