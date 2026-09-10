@@ -721,6 +721,40 @@ html[data-theme="dark"] .execution-pdf-builder :where(.execution-builder-summary
     color: var(--text);
 }
 
+html[data-theme="dark"] .execution-image-library {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .execution-image-library.dragging {
+    border-color: #79a9bd;
+    background: #294856;
+    box-shadow: inset 0 0 0 2px rgba(121, 169, 189, .22);
+}
+
+html[data-theme="dark"] .execution-library-heading :where(h4, p) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .execution-library-heading p {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .execution-crop-modal>section {
+    color: var(--text);
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .execution-crop-modal :where(h3, p, label) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .execution-crop-modal p {
+    color: var(--text-light);
+}
+
 html[data-theme="dark"] .execution-pdf-builder :where(.execution-builder-summary.editable input, .execution-builder-content-card textarea, .execution-page4-lines input) {
     color: var(--text);
     border-color: var(--border);

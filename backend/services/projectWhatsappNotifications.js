@@ -41,7 +41,9 @@ const namedHeader = (parameterNames, values) => {
 };
 
 const sendNamedTemplate = async (to, project, templateEnvName, fallbackName, parameterNames, values, headerNames = [], headerValues = [], metadata = {}) => {
-    const templateName = process.env[templateEnvName] || fallbackName;
+    const environmentNames = Array.isArray(templateEnvName) ? templateEnvName : [templateEnvName];
+    const configuredTemplateName = environmentNames.map((name) => process.env[name]).find(Boolean);
+    const templateName = configuredTemplateName || fallbackName;
     const result = await sendTemplateMessage(
         to,
         templateName,
@@ -89,7 +91,7 @@ const sendProjectCompletedPreview = (to, project, previewLink) => sendNamedTempl
     "WHATSAPP_TEMPLATE_PROJECT_COMPLETED_PREVIEW",
     "project_completed_preview",
     ["project_id", "client_name", "panels_count", "preview_url"],
-    [project._id, project.client?.name || "غير محدد", (project.panels || []).length, previewLink]
+    [project.projectCode || project._id, project.client?.name || "غير محدد", (project.panels || []).length, previewLink]
 );
 
 const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
@@ -98,7 +100,7 @@ const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
     "WHATSAPP_TEMPLATE_EXECUTION_PDF_REQUESTED",
     "execution_pdf_requested",
     ["customer_name", "panel_name", "project_id", "project_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project._id, projectUrl(project)],
+    [project.client?.name || "غير محدد", panelName || "غير محدد", project.projectCode || project._id, projectUrl(project)],
     ["panel_name"],
     [panelName || "غير محدد"]
 );
@@ -106,10 +108,10 @@ const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
 const sendExecutionPdfCompleted = (to, project, panelName, previewLink) => sendNamedTemplate(
     to,
     project,
-    "WHATSAPP_TEMPLATE_EXECUTION_PDF_COMPLETED",
-    "execution_pdf_completed",
+    "WHATSAPP_TEMPLATE_EXECUTION_PDF_READY",
+    "execution_pdf_ready",
     ["customer_name", "panel_name", "project_id", "execution_preview_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project._id, previewLink || projectUrl(project)]
+    [project.client?.name || "غير محدد", panelName || "غير محدد", project.projectCode || project._id, previewLink || projectUrl(project)]
 );
 
 const sendExecutionConfirmed = (to, project, panelName) => sendNamedTemplate(

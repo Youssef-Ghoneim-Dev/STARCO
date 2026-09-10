@@ -12,6 +12,7 @@ const isOwner = (user) => user?.role === "OwnerManager";
 const isEngineer = (user) => user?.role === "Engineer";
 const isMarketer = (user) => user?.role === "Marketer";
 const executionStatuses = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
+const productionVisibleStatuses = executionStatuses.filter((status) => status !== "executionPdfRequested");
 const marketingEditableStatuses = ["pendingPricing", "pricing", "quoteCompleted", "editing", "executionPdfRequested", "executionPdfReady"];
 const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
 const executionPdfPurposes = ["page2", "page3", "page4", "gallery"];
@@ -148,7 +149,7 @@ const refreshProjectCompletion = async (projectId) => {
     return projects.update({ _id: projectId }, { status: completed ? "completed" : "inProgress" });
 };
 const notifyRoles = async (roles, sender) => {
-    const recipients = await users.selectall({ role: { $in: roles }, approved: true, isDeleted: false, phoneNumber: { $ne: null } });
+    const recipients = await users.selectall({ role: { $in: roles }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     return Promise.allSettled(recipients.map(sender));
 };
 const notifyPanelPeople = async (panel, roles, sender) => {
@@ -156,7 +157,7 @@ const notifyPanelPeople = async (panel, roles, sender) => {
     if (panel.engineerId) conditions.push({ _id: panel.engineerId });
     if (roles.length) conditions.push({ role: { $in: roles } });
     if (!conditions.length) return [];
-    const recipients = await users.selectall({ $or: conditions, approved: true, isDeleted: false, phoneNumber: { $ne: null } });
+    const recipients = await users.selectall({ $or: conditions, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const unique = [...new Map(recipients.map((recipient) => [String(recipient._id), recipient])).values()];
     return Promise.allSettled(unique.map(sender));
 };
@@ -165,7 +166,7 @@ const notifyProjectMarketer = async (project, roles, sender) => {
     if (project.marketingId) conditions.push({ _id: project.marketingId });
     if (roles.length) conditions.push({ role: { $in: roles } });
     if (!conditions.length) return [];
-    const recipients = await users.selectall({ $or: conditions, approved: true, isDeleted: false, phoneNumber: { $ne: null } });
+    const recipients = await users.selectall({ $or: conditions, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const unique = [...new Map(recipients.map((recipient) => [String(recipient._id), recipient])).values()];
     return Promise.allSettled(unique.map(sender));
 };
@@ -195,7 +196,7 @@ const listAllPanels = async (req, res, next) => { try {
     const condition = { isDeleted: false };
     if (isMarketer(req.user)) condition.marketingId = req.user._id;
     if (isEngineer(req.user)) condition.$or = [{ status: "pendingPricing" }, { engineerId: req.user._id }];
-    if (req.user.role === "ProductionManager") condition.status = { $in: executionStatuses };
+    if (req.user.role === "ProductionManager") condition.status = { $in: productionVisibleStatuses };
     let list = await panels.find(condition);
     const projectIds = [...new Set(list.map((panel) => String(panel.projectId)))];
     const projectRows = await projects.find({ _id: { $in: projectIds }, isDeleted: false });
@@ -220,14 +221,14 @@ const listPanels = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
     if (isMarketer(req.user) && !sameId(project.marketingId, req.user._id)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض لوحات هذا المشروع." });
     const condition = { projectId: project._id, isDeleted: false };
-    if (req.user.role === "ProductionManager") condition.status = { $in: executionStatuses };
+    if (req.user.role === "ProductionManager") condition.status = { $in: productionVisibleStatuses };
     const list = await panels.find(condition);
     res.json(list.map((panel) => publicPanelForViewer(panel, project, req.user, (isMarketer(req.user) || isOwner(req.user)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id))));
 } catch (error) { next(error); } };
 const getPanel = async (req, res, next) => { try {
     const project = await loadProject(req.params.projectId); const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!project || !panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
     if (isMarketer(req.user) && !sameId(project.marketingId, req.user._id)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذه اللوحة." });
-    if (req.user.role === "ProductionManager" && !executionStatuses.includes(panel.status)) return res.status(403).json({ status: "error", message: "اللوحة لم تصل إلى مرحلة التنفيذ بعد." });
+    if (req.user.role === "ProductionManager" && !productionVisibleStatuses.includes(panel.status)) return res.status(403).json({ status: "error", message: "ملف PDF التنفيذ لم يصبح جاهزًا بعد." });
     const useMarketingDraft = (isMarketer(req.user) || isOwner(req.user)) && panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id);
     if (useMarketingDraft && panel.marketingDraftDeleted) return res.status(404).json({ status: "error", message: "اللوحة محذوفة من مسودة التعديل." });
     res.json(publicPanelForViewer(panel, project, req.user, useMarketingDraft));
@@ -405,7 +406,7 @@ const requestExecutionPdf = async (req, res, next) => { try {
     if (!Number.isFinite(selectedThickness) || !quotedThicknesses.some((value) => Math.abs(value - selectedThickness) < 0.0001)) {
         return res.status(400).json({ status: "error", message: "اختر سمكًا معتمدًا ضمن عرض السعر." });
     }
-    return transition(req, res, next, { from: ["quoteCompleted"], to: "executionPdfRequested", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.steelThickness": selectedThickness, "executionPdf.requestedAt": new Date(), "executionPdf.requestedBy": req.user._id }, notify: (project, savedPanel) => notifyPanelPeople(savedPanel, ["OwnerManager", "ProductionManager"], (recipient) => sendExecutionPdfRequested(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["OwnerManager", "ProductionManager"], type: "executionPdfRequested", title: "في انتظار PDF التنفيذ", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
+    return transition(req, res, next, { from: ["quoteCompleted"], to: "executionPdfRequested", roles: ["Marketer", "MarketingManager", "OwnerManager"], requireMarketingOwnership: true, extra: { "executionPdf.steelThickness": selectedThickness, "executionPdf.requestedAt": new Date(), "executionPdf.requestedBy": req.user._id }, notify: (project, savedPanel) => notifyPanelPeople(savedPanel, ["OwnerManager"], (recipient) => sendExecutionPdfRequested(recipient.phoneNumber, project, savedPanel.panelName)), internalNotification: (project, savedPanel) => ({ userIds: [savedPanel.engineerId], roles: ["OwnerManager"], type: "executionPdfRequested", title: "في انتظار PDF التنفيذ", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });
 } catch (error) { next(error); } };
 
 const saveExecutionPdfDesign = async (req, res, next) => { try {
@@ -486,9 +487,9 @@ const finishExecutionPdf = async (req, res, next) => { try {
             const previewUrl = previewProject?.clientPreviewToken
                 ? `${baseUrl}/p/${previewProject.clientPreviewToken}`
                 : `${baseUrl}/projects/${project._id}/panels/${savedPanel._id}`;
-            return notifyProjectMarketer(project, ["MarketingManager"], (recipient) => sendExecutionPdfCompleted(recipient.phoneNumber, project, savedPanel.panelName, previewUrl));
+            return notifyProjectMarketer(project, ["MarketingManager", "ProductionManager", "OwnerManager"], (recipient) => sendExecutionPdfCompleted(recipient.phoneNumber, project, savedPanel.panelName, previewUrl));
         },
-        internalNotification: (project, savedPanel) => ({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], type: "executionPdfReady", title: "PDF التنفيذ جاهز للمراجعة", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` })
+        internalNotification: (project, savedPanel) => ({ userIds: [project.marketingId], roles: ["MarketingManager", "ProductionManager", "OwnerManager"], type: "executionPdfReady", title: "PDF التنفيذ جاهز للمراجعة", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` })
     });
 } catch (error) { next(error); } };
 const skipExecutionPdf = (req, res, next) => transition(req, res, next, { from: ["executionPdfRequested"], to: "executionPdfReady", roles: ["Engineer", "OwnerManager"], requireEngineerAssignment: true, extra: { "executionPdf.skipped": true, "executionPdf.readyAt": new Date(), "executionPdf.readyBy": req.user._id }, internalNotification: (project, savedPanel) => ({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], type: "executionPdfReady", title: "تم تخطي PDF التنفيذ واللوحة جاهزة للمراجعة", body: `${savedPanel.panelName} — ${project.client?.name || project.projectCode}` }) });

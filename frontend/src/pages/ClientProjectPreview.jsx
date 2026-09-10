@@ -109,6 +109,7 @@ function ClientProjectPreview() {
         setQuoteDocument(loadedDocument);
         setState({ loading: false, executionLoading: false, error: "" });
       } catch (error) {
+        console.error("Could not open the public project preview:", error);
         if (active) setState({ loading: false, executionLoading: false, error: error.response?.data?.message || "تعذر فتح معاينة المشروع." });
       }
     };

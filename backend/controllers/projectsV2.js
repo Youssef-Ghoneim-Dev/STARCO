@@ -15,6 +15,7 @@ const sameId = (a, b) => String(a || "") === String(b || "");
 const isOwner = (user) => user?.role === "OwnerManager";
 const isEngineer = (user) => user?.role === "Engineer";
 const isMarketer = (user) => user?.role === "Marketer";
+const productionVisibleStatuses = ["executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
 const whatsappFailureReason = (row) => {
     const error = row?.rawPayload?.errors?.[0];
     if (!error) return "لم ترسل Meta سببًا تفصيليًا.";
@@ -69,7 +70,7 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
             return hidden;
         }
         if (viewer?.role !== "ProductionManager") return withEngineer;
-        const executionVisible = ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(value.status);
+        const executionVisible = productionVisibleStatuses.includes(value.status);
         return executionVisible ? withEngineer : { _id: value._id, projectId: value.projectId, panelCode: value.panelCode, sequence: value.sequence, panelName: value.panelName, status: value.status, marketerData: value.marketerData, assignedEngineer: withEngineer.assignedEngineer, createdAt: value.createdAt, updatedAt: value.updatedAt };
     });
     return {
@@ -111,7 +112,7 @@ const getProjects = async (req, res, next) => { try {
     else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
     let result = await projects.find(condition);
     if (req.user.role === "ProductionManager") {
-        const executionPanels = await panels.find({ isDeleted: false, status: { $in: ["executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"] } });
+        const executionPanels = await panels.find({ isDeleted: false, status: { $in: productionVisibleStatuses } });
         const ids = new Set(executionPanels.map((panel) => String(panel.projectId)));
         result = result.filter((project) => ids.has(String(project._id)));
     }
@@ -194,24 +195,24 @@ const submitProject = async (req, res, next) => { try {
         body: `${saved.projectCode} — ${saved.client?.name || "عميل غير محدد"}`,
         actor: req.user,
     });
-    const engineers = await users.selectall({ role: "Engineer", approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+    const recipients = await users.selectall({ role: { $in: ["Engineer", "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
     const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
-    const notifications = await Promise.allSettled(engineers.map((engineer) => sendNewProjectAssigned(engineer.phoneNumber, notificationProject, req.user.name || "غير محدد")));
+    const notifications = await Promise.allSettled(recipients.map((recipient) => sendNewProjectAssigned(recipient.phoneNumber, notificationProject, req.user.name || "غير محدد")));
     const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);
     if (acceptedIds.length) await new Promise((resolve) => setTimeout(resolve, 1800));
     const deliveryRows = await Promise.all(acceptedIds.map((id) => whatsappMessages.findByProviderMessageId(id)));
     const failedDeliveryRows = deliveryRows.filter((row) => row?.status === "failed");
     const notificationFailed = failedDeliveryRows.length;
     const notified = notifications.filter((item) => item.status === "fulfilled").length - notificationFailed;
-    const notificationMessage = !engineers.length
-        ? "لا يوجد مهندس معتمد لديه رقم WhatsApp مسجل."
+    const notificationMessage = !recipients.length
+        ? "لا يوجد مهندس أو Owner Manager معتمد لديه رقم WhatsApp مسجل."
         : notificationFailed > 0
-            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مهندس. سبب Meta: ${whatsappFailureReason(failedDeliveryRows[0])}`
+            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مستلم. سبب Meta: ${whatsappFailureReason(failedDeliveryRows[0])}`
         : notified === 0
-            ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب للمهندسين."
-            : notified < engineers.length
-                ? `وصل القالب إلى ${notified} من أصل ${engineers.length} مهندس.`
-                : `تم إرسال قالب المشروع إلى ${notified} مهندس.`;
+            ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب."
+            : notified < recipients.length
+                ? `وصل القالب إلى ${notified} من أصل ${recipients.length} مستلم.`
+                : `تم إرسال قالب المشروع إلى ${notified} مستلم.`;
     notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
     res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, notificationErrors: failedDeliveryRows.map(whatsappFailureReason), project: await hydrate(saved, false, req.user) });
 } catch (error) { next(error); } };
@@ -235,13 +236,16 @@ const regeneratePreview = async (req, res, next) => { try {
     });
     const previewUrl = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`;
     let notificationMessage = "";
-    let notified = false;
-    if (["marketing", "whatsapp"].includes(project.source) && project.marketingId) {
-        const marketer = await users.select_one({ _id: project.marketingId, approved: true, isDeleted: false });
-        if (!marketer?.phoneNumber) notificationMessage = "تم حفظ المشروع وإصدار العرض المجمع، لكن المندوب لا يملك رقم WhatsApp مسجلًا.";
+    let notified = 0;
+    if (["marketing", "whatsapp"].includes(project.source)) {
+        const recipients = await users.selectall({ role: { $in: ["Marketer", "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const uniqueRecipients = [...new Map(recipients.map((recipient) => [String(recipient._id), recipient])).values()];
+        if (!uniqueRecipients.length) notificationMessage = "تم حفظ المشروع وإصدار العرض المجمع، لكن لا يوجد مسوّق أو Owner Manager لديه رقم WhatsApp مسجل.";
         else {
-            try { await sendProjectCompletedPreview(marketer.phoneNumber, { ...(saved.toObject?.() || saved), panels: list }, previewUrl); notified = true; }
-            catch (error) { notificationMessage = `تم حفظ المشروع وإصدار العرض المجمع، لكن تعذر إرسال WhatsApp: ${error.message}`; }
+            const results = await Promise.allSettled(uniqueRecipients.map((recipient) => sendProjectCompletedPreview(recipient.phoneNumber, { ...(saved.toObject?.() || saved), panels: list }, previewUrl)));
+            notified = results.filter((result) => result.status === "fulfilled").length;
+            const failed = results.find((result) => result.status === "rejected");
+            if (failed) notificationMessage = `تم حفظ المشروع وإصدار العرض المجمع، ووصل WhatsApp إلى ${notified} من أصل ${uniqueRecipients.length}. سبب أول فشل: ${failed.reason?.message || "خطأ غير معروف"}`;
         }
     }
     res.json({ status: "ok", previewUrl, notified, notificationMessage, project: await hydrate(saved, false, req.user) });
