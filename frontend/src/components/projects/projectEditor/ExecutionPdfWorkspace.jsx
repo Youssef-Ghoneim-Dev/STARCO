@@ -787,7 +787,7 @@ function ExecutionPdfWorkspace() {
         {canDownloadManufacturing && <button type="button" className="manufacturing-download-all" onClick={downloadAllManufacturingFiles}><HiOutlineCloudDownload /> تحميل جميع الملفات ZIP</button>}
         <aside className={`manufacturing-engineer-note ${(manufacturing.engineerNotes || manufacturing.notes) ? "" : "is-empty"}`}>
           <b>الملاحظات المرفقة من المهندس</b>
-          <p>{manufacturing.engineerNotes || manufacturing.notes || "لم يرفق المهندس ملاحظات مع ملفات التصنيع."}</p>
+          <p>{manufacturing.engineerNotes || manufacturing.notes || "لا توجد ملاحظة محفوظة ضمن بيانات ملفات التصنيع لهذه اللوحة."}</p>
         </aside>
       </div>
     </details>
