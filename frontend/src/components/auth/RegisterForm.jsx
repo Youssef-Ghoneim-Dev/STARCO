@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/logo.jpg";
 import { normalizeEgyptianPhone } from "../../utils/phoneNumber";
 import StyledSelect from "../common/StyledSelect";
+import { PUBLIC_REGISTRATION_ROLES, rolesToOptions } from "../../utils/roles";
 
 function RegisterForm() {
   const navigate = useNavigate();
@@ -59,7 +60,7 @@ function RegisterForm() {
       <div className="phone-input-field"><AuthInput label="WhatsApp number" type="tel" name="phoneNumber" placeholder="1012345678" value={formData.phoneNumber} onChange={handleChange} />{phoneError && <p className="field-error">{phoneError}</p>}</div>
       <div className="password-group"><AuthInput label="Password" type={showPassword ? "text" : "password"} name="password" placeholder="At least 8 characters" value={formData.password} onChange={handleChange} /><button type="button" className="eye-btn" onClick={() => setShowPassword((current) => !current)}>{showPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
       <AuthInput label="Confirm password" type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Enter your password again" value={formData.confirmPassword} onChange={handleChange} />
-      <div className="input-group"><label>Role</label><div className="select-wrapper"><StyledSelect value={formData.role} placeholder="Choose your role" ariaLabel="Role" onChange={(value) => setFormData((current) => ({ ...current, role: value }))} options={[{ value: "Engineer", label: "Drawing Engineer" }, { value: "Marketer", label: "Marketer" }]} /></div></div>
+      <div className="input-group"><label>Role</label><div className="select-wrapper"><StyledSelect value={formData.role} placeholder="Choose your role" ariaLabel="Role" onChange={(value) => setFormData((current) => ({ ...current, role: value }))} options={rolesToOptions(PUBLIC_REGISTRATION_ROLES)} /></div></div>
       <button className="auth-btn" type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
     </form>
     {import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="google-auth"><span>أو</span><div className="google-login-shell"><span className="google-login-visual"><FcGoogle />Sign up with Google</span><GoogleLogin onSuccess={signUpWithGoogle} onError={() => toast.error("تعذر الاتصال بـ Google.")} text="signup_with" theme="outline" shape="pill" size="large" width="300" /></div></div>}

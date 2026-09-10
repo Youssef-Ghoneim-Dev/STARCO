@@ -100,6 +100,7 @@ const getProfile = async (req, res, next) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
+            isLinkedAccount: Boolean(user.accountCreatedBy),
             theme,
             approved: user.approved,
             whatsappOptInRequired: user.whatsappOptInRequired === true,

@@ -12,6 +12,26 @@ export const ROLE_LABELS = {
   AssemblySupervisor: "Assembly Supervisor",
 };
 
+export const OPERATIONAL_ROLE_ORDER = [
+  "Engineer",
+  "ProductionEngineer",
+  "FullEngineer",
+  "LaserSupervisor",
+  "ManufacturingSupervisor",
+  "PaintingSupervisor",
+  "AssemblySupervisor",
+  "Marketer",
+];
+
+export const OWNER_CREATABLE_ROLE_ORDER = [
+  ...OPERATIONAL_ROLE_ORDER,
+  "ProductionManager",
+  "MarketingManager",
+];
+
+export const PUBLIC_REGISTRATION_ROLES = [...OPERATIONAL_ROLE_ORDER];
+export const rolesToOptions = (roles) => roles.map((role) => ({ value: role, label: ROLE_LABELS[role] || role }));
+
 export const DRAWING_ENGINEER_ROLES = ["Engineer", "FullEngineer"];
 export const PRODUCTION_CONTROL_ROLES = ["ProductionManager", "ProductionEngineer", "FullEngineer"];
 export const PRODUCTION_VIEW_ROLES = [
@@ -35,4 +55,3 @@ export const isProductionControlRole = (role) => PRODUCTION_CONTROL_ROLES.includ
 export const isProductionViewRole = (role) => PRODUCTION_VIEW_ROLES.includes(role);
 export const isProductionSupervisorRole = (role) => Boolean(SUPERVISOR_STAGE_BY_ROLE[role]);
 export const supervisorCanAccessStatus = (role, status) => (SUPERVISOR_STAGE_BY_ROLE[role] || []).includes(status);
-

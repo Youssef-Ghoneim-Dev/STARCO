@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const models = require("../../models/users");
+const { OPERATIONAL_ROLE_ORDER, OWNER_CREATABLE_ROLE_ORDER } = require("../../utils/roles");
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const safeAccount = (account, currentId) => ({
@@ -13,9 +14,9 @@ const safeAccount = (account, currentId) => ({
 });
 
 const allowedRoles = {
-    OwnerManager: ["Engineer", "Marketer", "MarketingManager", "ProductionManager", "ProductionEngineer", "FullEngineer", "LaserSupervisor", "ManufacturingSupervisor", "PaintingSupervisor", "AssemblySupervisor"],
-    MarketingManager: ["Marketer"],
-    ProductionManager: ["Engineer", "Marketer"],
+    OwnerManager: OWNER_CREATABLE_ROLE_ORDER,
+    MarketingManager: OPERATIONAL_ROLE_ORDER,
+    ProductionManager: OPERATIONAL_ROLE_ORDER,
 };
 
 const getGroupId = (user) => user.accountGroupId || user._id;
@@ -42,6 +43,9 @@ const listLinkedAccounts = async (req, res, next) => {
 const createLinkedAccount = async (req, res, next) => {
     try {
         const creator = req.user;
+        if (creator.accountCreatedBy) {
+            return res.status(403).json({ status: "error", message: "إضافة الحسابات متاحة من الحساب الأساسي فقط." });
+        }
         const roles = allowedRoles[creator.role];
         if (!roles) return res.status(403).json({ status: "error", message: "هذا الحساب لا يملك صلاحية إضافة حسابات." });
 

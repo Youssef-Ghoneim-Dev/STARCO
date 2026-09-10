@@ -25,7 +25,8 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const [switchingId, setSwitchingId] = useState("");
   const notificationShellRef = useRef(null);
   const accountShellRef = useRef(null);
-  const canAddAccount = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
+  const canAddAccount = !user?.isLinkedAccount
+    && ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
   // Always open the account popover for a signed-in user. The linked-account
   // request can still be in flight immediately after verification or a switch;
   // navigating to the profile in that short window made the button feel broken.

@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { OAuth2Client } = require("google-auth-library");
 const { normalizePhoneNumber } = require("../../utils/phoneNumber");
+const { PUBLIC_REGISTRATION_ROLES } = require("../../utils/roles");
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -63,6 +64,9 @@ const issueSession = (res, user) => {
 const register = async (req, res, next) => {
     try {
         const user = { ...req.body };
+        if (!PUBLIC_REGISTRATION_ROLES.includes(user.role)) {
+            return res.status(403).json({ status: "error", message: "هذا الدور يحدده مدير النظام من داخل الحسابات فقط." });
+        }
         user.email = normalizeEmail(user.email);
         const queryResult = await findByEmail(user.email);
         if (queryResult != null) {
@@ -146,8 +150,7 @@ const googleRegister = async (req, res, next) => {
         if (googleAccount) {
             return res.status(409).json({ status: "error", code: "GOOGLE_ACCOUNT_ALREADY_REGISTERED", message: "حساب Google هذا مرتبط بحساب موجود بالفعل." });
         }
-        const allowedRoles = ["Engineer", "Marketer"];
-        if (!allowedRoles.includes(req.body.role) || !req.body.phoneNumber) {
+        if (!PUBLIC_REGISTRATION_ROLES.includes(req.body.role) || !req.body.phoneNumber) {
             return res.status(400).json({ status: "error", message: "أكمل رقم الهاتف والدور أولًا لإنشاء الحساب عبر Google." });
         }
         const phoneNumber = requirePhoneNumber(req.body.phoneNumber);

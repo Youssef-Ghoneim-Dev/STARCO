@@ -3,25 +3,12 @@ import { HiOutlineX } from "react-icons/hi";
 import toast from "react-hot-toast";
 import StyledSelect from "../common/StyledSelect";
 import { createLinkedAccount } from "../../services/linkedAccountsAPI";
+import { OPERATIONAL_ROLE_ORDER, OWNER_CREATABLE_ROLE_ORDER, rolesToOptions } from "../../utils/roles";
 
 const roleOptions = {
-  OwnerManager: [
-    { value: "Engineer", label: "Drawing Engineer" },
-    { value: "Marketer", label: "Marketer" },
-    { value: "MarketingManager", label: "Marketing Manager" },
-    { value: "ProductionManager", label: "Production Manager" },
-    { value: "ProductionEngineer", label: "Production Engineer" },
-    { value: "FullEngineer", label: "Full Engineer" },
-    { value: "LaserSupervisor", label: "Laser Supervisor" },
-    { value: "ManufacturingSupervisor", label: "Manufacturing Supervisor" },
-    { value: "PaintingSupervisor", label: "Painting Supervisor" },
-    { value: "AssemblySupervisor", label: "Assembly Supervisor" },
-  ],
-  MarketingManager: [{ value: "Marketer", label: "Marketer" }],
-  ProductionManager: [
-    { value: "Engineer", label: "Drawing Engineer" },
-    { value: "Marketer", label: "Marketer" },
-  ],
+  OwnerManager: rolesToOptions(OWNER_CREATABLE_ROLE_ORDER),
+  MarketingManager: rolesToOptions(OPERATIONAL_ROLE_ORDER),
+  ProductionManager: rolesToOptions(OPERATIONAL_ROLE_ORDER),
 };
 
 function AddAccountModal({ currentUser, onClose, onCreated }) {

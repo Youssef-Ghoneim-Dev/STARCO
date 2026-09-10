@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/logo.jpg";
 import { normalizeEgyptianPhone } from "../../utils/phoneNumber";
 import StyledSelect from "../common/StyledSelect";
+import { PUBLIC_REGISTRATION_ROLES, rolesToOptions } from "../../utils/roles";
 
 function GoogleRegistrationCompletion() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ function GoogleRegistrationCompletion() {
     <div className="auth-header"><img src={logo} alt="Starco" className="auth-logo" /><h1>Complete your account</h1><p>Add your phone number and role to complete registration.</p></div>
     <form onSubmit={handleSubmit} className="auth-body" style={{ width: "100%" }}>
       <div className="phone-input-field"><AuthInput label="WhatsApp number" type="tel" name="phoneNumber" placeholder="1012345678" value={formData.phoneNumber} onChange={handleChange} />{phoneError && <p className="field-error">{phoneError}</p>}</div>
-      <div className="input-group"><label>Role</label><div className="select-wrapper"><StyledSelect value={formData.role} placeholder="Choose your role" ariaLabel="Role" onChange={(value) => setFormData((current) => ({ ...current, role: value }))} options={[{ value: "Engineer", label: "Drawing Engineer" }, { value: "Marketer", label: "Marketer" }]} /></div></div>
+      <div className="input-group"><label>Role</label><div className="select-wrapper"><StyledSelect value={formData.role} placeholder="Choose your role" ariaLabel="Role" onChange={(value) => setFormData((current) => ({ ...current, role: value }))} options={rolesToOptions(PUBLIC_REGISTRATION_ROLES)} /></div></div>
       <button className="auth-btn" type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
     </form>
     <button type="button" className="auth-text-btn" onClick={() => { sessionStorage.removeItem("starco_google_registration_credential"); navigate("/register"); }}>Back to registration</button>

@@ -5,9 +5,9 @@ import { approveUser, deletePendingUser, deleteUser, restoreUser, updateUser } f
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import StyledSelect from "../common/StyledSelect";
-import { ROLE_LABELS, roleLabel } from "../../utils/roles";
+import { OWNER_CREATABLE_ROLE_ORDER, roleLabel } from "../../utils/roles";
 
-const roles = Object.keys(ROLE_LABELS);
+const roles = [...OWNER_CREATABLE_ROLE_ORDER, "OwnerManager"];
 
 function UserRow({ user, reload, mode }) {
   const [role, setRole] = useState(user.role);
