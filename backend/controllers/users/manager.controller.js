@@ -1,4 +1,5 @@
 const models = require("../../models/users")
+const { normalizePhoneNumber } = require("../../utils/phoneNumber")
 
 const managedRole = (manager) => manager.role === "MarketingManager"
     ? "Marketer"
@@ -8,6 +9,14 @@ const managedRole = (manager) => manager.role === "MarketingManager"
 
 const canManageTarget = (manager, targetUser) => manager.role === "OwnerManager"
     || Boolean(targetUser && managedRole(manager) === targetUser.role);
+
+const requireWhatsappVerificationIfPhoneChanged = async (targetUser, updatedUser) => {
+    const currentPhone = normalizePhoneNumber(targetUser.phoneNumber);
+    const nextPhone = normalizePhoneNumber(updatedUser.phoneNumber);
+    const requiresVerification = Boolean(nextPhone && currentPhone !== nextPhone);
+    if (requiresVerification) await models.resetWhatsappOptIn(targetUser._id);
+    return requiresVerification;
+};
 
 const includeLinkedAccountCreators = async (userList) => {
     const creatorIds = [...new Set(userList.map((user) => String(user.accountCreatedBy || "")).filter(Boolean))];
@@ -116,9 +125,11 @@ const updateUser = async (req, res, next) => {
                     message: `user id ${user.id} not found`,
                 })
             }
+            const requiresWhatsappVerification = await requireWhatsappVerificationIfPhoneChanged(targetUser, user);
             return res.status(200).json({
                 status: "ok",
                 message: "user update",
+                requiresWhatsappVerification,
             })
         } else if (canManageTarget(manager, targetUser)) {
             const queryResult = await models.update(user);
@@ -128,9 +139,11 @@ const updateUser = async (req, res, next) => {
                     message: `user id ${user.id} not found`,
                 })
             }
+            const requiresWhatsappVerification = await requireWhatsappVerificationIfPhoneChanged(targetUser, user);
             return res.status(200).json({
                 status: "ok",
                 message: "user update",
+                requiresWhatsappVerification,
             })
         } else {
             return res.status(403).json({

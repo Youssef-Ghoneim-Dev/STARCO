@@ -359,6 +359,35 @@
     font-size: 14px;
 }
 
+html[data-theme="dark"] .whatsapp-activation-number {
+    color: var(--text-light);
+    border-color: var(--border);
+    background: var(--surface-muted) !important;
+}
+
+html[data-theme="dark"] .whatsapp-activation-number strong {
+    color: #fff;
+}
+
+html[data-theme="dark"] .whatsapp-activation-refresh {
+    color: #d9edf6;
+    border-color: #668fa2;
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .whatsapp-activation-refresh:hover:not(:disabled) {
+    color: #fff;
+    border-color: #8fb8ca;
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .whatsapp-activation-refresh:disabled {
+    color: #a9c6d2;
+    border-color: var(--border);
+    background: var(--surface-muted);
+    opacity: .78;
+}
+
 @media (max-width: 600px) {
     .whatsapp-activation {
         min-height: 0;
@@ -383,4 +412,3 @@
         font-size: 14px;
     }
 }
-
