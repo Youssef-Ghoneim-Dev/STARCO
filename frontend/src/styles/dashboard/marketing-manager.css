@@ -869,6 +869,20 @@ html[data-theme="dark"] .marketing-production>p :where(strong, svg) {
     color: var(--primary);
 }
 
+.marketing-clients>.marketing-card-link,
+.marketing-best>.marketing-card-link {
+    margin-top: 18px;
+}
+
+html[data-theme="dark"] .marketing-clients>a>b,
+html[data-theme="dark"] .marketing-best>div>b {
+    color: #d9edf6;
+}
+
+html[data-theme="dark"] .marketing-activity strong {
+    color: #b8dce9;
+}
+
 @media (max-width: 1400px) {
     .marketing-panel {
         min-height: 0;

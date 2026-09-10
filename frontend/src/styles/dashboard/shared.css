@@ -144,6 +144,11 @@
     padding: 14px;
     color: var(--text);
     background: var(--surface-muted);
+    text-decoration: none;
+}
+
+.dashboard-tasks-list>a :where(strong, span, b) {
+    text-decoration: none;
 }
 
 .dashboard-tasks-list>a>div { display: grid; min-width: 0; gap: 4px; }
@@ -152,6 +157,29 @@
 .dashboard-tasks-list b { border-radius: 999px; padding: 6px 10px; color: #9a6810; background: #fff3d5; font-size: 12px; white-space: nowrap; }
 .dashboard-tasks-list>a>svg { color: var(--acade); }
 .dashboard-tasks-empty { padding: 34px 16px; color: var(--text-light); text-align: center; }
+
+html[data-theme="dark"] .dashboard-tasks-list>a {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .dashboard-tasks-list span { color: var(--text-light); }
+html[data-theme="dark"] .dashboard-tasks-list b { color: #f3cf82; background: rgba(151, 105, 20, .22); }
+
+html[data-theme="dark"] .dashboard-task-state.success { color: #8ee4b3 !important; background: rgba(22, 126, 73, .22) !important; }
+html[data-theme="dark"] .dashboard-task-state.pending { color: #f3cf82 !important; background: rgba(154, 104, 16, .22) !important; }
+html[data-theme="dark"] .dashboard-task-state.refused { color: #ff9fa9 !important; background: rgba(187, 51, 67, .2) !important; }
+
+html[data-theme="dark"] :where(.marketer-state.completed, .marketer-state.production, .marketer-state.pdf) {
+    border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+    background: color-mix(in srgb, currentColor 14%, var(--surface)) !important;
+}
+
+html[data-theme="dark"] :where(.marketer-delayed a b, .production-delayed-list a b, .engineer-priority-card b.high, .engineer-priority-card b.medium) {
+    color: #ffadb4;
+    background: rgba(177, 55, 68, .2);
+}
 
 .engineer-table-empty {
     padding-block: 28px !important;

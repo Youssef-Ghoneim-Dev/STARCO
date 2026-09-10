@@ -197,6 +197,7 @@ function ExecutionPdfWorkspace() {
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(() => dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
   const [replacementDeliveryDate, setReplacementDeliveryDate] = useState(() => minimumDeliveryDateValue());
   const [deliveryResponseNote, setDeliveryResponseNote] = useState("");
+  const [showReplacementDeliveryDialog, setShowReplacementDeliveryDialog] = useState(false);
   const stageSavedTimerRef = useRef(null);
   const [selectedSteelThickness, setSelectedSteelThickness] = useState(workflow.steelThickness || "");
   const availableExecutionThicknesses = useMemo(() => (
@@ -587,6 +588,7 @@ function ExecutionPdfWorkspace() {
       const { data } = await respondPanelDeliverySchedule(project._id, panel.panelId, decision, deliveryResponseNote, decision === "rejected" ? replacementDeliveryDate : "");
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       toast.success(data.message || "تم حفظ قرار الموعد.");
+      setShowReplacementDeliveryDialog(false);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر حفظ قرار الموعد."); }
     finally { setBusy(false); }
   };
@@ -725,9 +727,10 @@ function ExecutionPdfWorkspace() {
           </label>
           <button type="button" onClick={requestDeliveryDate} disabled={busy || !requestedDeliveryDate}><HiOutlineCalendar />{deliverySchedule.status === "pending" ? "تحديث الموعد وإعادة الإرسال" : "إرسال الموعد لمدير التنفيذ"}</button>
         </div>}
-        {canRespondDeliverySchedule && <div className="panel-delivery-response"><label className="panel-delivery-date-picker"><span className="panel-delivery-date-icon"><HiOutlineCalendar /></span><span><small>الموعد البديل عند عدم المناسبة</small><strong>{formatDeliveryPickerDate(replacementDeliveryDate)}</strong></span><input aria-label="اختيار الموعد البديل" type="date" inputMode="none" min={minimumDeliveryDateValue()} value={replacementDeliveryDate} onChange={(event) => setReplacementDeliveryDate(event.target.value)} /></label><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، اعتمد الموعد</button><button type="button" className="reject" onClick={() => respondToDeliveryDate("rejected")} disabled={busy || !replacementDeliveryDate}><HiOutlineX /> غير مناسب، اعتمد البديل</button></div></div>}
+        {canRespondDeliverySchedule && <div className="panel-delivery-response panel-delivery-decision"><label>ملاحظة القرار <small>(اختياري)</small><textarea value={deliveryResponseNote} onChange={(event) => setDeliveryResponseNote(event.target.value)} placeholder="اكتب توضيحًا للمندوب عند الحاجة..." /></label><div><button type="button" className="accept" onClick={() => respondToDeliveryDate("accepted")} disabled={busy}><HiOutlineCheckCircle /> نعم، اعتمد الموعد</button><button type="button" className="reject" onClick={() => setShowReplacementDeliveryDialog(true)} disabled={busy}><HiOutlineX /> غير مناسب</button></div></div>}
         {deliverySchedule.responseNote && deliverySchedule.status !== "pending" && <aside><b>ملاحظة مدير التنفيذ</b><p>{deliverySchedule.responseNote}</p></aside>}
       </div>
+      {showReplacementDeliveryDialog && <div className="delivery-replacement-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setShowReplacementDeliveryDialog(false); }}><section className="delivery-replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="delivery-replacement-title"><header><div><small>تعديل موعد التسليم</small><h3 id="delivery-replacement-title">برجاء تحديد الموعد البديل</h3><p>اختر موعدًا مناسبًا ثم أرسله للمندوب لاعتماده.</p></div><button type="button" onClick={() => setShowReplacementDeliveryDialog(false)} disabled={busy} aria-label="إغلاق"><HiOutlineX /></button></header><label className="panel-delivery-date-picker"><span className="panel-delivery-date-icon"><HiOutlineCalendar /></span><span><small>الموعد البديل المقترح</small><strong>{formatDeliveryPickerDate(replacementDeliveryDate)}</strong></span><input aria-label="اختيار الموعد البديل" type="date" inputMode="none" min={minimumDeliveryDateValue()} value={replacementDeliveryDate} onChange={(event) => setReplacementDeliveryDate(event.target.value)} /></label><div className="delivery-replacement-actions"><button type="button" className="cancel" onClick={() => setShowReplacementDeliveryDialog(false)} disabled={busy}>إلغاء</button><button type="button" className="submit" onClick={() => respondToDeliveryDate("rejected")} disabled={busy || !replacementDeliveryDate}>{busy ? "جاري الإرسال..." : "إرسال الموعد للمندوب"}</button></div></section></div>}
     </section>;
   };
 

@@ -446,8 +446,8 @@
 
     height: 100%;
 
-    color: #f7fbfd;
-    background: #172a35;
+    color: var(--text);
+    background: color-mix(in srgb, var(--background) 94%, transparent);
     backdrop-filter: blur(9px);
     display: flex;
 

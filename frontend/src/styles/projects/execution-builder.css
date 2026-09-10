@@ -717,3 +717,60 @@
     }
 }
 
+html[data-theme="dark"] .execution-pdf-builder :where(.execution-builder-summary b, .execution-builder-content-card>label, .execution-crop-controls label) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .execution-pdf-builder :where(.execution-builder-summary.editable input, .execution-builder-content-card textarea, .execution-page4-lines input) {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .execution-library-empty {
+    color: #c7dde7;
+    border-color: #62889a;
+    background: var(--surface);
+}
+
+html[data-theme="dark"] .execution-library-preview,
+html[data-theme="dark"] .execution-crop-preview {
+    background: #071219;
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+html[data-theme="dark"] .execution-image-assignments button {
+    color: #d7e8ef;
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .execution-image-assignments button.selected {
+    color: #fff;
+    border-color: #79a9bd;
+    background: #356b86;
+}
+
+html[data-theme="dark"] .execution-library-delete,
+html[data-theme="dark"] .execution-page4-lines button,
+html[data-theme="dark"] .execution-crop-modal header>button {
+    color: #ff9fa7;
+    background: rgba(158, 43, 55, .2);
+}
+
+html[data-theme="dark"] .execution-page4-heading button,
+html[data-theme="dark"] .execution-builder-pick {
+    color: #d8edf6;
+    border-color: #6b97aa;
+    background: var(--surface-muted);
+}
+
+@media (max-width: 600px) {
+    .execution-pdf-builder :where(button, .execution-document-switcher button) {
+        font-size: .82rem;
+        line-height: 1.35;
+    }
+
+    .execution-page4-heading { align-items: stretch; flex-direction: column; }
+}
+

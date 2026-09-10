@@ -82,11 +82,23 @@ const update = async (user, { allowRole = false } = {}) => {
 
 const updateTheme = async (userId, theme) => {
     const openconnection = await dbconfig.openconnection(collectionName, userSchema);
-    return openconnection.findByIdAndUpdate(
-        userId,
+    const currentUser = await openconnection.findById(userId);
+    if (!currentUser) return null;
+
+    const accountGroupId = currentUser.accountGroupId || currentUser._id;
+    await openconnection.updateMany(
+        {
+            isDeleted: { $ne: true },
+            $or: [
+                { _id: accountGroupId },
+                { accountGroupId }
+            ]
+        },
         { $set: { theme } },
-        { new: true, runValidators: true }
+        { runValidators: true }
     );
+    currentUser.theme = theme;
+    return currentUser;
 };
 
 const ensureTheme = async (userId) => {

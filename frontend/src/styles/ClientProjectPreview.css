@@ -1,7 +1,15 @@
 .client-project-preview,
 .client-preview-state {
+    --primary: #355f7a;
+    --surface: #fff;
+    --surface-muted: #f8fafc;
+    --text: #1f2937;
+    --text-light: #6b7280;
+    --border: #d9e1ec;
     min-height: 100dvh;
     background: #eef3f8;
+    color: #1f2937;
+    color-scheme: light;
 }
 
 .client-preview-header {
@@ -354,7 +362,7 @@
     width: min(100%, 420px);
     padding: 36px 28px;
     border-radius: 18px;
-    background: var(--surface);
+    background: #fff;
     box-shadow: 0 12px 32px rgb(18 45 71 / 10%);
 }
 

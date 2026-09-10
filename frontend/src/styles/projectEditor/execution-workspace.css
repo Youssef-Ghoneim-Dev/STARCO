@@ -1609,6 +1609,27 @@ html[data-theme="dark"] .add-part-btn:hover {
     cursor: pointer;
 }
 
+html[data-theme="dark"] .project-preview-link-card {
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .project-preview-link-card a { color: #a8d8ed; }
+html[data-theme="dark"] .project-preview-link-card button { color: #d9edf6; border-color: #668fa2; background: var(--surface); }
+
+html[data-theme="dark"] .project-id-copy {
+    color: #d9edf6;
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .execution-phase-label {
+    color: #d9edf6;
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .quote-reference-details>summary { color: #d9edf6; }
+
 .marketing-panel-title {
     display: flex;
     justify-content: space-between;

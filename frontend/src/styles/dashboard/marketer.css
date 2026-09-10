@@ -313,6 +313,11 @@
     background: #edf1f4;
 }
 
+html[data-theme="dark"] .marketer-production>div i {
+    border: 1px solid #355866;
+    background: #102630;
+}
+
 .marketer-production>div i b {
     display: block;
     height: 100%;

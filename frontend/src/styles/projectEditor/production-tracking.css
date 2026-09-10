@@ -1107,6 +1107,81 @@
     color: #687b87;
 }
 
+.delivery-replacement-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 5400;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(7, 25, 36, .72);
+    backdrop-filter: blur(7px);
+}
+
+.delivery-replacement-dialog {
+    width: min(520px, 100%);
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: 0 24px 80px rgba(4, 20, 30, .32);
+}
+
+.delivery-replacement-dialog>header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.delivery-replacement-dialog>header :where(h3, p) { margin: 0; }
+.delivery-replacement-dialog>header small { color: var(--text-light); }
+.delivery-replacement-dialog>header h3 { margin-block: 3px; color: var(--text); }
+.delivery-replacement-dialog>header p { color: var(--text-light); font-size: .86rem; }
+.delivery-replacement-dialog>header>button { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 11px; color: var(--text); background: var(--surface-muted); font-size: 20px; cursor: pointer; }
+
+.delivery-replacement-actions {
+    display: grid;
+    grid-template-columns: .7fr 1.3fr;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.delivery-replacement-actions button { min-height: 48px; border-radius: 11px; font: inherit; font-weight: 900; cursor: pointer; }
+.delivery-replacement-actions .cancel { border: 1px solid var(--border); color: var(--text); background: var(--surface-muted); }
+.delivery-replacement-actions .submit { border: 0; color: #fff; background: #356b86; }
+
+html[data-theme="dark"] .panel-delivery-schedule>header {
+    background: linear-gradient(135deg, var(--surface-muted), var(--surface-soft));
+}
+
+html[data-theme="dark"] .panel-delivery-schedule :where(h3, .panel-delivery-date-summary strong, .panel-delivery-date-picker strong) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .panel-delivery-schedule :where(p, small, .panel-delivery-date-summary span) {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .panel-delivery-date-picker {
+    border-color: var(--border);
+    background: linear-gradient(135deg, var(--surface-muted), var(--surface));
+}
+
+html[data-theme="dark"] .panel-delivery-response textarea {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .panel-delivery-response button.reject {
+    color: #ffaaa6;
+    border-color: rgba(255, 135, 128, .4);
+    background: rgba(151, 48, 44, .18);
+}
+
 .quote-reference-details {
     margin-bottom: 24px;
     border: 1px solid var(--border);
@@ -1239,6 +1314,9 @@
     .panel-delivery-response>div {
         flex-direction: column;
     }
+
+    .delivery-replacement-dialog { padding: 16px; border-radius: 17px; }
+    .delivery-replacement-actions { grid-template-columns: 1fr; }
 
     .manufacturing-delay-form {
         grid-template-columns: 1fr;

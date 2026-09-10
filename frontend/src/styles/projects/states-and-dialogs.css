@@ -171,6 +171,21 @@ textarea[aria-invalid="true"] {
     color: #fff;
 }
 
+html[data-theme="dark"] .execution-preview-link {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted);
+}
+
+html[data-theme="dark"] .execution-preview-link small { color: var(--text-light); }
+html[data-theme="dark"] .execution-preview-link a { color: #a8d8ed; }
+html[data-theme="dark"] .execution-preview-link>button { color: #d9edf6; border-color: #668fa2; background: var(--surface); }
+
+html[data-theme="dark"] .section-loading-overlay {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
 html[data-theme="dark"] .project-delete-modal-backdrop {
     background: rgba(3, 13, 21, .72);
     backdrop-filter: blur(4px);

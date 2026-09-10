@@ -528,6 +528,37 @@
     background: #fff6df;
 }
 
+html[data-theme="dark"] .engineer-execution-card>div>a {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-muted) !important;
+}
+
+html[data-theme="dark"] .engineer-execution-card>div>a :where(strong, span) {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .engineer-execution-card>div>a span {
+    color: var(--text-light);
+}
+
+html[data-theme="dark"] .engineer-execution-card a small {
+    color: #93e0b5;
+    background: rgba(26, 129, 75, .24) !important;
+}
+
+html[data-theme="dark"] .engineer-priority-card b.high {
+    color: #ffadb4;
+    border: 1px solid rgba(255, 132, 143, .3);
+    background: rgba(177, 55, 68, .22) !important;
+}
+
+html[data-theme="dark"] .engineer-priority-card b.medium {
+    color: #f4cf83;
+    border: 1px solid rgba(234, 183, 82, .3);
+    background: rgba(151, 105, 20, .22) !important;
+}
+
 .engineer-recent-card {
     grid-column: span 2;
 }
