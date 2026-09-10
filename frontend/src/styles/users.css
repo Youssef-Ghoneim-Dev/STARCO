@@ -261,36 +261,64 @@
     text-align: left;
 }
 
+.user-identity {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.user-name-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.user-name-line>strong {
+    min-width: 0;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
 .linked-account-origin {
     display: grid;
     justify-items: start;
-    gap: 2px;
+    gap: 3px;
     direction: ltr;
     text-align: left;
 }
 
 .linked-account-origin small {
     color: var(--text-light);
-    font-size: 10px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.linked-account-origin>span {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
 }
 
 .linked-account-origin strong {
     color: var(--text);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .linked-account-origin em {
     width: fit-content;
     border-radius: 999px;
     padding: 2px 7px;
-    color: var(--primary);
-    background: var(--surface-soft);
+    color: #244f68;
+    background: #e5f1f7;
     font-size: 9px;
     font-style: normal;
 }
 
 html[data-theme="dark"] .linked-account-origin em {
-    color: var(--acade);
+    color: #d9edf6;
+    background: #315563;
 }
 
 .users-actions {
@@ -323,11 +351,26 @@ html[data-theme="dark"] .linked-account-origin em {
 }
 
 .current-user-badge {
-    display: block;
-    margin-top: 5px;
-    color: var(--primary);
-    font-size: 12px;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 24px;
+    margin: 0;
+    padding: 3px 9px;
+    border: 1px solid #b9d7e5;
+    border-radius: 999px;
+    color: #244f68;
+    background: #e5f1f7;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+html[data-theme="dark"] .current-user-badge {
+    color: #e9f6fb;
+    background: #315563;
+    border-color: #5f8798;
 }
 
 .user-edit-backdrop {

@@ -53,10 +53,24 @@ function UserRow({ user, reload, mode }) {
 
   return (
     <div className="users-row">
-      <span>{user.name}{isCurrentUser && <small className="current-user-badge">This is you</small>}</span>
+      <span className="user-identity">
+        <span className="user-name-line">
+          <strong>{user.name}</strong>
+          {isCurrentUser && <small className="current-user-badge">This is you</small>}
+        </span>
+        {user.linkedAccountCreator && (
+          <span className="linked-account-origin">
+            <small>Additional account from</small>
+            <span>
+              <strong>{user.linkedAccountCreator.name}</strong>
+              <em>{user.linkedAccountCreator.role}</em>
+            </span>
+          </span>
+        )}
+      </span>
 
       <span>{user.email}</span>
-      <span className="phone-value">{user.phoneNumber || (user.linkedAccountCreator ? <span className="linked-account-origin"><small>Additional Account From</small><strong>{user.linkedAccountCreator.name}</strong><em>{user.linkedAccountCreator.role}</em></span> : "No phone number")}</span>
+      <span className="phone-value">{user.phoneNumber || "No phone number"}</span>
       <div className="role-editor"><StyledSelect value={role} onChange={changeRole} disabled={user.isDeleted || saving || isCurrentUser || currentUser?.role !== "OwnerManager"} ariaLabel="دور المستخدم" direction="ltr" options={availableRoles.map((item) => ({ value: item, label: item }))} /></div>
 
       <div className="users-actions">
