@@ -1566,6 +1566,18 @@ html[data-theme="dark"] .add-part-btn:hover {
     font-size: .9rem;
 }
 
+html[data-theme="dark"] .project-audit-summary>div {
+    background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .project-audit-summary span {
+    color: #d8e7ed;
+}
+
+html[data-theme="dark"] .project-audit-summary strong {
+    color: #fff;
+}
+
 .project-preview-link-card {
     display: flex;
     align-items: center;
@@ -2253,15 +2265,16 @@ html[data-theme="dark"] .media-delete-actions .media-delete-confirm {
 }
 
 .request-changes-btn {
-    color: var(--primary);
-    background: var(--surface);
-    border-color: #c8dce6 !important;
-    box-shadow: none;
+    color: #fff;
+    background: var(--primary);
+    border-color: var(--primary) !important;
+    box-shadow: 0 8px 18px rgba(53, 95, 122, .18);
 }
 
 .request-changes-btn:hover {
-    border-color: #8fb6c9 !important;
-    background: var(--surface-muted);
+    color: #fff;
+    border-color: var(--primary-hover) !important;
+    background: var(--primary-hover);
 }
 
 .request-changes-btn:focus-visible {

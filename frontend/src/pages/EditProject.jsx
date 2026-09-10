@@ -454,7 +454,7 @@ function EditProject() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications, readProject } = useNotifications();
+  const { notifications } = useNotifications();
   const latestWorkflowNotification = notifications.find((item) => String(item.projectId) === String(id));
   const latestWorkflowNotificationId = latestWorkflowNotification?._id;
   useEffect(() => {
@@ -468,7 +468,6 @@ function EditProject() {
     toast.error(stopNotification.title || "توقف عن العمل؛ المندوب يعدّل اللوحة الآن.", { duration: 7000 });
     navigate("/projects", { replace: true });
   }, [id, navigate, notifications, user?.role]);
-  useEffect(() => { readProject(id); }, [id, readProject]);
   const isMarketer = user?.role === "Marketer";
   const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
     user?.role,

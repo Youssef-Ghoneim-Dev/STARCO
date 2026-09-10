@@ -61,7 +61,7 @@ const sendNamedTemplate = async (to, project, templateEnvName, fallbackName, par
             type: metadata.messageType || "template",
             text: templateName,
             status: result?.messages?.[0]?.message_status || "accepted",
-            rawPayload: metadata.stageName ? { provider: result, stageName: metadata.stageName } : result
+            rawPayload: metadata.stageName ? { provider: result, stageName: metadata.stageName, stageKey: metadata.stageKey || "" } : result
         }).catch((error) => console.error("Could not store WhatsApp template message:", error.message));
     }
     return result;
@@ -134,16 +134,16 @@ const sendPanelFilesReady = (to, project, panelName) => sendNamedTemplate(
     [project.client?.name || "غير محدد", panelName || "غير محدد", project._id, projectUrl(project)]
 );
 
-const sendProductionStageCheck = (to, project, panel, stageName, marketerName = "غير محدد") => sendNamedTemplate(
+const sendProductionStageCheck = (to, project, panel, stageName, marketerName = "غير محدد", stageKey = "") => sendNamedTemplate(
     to,
     project,
     "WHATSAPP_TEMPLATE_PRODUCTION_STAGE_CHECK",
     "production_stage_check",
     ["project_id", "client_name", "marketer_name", "panel_name", "stage_name"],
-    [project._id, project.client?.name || "غير محدد", marketerName, panel?.panelName || "غير محدد", stageName],
+    [project.projectCode || project._id, project.client?.name || "غير محدد", marketerName, panel?.panelName || "غير محدد", stageName],
     ["panel_name"],
     [panel?.panelName || "غير محدد"],
-    { messageType: "production_stage_check", panelId: panel?.panelId, stageName }
+    { messageType: "production_stage_check", panelId: panel?._id || panel?.panelId, stageName, stageKey }
 );
 
 module.exports = {

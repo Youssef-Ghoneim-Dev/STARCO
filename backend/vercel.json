@@ -6,7 +6,11 @@
     },
     {
       "path": "/api/v1/production-workflow/reminders",
-      "schedule": "0 1 * * *"
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/v1/production-workflow/reminders-cairo-standard",
+      "schedule": "0 8 * * *"
     }
   ]
 }

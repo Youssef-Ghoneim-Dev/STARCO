@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import {
   getNotifications,
@@ -20,16 +20,20 @@ const urlBase64ToUint8Array = (value) => {
 
 export function NotificationProvider({ children }) {
   const { user, pending } = useAuth();
+  const userId = String(user?.id || user?._id || "");
+  const activeUserIdRef = useRef(userId);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [pushState, setPushState] = useState(() => typeof Notification === "undefined" ? "unsupported" : Notification.permission);
 
   const refresh = useCallback(async ({ quiet = false } = {}) => {
-    if (!user || pending) return;
+    if (!userId || pending) return;
+    const requestedUserId = userId;
     if (!quiet) setLoading(true);
     try {
       const { data } = await getNotifications(40);
+      if (activeUserIdRef.current !== requestedUserId) return;
       setNotifications(data.notifications || []);
       setUnreadCount(Number(data.unreadCount) || 0);
     } catch {
@@ -37,10 +41,13 @@ export function NotificationProvider({ children }) {
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [pending, user]);
+  }, [pending, userId]);
 
   useEffect(() => {
-    if (!user || pending) {
+    activeUserIdRef.current = userId;
+    setNotifications([]);
+    setUnreadCount(0);
+    if (!userId || pending) {
       setNotifications([]);
       setUnreadCount(0);
       return undefined;
@@ -68,7 +75,7 @@ export function NotificationProvider({ children }) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
     };
-  }, [pending, refresh, user]);
+  }, [pending, refresh, userId]);
 
   useEffect(() => {
     if (!user || pending || typeof Notification === "undefined" || Notification.permission !== "granted") return;
@@ -125,7 +132,13 @@ export function NotificationProvider({ children }) {
     await markAllNotificationsRead();
   }, []);
 
-  const value = useMemo(() => ({ notifications, unreadCount, loading, pushState, refresh, enablePush, readOne, readProject, readAll }), [enablePush, loading, notifications, pushState, readAll, readOne, readProject, refresh, unreadCount]);
+  const resetForAccountSwitch = useCallback(() => {
+    activeUserIdRef.current = "";
+    setNotifications([]);
+    setUnreadCount(0);
+  }, []);
+
+  const value = useMemo(() => ({ notifications, unreadCount, loading, pushState, refresh, enablePush, readOne, readProject, readAll, resetForAccountSwitch }), [enablePush, loading, notifications, pushState, readAll, readOne, readProject, refresh, resetForAccountSwitch, unreadCount]);
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }
 

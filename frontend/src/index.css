@@ -249,11 +249,18 @@ html[data-theme="dark"] .account-modal .account-approval-note.is-pending {
 }
 
 html[data-theme="dark"] .mobile-bottom-nav a {
-    color: var(--text-light);
+    color: var(--acade);
 }
 
 html[data-theme="dark"] .mobile-bottom-nav a.active {
-    color: #fff;
+    color: #fff !important;
+    border-color: #56869c;
+    background: #376d88;
+    box-shadow: 0 5px 16px rgba(5, 22, 31, .38);
+}
+
+html[data-theme="dark"] .mobile-bottom-nav a.active :where(svg, span) {
+    color: #fff !important;
 }
 
 html[data-theme="dark"] .owner-kpi-strip svg {

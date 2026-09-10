@@ -32,11 +32,14 @@ const runProductionWorkflowReminders = async () => {
             const stageNames = { pendingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
             const stageName = waitingForEngineer ? "رفع ملفات التصنيع" : stageNames[activeStage?.key];
             if (!stageName) continue;
+            const marketer = project.marketingId
+                ? await users.select_one({ _id: project.marketingId, approved: true, isDeleted: false })
+                : null;
             const recipients = waitingForEngineer
                 ? await users.selectall({ _id: panel.engineerId, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } })
                 : productionRecipients;
             const results = await Promise.allSettled(
-                recipients.map((recipient) => sendProductionStageCheck(recipient.phoneNumber, project, panel, stageName))
+                recipients.map((recipient) => sendProductionStageCheck(recipient.phoneNumber, project, panel, stageName, marketer?.name || "غير محدد", deadlineKey))
             );
             remindersSent += results.filter((result) => result.status === "fulfilled").length;
             const update = { [waitingForEngineer ? "manufacturing.engineerReminderAt" : "manufacturing.lastReminderAt"]: now };

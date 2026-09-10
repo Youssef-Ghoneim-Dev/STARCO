@@ -478,6 +478,8 @@
 
         box-shadow: 0 -8px 24px rgba(15, 23, 42, .08);
 
+        gap: 6px;
+
     }
 
     .mobile-bottom-nav a {
@@ -496,13 +498,25 @@
 
         min-width: 0;
 
-        color: var(--text-light);
+        position: relative;
+
+        margin: 0;
+
+        padding: 5px 4px;
+
+        border: 1px solid transparent;
+
+        border-radius: 12px;
+
+        color: var(--primary);
 
         font-size: 10px;
 
         font-weight: 600;
 
         text-decoration: none;
+
+        transition: color .2s ease, background-color .2s ease, border-color .2s ease, transform .2s ease;
 
     }
 
@@ -513,10 +527,19 @@
     }
 
     .mobile-bottom-nav a.active {
-
-        color: var(--primary);
+        color: #fff !important;
+        border-color: var(--primary);
+        background: var(--primary);
         font-weight: 900;
 
+        box-shadow: 0 5px 14px rgba(28, 91, 132, .25);
+
+        transform: translateY(-2px);
+
+    }
+
+    .mobile-bottom-nav a.active :where(svg, span) {
+        color: #fff !important;
     }
 
 }

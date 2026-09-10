@@ -18,6 +18,7 @@ const {
 } = require("../services/whatsappMeta");
 const { uploadFile, deleteStoredFile } = require("../services/googleDrive");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
+const { createInternalNotifications } = require("../services/internalNotifications");
 const {
     sendNewProjectAssigned,
     sendProjectUpdatedReview,
@@ -232,32 +233,58 @@ const handleProductionStageReply = async ({ message, senderPhone, text }) => {
     });
 
     const stageName = outbound.rawPayload?.stageName || "";
+    const stageKey = outbound.rawPayload?.stageKey || "";
+    const waitingForEngineer = stageKey === "manufacturingFilesDueAt";
+    const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
+    const active = stageRows.find((stage) => stage.status === "active");
+    if ((waitingForEngineer && panel.status !== "manufacturingFilesPending") || (!waitingForEngineer && (!active || active.key !== stageKey))) {
+        await sendSafeText(senderPhone, `تم تحديث «${stageName || "هذه المرحلة"}» بالفعل، لذلك لم نغيّر حالة اللوحة من هذا الرد القديم.`);
+        return true;
+    }
+
     if (!answer) {
-        const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
-        const active = stageRows.find((stage) => stage.status === "active");
-        if (active) { active.delayReason = active.key === "pendingLaserDownload" ? "برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة" : "بانتظار تحديد سبب التأخير"; active.delayedAt = new Date(); active.delayedBy = responder._id; }
-        await panelsModel.update({ _id: panel._id }, { "manufacturing.stages": stageRows });
+        const delayReason = waitingForEngineer
+            ? "لم يتم رفع ملفات التصنيع حتى الآن"
+            : active.key === "pendingLaserDownload"
+                ? "برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة"
+                : "بانتظار تحديد سبب التأخير";
+        if (active) { active.delayReason = delayReason; active.delayedAt = new Date(); active.delayedBy = responder._id; }
+        await panelsModel.update({ _id: panel._id }, {
+            ...(active ? { "manufacturing.stages": stageRows } : {}),
+            "manufacturing.productionNotes": delayReason,
+            $push: { statusHistory: { from: panel.status, to: panel.status, action: "stage:delayed", note: delayReason, stageKey, reason: delayReason, actorId: responder._id, actorName: responder.name || "", actorRole: responder.role, createdAt: new Date() } }
+        });
+        await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: responder._id, project, panel, type: "productionDelayed", title: "تأخير في مرحلة الإنتاج", body: `${panel.panelName} — ${delayReason}`, actor: responder });
         const link = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/projects/${project._id}`;
         await sendSafeText(senderPhone, `تم تسجيل وجود تأخير في «${stageName}». افتح المشروع واختر سبب التأخير من القائمة:\n${link}`);
         return true;
     }
 
-    if (stageName.includes("تنزيل الملفات")) {
-        const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
-        const current = stageRows.find((stage) => stage.status === "active"); const currentIndex = stageRows.indexOf(current);
-        if (current) { current.status = "completed"; current.completedAt = new Date(); current.completedBy = responder._id; }
-        const nextStage = stageRows[currentIndex + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); }
-        await panelsModel.update({ _id: panel._id }, { status: nextStage?.key || "completed", "manufacturing.stages": stageRows, "manufacturing.lastReminderAt": null });
-        await sendSafeText(senderPhone, `تم تسجيل تنزيل ملفات اللوحة «${panel.panelName}» إلى الليزر. ستبدأ متابعة مرحلة الليزر في اليوم التالي.`);
+    if (waitingForEngineer) {
+        if (!(panel.manufacturing.files || []).length) {
+            await sendSafeText(senderPhone, `لا توجد ملفات تصنيع مرفوعة للوحة «${panel.panelName}» حتى الآن. ارفع الملفات من المشروع أولًا، ثم أجب عن رسالة المتابعة.`);
+            return true;
+        }
+        const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"].map((key, index) => ({ key, status: index === 0 ? "active" : "pending", startedAt: index === 0 ? new Date() : null }));
+        const saved = await panelsModel.update({ _id: panel._id }, { status: "manufacturingFilesReady", "manufacturing.stages": stages, "manufacturing.engineerReminderAt": null, "manufacturing.productionNotes": "", $push: { statusHistory: { from: panel.status, to: "manufacturingFilesReady", action: "manufacturingFilesConfirmedByWhatsapp", stageKey, actorId: responder._id, actorName: responder.name || "", actorRole: responder.role, createdAt: new Date() } } });
+        await createInternalNotifications({ roles: ["ProductionManager", "OwnerManager"], excludeUserId: responder._id, project, panel: saved, type: "manufacturingFilesReady", title: "ملفات تصنيع اللوحة جاهزة", body: `${panel.panelName} — برجاء تنزيل الملفات إلى الليزر`, actor: responder });
+        await sendSafeText(senderPhone, `تم تأكيد جاهزية ملفات تصنيع اللوحة «${panel.panelName}». بدأت الآن متابعة تنزيل الملفات إلى الليزر.`);
         return true;
     }
 
-    const stageRows = (panel.manufacturing.stages || []).map((stage) => stage.toObject?.() || stage);
-    const current = stageRows.find((stage) => stage.status === "active"); const currentIndex = stageRows.indexOf(current);
-    if (current) { current.status = "completed"; current.completedAt = new Date(); current.completedBy = responder._id; }
+    const current = active; const currentIndex = stageRows.indexOf(current);
+    current.status = "completed"; current.completedAt = new Date(); current.completedBy = responder._id;
     const nextStage = stageRows[currentIndex + 1]; if (nextStage) { nextStage.status = "active"; nextStage.startedAt = new Date(); }
-    await panelsModel.update({ _id: panel._id }, { status: nextStage?.key || "completed", "manufacturing.stages": stageRows, "manufacturing.lastReminderAt": null });
-    await sendSafeText(senderPhone, `تم تسجيل اكتمال مرحلة الليزر للوحة «${panel.panelName}» والانتقال إلى مرحلة التصنيع.`);
+    const nextStatus = nextStage?.key || "completed";
+    const saved = await panelsModel.update({ _id: panel._id }, { status: nextStatus, "manufacturing.stages": stageRows, "manufacturing.lastReminderAt": null, "manufacturing.productionNotes": "", $push: { statusHistory: { from: panel.status, to: nextStatus, action: "stage:completed", stageKey: current.key, actorId: responder._id, actorName: responder.name || "", actorRole: responder.role, createdAt: new Date() } } });
+    if (nextStatus === "completed") {
+        const projectPanels = await panelsModel.find({ projectId: project._id, isDeleted: false });
+        if (projectPanels.length && projectPanels.every((projectPanel) => projectPanel.status === "completed")) await projects.update({ _id: project._id }, { status: "completed" });
+    }
+    const stageLabels = { pendingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
+    const resultText = nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت ${stageLabels[nextStatus] || nextStatus}`;
+    await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: responder._id, project, panel: saved, type: "productionStageCompleted", title: "تم تحديث مرحلة الإنتاج", body: `${panel.panelName} — ${resultText}`, actor: responder });
+    await sendSafeText(senderPhone, `تم تسجيل اكتمال «${stageName}» للوحة «${panel.panelName}». ${resultText}.`);
     return true;
 };
 

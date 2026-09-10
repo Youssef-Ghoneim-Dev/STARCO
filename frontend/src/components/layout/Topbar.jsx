@@ -12,10 +12,10 @@ import AddAccountModal from "../auth/AddAccountModal";
 import { getLinkedAccounts, switchLinkedAccount } from "../../services/linkedAccountsAPI";
 
 function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
-  const { user, reloadProfile } = useAuth();
+  const { user, reloadProfile, accountStatus } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, pushState, enablePush, readOne, readAll } = useNotifications();
+  const { notifications, unreadCount, loading, pushState, enablePush, readOne, readAll, resetForAccountSwitch } = useNotifications();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [addAccountOpen, setAddAccountOpen] = useState(false);
@@ -25,7 +25,10 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   const notificationShellRef = useRef(null);
   const accountShellRef = useRef(null);
   const canAddAccount = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
-  const canOpenAccountMenu = canAddAccount || accounts.length > 1;
+  // Always open the account popover for a signed-in user. The linked-account
+  // request can still be in flight immediately after verification or a switch;
+  // navigating to the profile in that short window made the button feel broken.
+  const canOpenAccountMenu = Boolean(user);
   const quickSwitchAccount = accounts.find((account) => !account.current && account.approved);
 
   useEffect(() => {
@@ -38,15 +41,20 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
   }, []);
 
   useEffect(() => {
-    if (!user?.id && !user?._id) return;
+    if ((!user?.id && !user?._id) || accountStatus !== "active") {
+      setAccounts([]);
+      setAccountsLoading(false);
+      return;
+    }
     let active = true;
+    setAccounts([]);
     setAccountsLoading(true);
     getLinkedAccounts()
       .then(({ data }) => { if (active) setAccounts(Array.isArray(data) ? data : []); })
       .catch(() => { if (active) setAccounts([]); })
       .finally(() => { if (active) setAccountsLoading(false); });
     return () => { active = false; };
-  }, [user?.id, user?._id]);
+  }, [accountStatus, user?.id, user?._id]);
 
   const changeAccount = async (account) => {
     if (account.current || !account.approved) return;
@@ -55,6 +63,7 @@ function Topbar({ hasSidebar = false, onMenuClick, pending = false }) {
       const response = await switchLinkedAccount(account.id);
       const token = response.headers["x-auth-token"] || response.data?.token;
       if (!token) throw new Error("Missing session token");
+      resetForAccountSwitch();
       localStorage.setItem("token", token);
       await reloadProfile();
       setAccountOpen(false);
