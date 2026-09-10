@@ -100,7 +100,22 @@ const gettingStartedReplies = async () => {
     ];
 };
 
-const canSenderAttachToProject = async (project, marketer, senderPhone) => {
+const linkedManagerCanUploadForMarketer = async (marketer, senderPhone) => {
+    if (!marketer?.accountCreatedBy || marketer.phoneNumber) return false;
+    const manager = await users.select_one({
+        _id: marketer.accountCreatedBy,
+        phoneNumber: normalizePhoneNumber(senderPhone),
+        role: { $in: ["OwnerManager", "MarketingManager"] },
+        approved: true,
+        isDeleted: false
+    });
+    if (!manager) return false;
+    const managerGroupId = manager.accountGroupId || manager._id;
+    const marketerGroupId = marketer.accountGroupId || marketer._id;
+    return sameId(managerGroupId, marketerGroupId);
+};
+
+const canSenderAttachToProject = async (project, marketer, senderPhone, { allowLinkedManager = false } = {}) => {
     if (!project?.marketingId) return false;
     const projectMarketer = await users.select_one({
         _id: project.marketingId,
@@ -108,13 +123,35 @@ const canSenderAttachToProject = async (project, marketer, senderPhone) => {
         approved: true,
         isDeleted: false
     });
-    return Boolean(
+    const directOwner = Boolean(
         marketer
         && sameId(marketer._id, projectMarketer?._id)
         && normalizePhoneNumber(marketer.phoneNumber) === normalizePhoneNumber(senderPhone)
         && projectMarketer?.phoneNumber
         && normalizePhoneNumber(projectMarketer.phoneNumber) === normalizePhoneNumber(senderPhone)
     );
+    if (directOwner) return true;
+    return Boolean(
+        allowLinkedManager
+        && sameId(marketer?._id, projectMarketer?._id)
+        && await linkedManagerCanUploadForMarketer(projectMarketer, senderPhone)
+    );
+};
+
+const resolveLinkedMediaMarketer = async ({ command, activeSession, senderPhone }) => {
+    let marketerId = activeSession?.mode === "media" ? activeSession.marketingRepId : null;
+    if (!marketerId && command?.type === "media") {
+        const targetProject = await loadProjectWithPanels(projectReferenceCondition(command.projectId));
+        marketerId = targetProject?.marketingId;
+    }
+    if (!marketerId) return null;
+    const marketer = await users.select_one({
+        _id: marketerId,
+        role: "Marketer",
+        approved: true,
+        isDeleted: false
+    });
+    return await linkedManagerCanUploadForMarketer(marketer, senderPhone) ? marketer : null;
 };
 
 const normalizeReplies = (reply) => Array.isArray(reply) ? reply : [reply];
@@ -646,7 +683,7 @@ const handleCommand = async ({ command, senderPhone, marketer, inboundMessage })
             return "لديك جلسة مفتوحة بالفعل. أنهِها برسالة «تم» أو ألغِها برسالة STARCO DELETE قبل بدء رفع مرفقات جديدة.";
         }
         const targetProject = await loadProjectWithPanels(projectReferenceCondition(command.projectId));
-        const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone);
+        const ownsProject = targetProject && await canSenderAttachToProject(targetProject, marketer, senderPhone, { allowLinkedManager: true });
         if (!targetProject || !ownsProject) {
             return "لم يتم العثور على مشروع بهذا ID تابع لك.";
         }
@@ -909,7 +946,8 @@ const handleIncomingMessage = async (message, value) => {
 
     markMessageAsRead(message.id).catch((error) => console.error("Could not mark message as read:", error.message));
     if (await handleProductionStageReply({ message, senderPhone, text })) return;
-    const marketer = await users.select_marketer_by_phone(senderPhone);
+    const marketer = await users.select_marketer_by_phone(senderPhone)
+        || await resolveLinkedMediaMarketer({ command, activeSession, senderPhone });
     if (!marketer) {
         await sendSafeText(senderPhone, "هذا الرقم غير مربوط بحساب مندوب معتمد في نظام STARCO.");
         return;
