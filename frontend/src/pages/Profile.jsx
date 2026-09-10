@@ -36,9 +36,14 @@ function Profile() {
     setSaving(true);
 
     try {
-      await updateProfile(form);
+      const { data } = await updateProfile(form);
       await reloadProfile({ background: true });
-      toast.success("تم حفظ بيانات الملف الشخصي.");
+      if (data?.requiresWhatsappVerification) {
+        toast.success("تم حفظ الرقم. أكمل التحقق برسالة WhatsApp.");
+        navigate("/dashboard", { replace: true });
+      } else {
+        toast.success("تم حفظ بيانات الملف الشخصي.");
+      }
     } catch (error) {
       const message = error?.response?.data?.message;
       toast.error(typeof message === "string" ? message : "تعذر حفظ البيانات.");

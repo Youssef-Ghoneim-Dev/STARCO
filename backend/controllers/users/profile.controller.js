@@ -37,6 +37,14 @@ const UpdateProfile = async (req, res, next) => {
                 message: `Duplicted email ${user.email}`,
             })
         }
+        const currentPhone = normalizePhoneNumber(targetUser.phoneNumber);
+        const nextPhone = normalizePhoneNumber(user.phoneNumber);
+        const phoneChanged = currentPhone !== nextPhone;
+        const requiresLinkedAccountVerification = Boolean(
+            targetUser.accountCreatedBy
+            && nextPhone
+            && phoneChanged
+        );
         const queryResult = await models.update(user);
         if (queryResult === null) {
             return res.status(404).json({
@@ -44,15 +52,13 @@ const UpdateProfile = async (req, res, next) => {
                 message: `user id ${user.id} not found`,
             })
         }
-        if (
-            targetUser.whatsappOptInRequired === true &&
-            normalizePhoneNumber(user.phoneNumber) !== normalizePhoneNumber(targetUser.phoneNumber)
-        ) {
+        if (requiresLinkedAccountVerification || (targetUser.whatsappOptInRequired === true && phoneChanged && nextPhone)) {
             await models.resetWhatsappOptIn(user.id);
         }
         return res.status(200).json({
             status: "ok",
             message: "user update",
+            requiresWhatsappVerification: requiresLinkedAccountVerification || (targetUser.whatsappOptInRequired === true && phoneChanged && Boolean(nextPhone)),
         })
     } catch (error) {
         next(error)
