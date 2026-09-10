@@ -633,7 +633,16 @@ function ExecutionPdfWorkspace() {
   const downloadAllManufacturingFiles = async () => {
     try {
       const { data } = await getManufacturingArchive(project._id, panel.panelId);
-      saveBlob(data, `${panel.panelName || "panel"}-files.zip`);
+      const downloadDate = new Date();
+      const formattedDate = [
+        String(downloadDate.getDate()).padStart(2, "0"),
+        String(downloadDate.getMonth() + 1).padStart(2, "0"),
+        downloadDate.getFullYear(),
+      ].join("-");
+      const safePanelName = String(panel.panelName || "لوحة")
+        .replace(/[\\/:*?"<>|]/g, "-")
+        .trim();
+      saveBlob(data, `(${safePanelName}) (${formattedDate}) files.zip`);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملفات مجمعة."); }
   };
 
@@ -775,8 +784,11 @@ function ExecutionPdfWorkspace() {
             </div>
           </article>)}
         </div>
-        {(manufacturing.engineerNotes || manufacturing.notes) && <aside className="manufacturing-engineer-note"><b>ملاحظات المهندس مع الملفات</b><p>{manufacturing.engineerNotes || manufacturing.notes}</p></aside>}
         {canDownloadManufacturing && <button type="button" className="manufacturing-download-all" onClick={downloadAllManufacturingFiles}><HiOutlineCloudDownload /> تحميل جميع الملفات ZIP</button>}
+        <aside className={`manufacturing-engineer-note ${(manufacturing.engineerNotes || manufacturing.notes) ? "" : "is-empty"}`}>
+          <b>الملاحظات المرفقة من المهندس</b>
+          <p>{manufacturing.engineerNotes || manufacturing.notes || "لم يرفق المهندس ملاحظات مع ملفات التصنيع."}</p>
+        </aside>
       </div>
     </details>
 
@@ -801,8 +813,8 @@ function ExecutionPdfWorkspace() {
           </header>
 
           <div className="production-stage-decision-grid">
-            <button type="button" className={stageDecision === "completed" ? "selected completed" : ""} onClick={() => { setStageDecision("completed"); setDelayReason(""); setDelayDetails(""); setStageSavedFeedback(null); }}><HiOutlineCheckCircle /><span><b>تمت المرحلة</b><small>حفظ الإتمام والانتقال للمرحلة التالية</small></span></button>
-            <button type="button" className={stageDecision === "delayed" ? "selected delayed" : ""} onClick={() => { setStageDecision("delayed"); setStageSavedFeedback(null); }}><HiOutlineExclamationCircle /><span><b>لم تتم</b><small>تسجيل تأخير مع توضيح السبب</small></span></button>
+            <button type="button" aria-pressed={stageDecision === "completed"} className={stageDecision === "completed" ? "selected completed" : ""} onClick={() => { setStageDecision("completed"); setDelayReason(""); setDelayDetails(""); setStageSavedFeedback(null); }}><HiOutlineCheckCircle /><span><b>تمت المرحلة</b><small>حفظ الإتمام والانتقال للمرحلة التالية</small></span></button>
+            <button type="button" aria-pressed={stageDecision === "delayed"} className={stageDecision === "delayed" ? "selected delayed" : ""} onClick={() => { setStageDecision("delayed"); setStageSavedFeedback(null); }}><HiOutlineExclamationCircle /><span><b>لم تتم</b><small>تسجيل تأخير مع توضيح السبب</small></span></button>
           </div>
 
           {stageDecision === "delayed" && activeProductionStage.key === "awaitingLaserDownload" && <div className="production-fixed-warning"><HiOutlineExclamationCircle /> برجاء تنزيل اللوحة إلى الليزر بأقصى سرعة</div>}

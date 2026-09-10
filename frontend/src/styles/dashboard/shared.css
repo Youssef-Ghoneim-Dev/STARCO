@@ -347,6 +347,76 @@ button.production-card-link {
     line-height: 1.25;
 }
 
+.dashboard-donut-tooltip {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 132px;
+    max-width: 190px;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 10px;
+    color: #fff;
+    background: #101820;
+    box-shadow: 0 10px 28px rgba(2, 10, 16, .3);
+    direction: rtl;
+    text-align: right;
+    transform: translate(-50%, calc(-100% - 13px));
+    pointer-events: none;
+    animation: dashboard-donut-tooltip-in .16s ease-out;
+}
+
+.dashboard-donut-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    border: 6px solid transparent;
+    border-top-color: #101820;
+    transform: translateX(-50%);
+}
+
+.dashboard-donut-tooltip>i {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--dashboard-tooltip-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dashboard-tooltip-color) 22%, transparent);
+}
+
+.dashboard-donut-tooltip>span {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.dashboard-donut-tooltip strong,
+.dashboard-donut-tooltip small {
+    overflow-wrap: anywhere;
+    color: #fff !important;
+    font-style: normal;
+    line-height: 1.25;
+}
+
+.dashboard-donut-tooltip strong {
+    font-size: 12px !important;
+}
+
+.dashboard-donut-tooltip small {
+    color: #cbd7df !important;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+@keyframes dashboard-donut-tooltip-in {
+    from { opacity: 0; transform: translate(-50%, calc(-100% - 7px)) scale(.96); }
+    to { opacity: 1; transform: translate(-50%, calc(-100% - 13px)) scale(1); }
+}
+
 /* Incomplete averages show an explanation beneath a neutral placeholder. */
 .dashboard-average-pending {
     display: grid;
@@ -497,6 +567,12 @@ button.production-card-link {
     .dashboard-donut-segment:focus,
     .dashboard-donut-segment.active {
         stroke-width: 21;
+    }
+
+    .dashboard-donut-tooltip {
+        min-width: 116px;
+        max-width: 155px;
+        padding: 7px 9px;
     }
 
     .dashboard-average-pending>small {

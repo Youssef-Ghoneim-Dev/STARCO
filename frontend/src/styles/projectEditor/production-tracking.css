@@ -4,8 +4,8 @@
     gap: 14px;
     padding: 18px;
     border-radius: 18px;
-    background: var(--surface-muted);
-    color: #172b3e;
+    background: var(--production-page);
+    color: var(--production-text);
     direction: rtl;
 }
 
@@ -21,6 +21,7 @@
     margin: 0;
     font-size: 1.8rem;
     text-align: right;
+    color: var(--production-text);
 }
 
 .production-breadcrumbs {
@@ -42,23 +43,31 @@
     gap: 8px;
     min-height: 42px;
     padding: 0 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--production-border);
     border-radius: 9px;
-    background: var(--surface);
-    color: #3d6680;
+    background: var(--production-surface);
+    color: var(--production-accent);
     font: inherit;
     font-size: .92rem;
     font-weight: 800;
     cursor: pointer;
+    transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.production-tracking-titlebar>button:hover {
+    border-color: var(--production-accent);
+    color: var(--production-text);
+    background: var(--production-surface-active);
+    transform: translateY(-1px);
 }
 
 .production-project-overview {
     display: grid;
     grid-template-columns: minmax(360px, 1.2fr) minmax(540px, 1fr);
     align-items: stretch;
-    border: 1px solid var(--border);
+    border: 1px solid var(--production-border);
     border-radius: 13px;
-    background: var(--surface);
+    background: var(--production-surface);
     overflow: hidden;
 }
 
@@ -76,10 +85,10 @@
     flex: 0 0 auto;
     width: 66px;
     height: 66px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--production-border);
     border-radius: 10px;
-    background: linear-gradient(145deg, #f8fbfd, #e9f0f5);
-    color: #446d86;
+    background: var(--production-surface-muted);
+    color: var(--production-accent);
     font-size: 38px;
 }
 
@@ -91,6 +100,7 @@
     margin: 0 0 9px;
     font-size: 1.3rem;
     overflow-wrap: anywhere;
+    color: var(--production-text);
 }
 
 .production-code-copy {
@@ -100,8 +110,9 @@
     padding: 6px 9px;
     border: 0;
     border-radius: 6px;
-    background: #edf5ff;
-    color: #2e68ad;
+    border: 1px solid var(--production-border);
+    background: var(--production-surface-muted);
+    color: var(--production-accent);
     font: inherit;
     font-size: .84rem;
     cursor: pointer;
@@ -113,7 +124,7 @@
     align-items: center;
     gap: 9px;
     margin: 10px 0 0;
-    color: #5d6d7c;
+    color: var(--production-text-muted);
     font-size: .86rem;
 }
 
@@ -127,7 +138,7 @@
 .production-project-facts {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--production-border);
 }
 
 .production-project-facts.compact {
@@ -145,20 +156,20 @@
 }
 
 .production-project-facts>div+div {
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--production-border);
 }
 
 .production-project-facts span {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #6a7987;
+    color: var(--production-text-muted);
     font-size: .82rem;
 }
 
 .production-project-facts b {
     max-width: 100%;
-    color: #2c3f51;
+    color: var(--production-text);
     font-size: .9rem;
     overflow-wrap: anywhere;
 }
@@ -170,19 +181,19 @@
 }
 
 .production-phase-badge {
-    background: #f2edff;
-    color: #7253bd !important;
+    background: color-mix(in srgb, #7754c8 18%, var(--production-surface));
+    color: color-mix(in srgb, #9f83e2 82%, var(--production-text)) !important;
 }
 
 .production-state-badge {
-    background: #e8f1ff;
-    color: #3869aa !important;
+    background: color-mix(in srgb, var(--production-accent) 18%, var(--production-surface));
+    color: var(--production-accent) !important;
 }
 
 .production-files-accordion {
-    border: 1px solid var(--border);
+    border: 1px solid var(--production-border);
     border-radius: 13px;
-    background: var(--surface);
+    background: var(--production-surface);
     overflow: hidden;
 }
 
@@ -194,6 +205,12 @@
     list-style: none;
     cursor: pointer;
     user-select: none;
+    color: var(--production-text);
+    transition: background-color .18s ease;
+}
+
+.production-files-accordion>summary:hover {
+    background: var(--production-surface-active);
 }
 
 .production-files-accordion>summary::-webkit-details-marker {
@@ -210,21 +227,22 @@
 
 .production-files-accordion>summary svg {
     grid-row: 1 / span 2;
-    color: #396d8b;
+    color: var(--production-accent);
     font-size: 22px;
 }
 
 .production-files-accordion>summary b {
     font-size: 1.2rem;
+    color: var(--production-text);
 }
 
 .production-files-accordion>summary small {
-    color: #6f7c88;
+    color: var(--production-text-muted);
     font-size: .82rem;
 }
 
 .production-files-chevron {
-    color: #45677c;
+    color: var(--production-accent);
     font-size: 22px;
     transition: transform .2s ease;
 }
@@ -234,7 +252,7 @@
 }
 
 .production-files-content {
-    padding: 0 18px 17px;
+    padding: 16px 18px 17px;
 }
 
 .production-files-content .manufacturing-download-grid {
@@ -270,18 +288,55 @@
 .production-files-content .manufacturing-download-all {
     min-height: 48px;
     margin-top: 14px;
-    border: 1px solid #bdd1df;
+    border: 1px solid var(--production-border);
     border-radius: 10px;
-    background: var(--surface-muted);
-    color: #366b8b;
+    background: var(--production-surface-muted);
+    color: var(--production-text);
     font-size: .9rem;
+    transition: color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+
+.production-files-content .manufacturing-download-all svg {
+    color: var(--production-accent);
+}
+
+.production-files-content .manufacturing-download-all:hover {
+    border-color: var(--production-accent);
+    background: var(--production-surface-active);
+}
+
+.production-files-content .manufacturing-engineer-note {
+    display: grid;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--production-border);
+    border-radius: 10px;
+    background: var(--production-surface-muted);
+    color: var(--production-text);
+}
+
+.production-files-content .manufacturing-engineer-note b,
+.production-files-content .manufacturing-engineer-note p {
+    margin: 0;
+    color: var(--production-text);
+}
+
+.production-files-content .manufacturing-engineer-note p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+}
+
+.production-files-content .manufacturing-engineer-note.is-empty p {
+    color: var(--production-text-muted);
 }
 
 .production-stages-board {
     padding: 22px 22px 24px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--production-border);
     border-radius: 15px;
-    background: var(--surface);
+    background: var(--production-surface);
 }
 
 .production-stages-board>header {
@@ -296,16 +351,17 @@
     gap: 9px;
     margin: 0;
     font-size: 1.35rem;
+    color: var(--production-text);
 }
 
 .production-stages-board>header h2 svg {
-    color: #366f90;
+    color: var(--production-accent);
     font-size: 27px;
 }
 
 .production-stages-board>header p {
     margin: 6px 0 0;
-    color: #667483;
+    color: var(--production-text-muted);
     font-size: .84rem;
 }
 
@@ -515,7 +571,7 @@
     }
 
     .production-project-facts {
-        border-top: 1px solid var(--border);
+        border-top: 1px solid var(--production-border);
         border-right: 0;
     }
 
@@ -616,7 +672,7 @@
     }
 
     .production-files-content {
-        padding: 0 12px 13px;
+        padding: 14px 12px 13px;
     }
 
     .production-files-content .manufacturing-download-grid {
