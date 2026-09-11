@@ -29,6 +29,7 @@ import { createExecutionPdf } from "../../../utils/executionPdf";
 import {
   isProductionControlRole,
   isProductionSupervisorRole,
+  PRODUCTION_EXECUTION_REFERENCE_ROLES,
   supervisorCanAccessStatus,
 } from "../../../utils/roles";
 
@@ -226,6 +227,7 @@ function ExecutionPdfWorkspace() {
     || (project?.source === "manual" && ["Engineer", "FullEngineer"].includes(user?.role));
   const canPrepareManufacturing = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
+  const canViewExecutionPdfReference = PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
   const canDownloadManufacturing = ["Engineer", "FullEngineer", "OwnerManager", "ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(user?.role);
   const canManageProductionStages = user?.role === "OwnerManager"
     || isProductionControlRole(user?.role)
@@ -808,6 +810,11 @@ function ExecutionPdfWorkspace() {
     </section>
 
     {renderDeliverySchedule()}
+
+    {canViewExecutionPdfReference && !workflow.skipped && ["ready", "confirmed"].includes(workflow.status) && <section className="production-execution-reference">
+      <div><HiOutlineDocumentText /><span><b>PDF التنفيذ</b><small>ملف التنفيذ فقط — لا يتضمن عرض السعر</small></span></div>
+      <button type="button" onClick={previewExecutionPdf} disabled={previewingExecution || !executionImageFiles.length}><HiOutlineEye /> {previewingExecution ? "جاري تجهيز الملف..." : "معاينة PDF التنفيذ"}</button>
+    </section>}
 
     {(!isProductionSupervisor || user?.role === "LaserSupervisor") && <details className="production-files-accordion" open>
       <summary><span><HiOutlineFolder /><b>ملفات التصنيع</b><small>جميع الملفات المرفوعة من قبل المهندس</small></span><IoChevronDown className="production-files-chevron" /></summary>

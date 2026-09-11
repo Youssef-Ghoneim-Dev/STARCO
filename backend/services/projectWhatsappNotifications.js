@@ -136,6 +136,30 @@ const sendPanelFilesReady = (to, project, panel) => sendNamedTemplate(
     [project.client?.name || "غير محدد", panel?.panelName || "غير محدد", publicProjectCode(project), manufacturingArchiveUrl(project, panel)]
 );
 
+const sendPanelCompleted = (to, project, panel) => sendNamedTemplate(
+    to,
+    project,
+    "WHATSAPP_TEMPLATE_PANEL_COMPLETED",
+    "panel_completed",
+    ["project_id", "client_name", "panel_name", "project_url"],
+    [publicProjectCode(project), project.client?.name || "غير محدد", panel?.panelName || "غير محدد", projectUrl(project)],
+    ["panel_name"],
+    [panel?.panelName || "غير محدد"],
+    { messageType: "panel_completed", panelId: panel?._id || panel?.panelId }
+);
+
+const sendPanelDelayNotice = (to, project, panel, stageName, delayReason) => sendNamedTemplate(
+    to,
+    project,
+    "WHATSAPP_TEMPLATE_PANEL_DELAY_NOTICE",
+    "panel_delay_notice",
+    ["project_id", "client_name", "panel_name", "stage_name", "delay_reason"],
+    [publicProjectCode(project), project.client?.name || "غير محدد", panel?.panelName || "غير محدد", stageName || "مرحلة الإنتاج", delayReason || "سبب التأخير غير معروف"],
+    ["panel_name"],
+    [panel?.panelName || "غير محدد"],
+    { messageType: "panel_delay_notice", panelId: panel?._id || panel?.panelId, stageName }
+);
+
 const sendProductionStageCheck = (to, project, panel, stageName, marketerName = "غير محدد", stageKey = "") => sendNamedTemplate(
     to,
     project,
@@ -156,5 +180,7 @@ module.exports = {
     sendExecutionPdfCompleted,
     sendExecutionConfirmed,
     sendPanelFilesReady,
+    sendPanelCompleted,
+    sendPanelDelayNotice,
     sendProductionStageCheck
 };

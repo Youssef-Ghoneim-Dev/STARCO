@@ -33,6 +33,11 @@
     --production-warning-border: #E1BD78;
     --production-disabled-bg: #E4EBEF;
     --production-shadow: 0 10px 28px rgba(25, 55, 73, .08);
+    --production-stage-download: #2685A9;
+    --production-stage-laser: #7652CA;
+    --production-stage-manufacturing: #DC861D;
+    --production-stage-painting: #65A442;
+    --production-stage-assembly: #19929C;
 }
 
 :root[data-theme="dark"] {
@@ -68,6 +73,11 @@
     --production-warning-border: #8B6B32;
     --production-disabled-bg: #36515E;
     --production-shadow: 0 12px 30px rgba(5, 20, 28, .28);
+    --production-stage-download: #62B8D8;
+    --production-stage-laser: #A78BFA;
+    --production-stage-manufacturing: #F2AD55;
+    --production-stage-painting: #92CB70;
+    --production-stage-assembly: #55C6CF;
 }
 
 @font-face {

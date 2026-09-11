@@ -1,7 +1,7 @@
 const projects = require("../models/projects");
 const panels = require("../models/panels");
 const users = require("../models/users");
-const { sendProductionStageCheck } = require("./projectWhatsappNotifications");
+const { sendProductionStageCheck, sendPanelDelayNotice } = require("./projectWhatsappNotifications");
 const { PRODUCTION_CONTROL_ROLES, SUPERVISOR_STAGE_BY_ROLE } = require("../utils/roles");
 const { addEgyptWorkingDays, egyptDateValue, isEgyptNonWorkingDate } = require("../utils/egyptWorkingDays");
 const { currentProductionStageDueAt, reachedEgyptDate } = require("../utils/productionStageSchedule");
@@ -14,6 +14,12 @@ const runProductionWorkflowReminders = async () => {
     const panelsToCheck = await panels.find({ isDeleted: false, status: { $in: ["manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"] } });
     const productionRecipients = await users.selectall({
         role: { $in: ["OwnerManager", ...PRODUCTION_CONTROL_ROLES] },
+        approved: true,
+        isDeleted: false,
+        phoneNumber: { $nin: [null, ""] }
+    });
+    const delayNoticeRecipients = await users.selectall({
+        role: { $in: ["MarketingManager", "OwnerManager"] },
         approved: true,
         isDeleted: false,
         phoneNumber: { $nin: [null, ""] }
@@ -63,13 +69,25 @@ const runProductionWorkflowReminders = async () => {
             // ساعتين على تنزيل الملفات أو انتهاء يوم المرحلة. يظل التأخير
             // مرتبطًا بالخطة النهائية للوحة حتى لا نسجل تأخيرًا مبكرًا.
             const delayAt = baselineDueAt ? addEgyptWorkingDays(baselineDueAt, 1) : null;
-            if (!waitingForEngineer && delayAt && reachedEgyptDate(now, delayAt) && !activeStage.delayedAt) {
-                activeStage.delayReason = `تجاوز الموعد المخطط لـ${stageName}`;
-                activeStage.delayedAt = now;
-                update["manufacturing.stages"] = workflow.stages;
-                delaysRecorded += 1;
+            let delayNoticeReason = "";
+            if (delayAt && reachedEgyptDate(now, delayAt)) {
+                if (waitingForEngineer && !workflow.engineerDelayedAt) {
+                    delayNoticeReason = "تأخر تجهيز ملفات التصنيع ودخلت اللوحة آخر أربعة أيام قبل موعد التسليم";
+                    update["manufacturing.engineerDelayedAt"] = now;
+                    update["manufacturing.engineerDelayReason"] = delayNoticeReason;
+                    delaysRecorded += 1;
+                } else if (!waitingForEngineer && activeStage && !activeStage.delayedAt) {
+                    delayNoticeReason = `تجاوز الموعد المخطط لـ${stageName}`;
+                    activeStage.delayReason = delayNoticeReason;
+                    activeStage.delayedAt = now;
+                    update["manufacturing.stages"] = workflow.stages;
+                    delaysRecorded += 1;
+                }
             }
             await panels.update({ _id: panel._id }, update);
+            if (delayNoticeReason) {
+                await Promise.allSettled(delayNoticeRecipients.map((recipient) => sendPanelDelayNotice(recipient.phoneNumber, project, panel, stageName, delayNoticeReason)));
+            }
     }
     return { projectsChecked: new Set(panelsToCheck.map((panel) => String(panel.projectId))).size, remindersSent, delaysRecorded };
 };

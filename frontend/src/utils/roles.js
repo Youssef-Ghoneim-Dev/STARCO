@@ -34,6 +34,13 @@ export const rolesToOptions = (roles) => roles.map((role) => ({ value: role, lab
 
 export const DRAWING_ENGINEER_ROLES = ["Engineer", "FullEngineer"];
 export const PRODUCTION_CONTROL_ROLES = ["ProductionManager", "ProductionEngineer", "FullEngineer"];
+export const PRODUCTION_EXECUTION_REFERENCE_ROLES = [
+  "ProductionManager",
+  "ProductionEngineer",
+  "LaserSupervisor",
+  "ManufacturingSupervisor",
+  "AssemblySupervisor",
+];
 export const PRODUCTION_VIEW_ROLES = [
   ...PRODUCTION_CONTROL_ROLES,
   "LaserSupervisor",

@@ -1,7 +1,7 @@
 const panels = require("../models/panels");
 const projects = require("../models/projects");
 const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
-const { sendExecutionPdfRequested, sendExecutionPdfCompleted, sendExecutionConfirmed, sendPanelFilesReady } = require("../services/projectWhatsappNotifications");
+const { sendExecutionPdfRequested, sendExecutionPdfCompleted, sendExecutionConfirmed, sendPanelFilesReady, sendPanelCompleted, sendPanelDelayNotice } = require("../services/projectWhatsappNotifications");
 const users = require("../models/users");
 const createZipArchive = require("../utils/createZipArchive");
 const { createInternalNotifications } = require("../services/internalNotifications");
@@ -10,6 +10,7 @@ const { currentProductionStageDueAt } = require("../utils/productionStageSchedul
 const {
     DRAWING_ENGINEER_ROLES,
     PRODUCTION_CONTROL_ROLES,
+    PRODUCTION_EXECUTION_REFERENCE_ROLES,
     SUPERVISOR_STAGE_BY_ROLE,
     isDrawingEngineer,
     isProductionController,
@@ -28,10 +29,29 @@ const productionStatusesFor = (user) => isProductionController(user)
     ? productionVisibleStatuses
     : (SUPERVISOR_STAGE_BY_ROLE[user?.role] || null);
 const isProductionRestrictedViewer = (user) => isProductionViewer(user) && user?.role !== "FullEngineer";
+const canViewProductionReferences = (user) => PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
+const publicExecutionPdf = (value, status, includeReference) => ({
+    status,
+    readyAt: value?.readyAt,
+    skipped: Boolean(value?.skipped),
+    ...(includeReference ? {
+        steelThickness: value?.steelThickness,
+        design: value?.design || {},
+        files: (value?.files || []).map((file) => ({
+            _id: file._id,
+            fileName: file.fileName,
+            mimeType: file.mimeType,
+            fileSize: file.fileSize,
+            purpose: file.purpose,
+            uploadedAt: file.uploadedAt,
+        })),
+    } : { files: [] }),
+});
 const supervisorRoleForStatus = (status) => Object.entries(SUPERVISOR_STAGE_BY_ROLE)
     .find(([, statuses]) => statuses.includes(status))?.[0] || null;
 const marketingEditableStatuses = ["pendingPricing", "pricing", "quoteCompleted", "editing", "executionPdfRequested", "executionPdfReady"];
 const stages = ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+const productionStageNames = { pendingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
 const executionPdfPurposes = ["page2", "page3", "page4", "gallery"];
 const history = (req, from, to, action, note = "") => ({ from, to, action, note, actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role, createdAt: new Date() });
 const buildProductionDeadlines = (approvedDate) => ({
@@ -147,8 +167,11 @@ const publicPanel = (panel, useMarketingDraft = false) => {
 };
 const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false) => {
     const result = publicPanel(panel, useMarketingDraft);
-    if (isProductionSupervisor(viewer)) {
-        const allowedStageKeys = new Set((SUPERVISOR_STAGE_BY_ROLE[viewer.role] || []).map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
+    if (isProductionRestrictedViewer(viewer)) {
+        const allowedStatuses = SUPERVISOR_STAGE_BY_ROLE[viewer.role] || ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+        const allowedStageKeys = new Set(allowedStatuses.map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
+        const includeReferences = canViewProductionReferences(viewer);
+        const marketerData = includeReferences ? (result.marketerData || {}) : {};
         return {
             _id: result._id,
             panelId: result._id,
@@ -156,14 +179,15 @@ const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false)
             panelCode: result.panelCode,
             sequence: result.sequence,
             panelName: result.panelName,
+            ...(includeReferences ? { marketerData, ...marketerData } : {}),
             status: result.status,
             deliverySchedule: result.deliverySchedule,
-            executionPdf: { status: result.executionPdf?.status, readyAt: result.executionPdf?.readyAt },
+            executionPdf: publicExecutionPdf(result.executionPdf, result.executionPdf?.status, includeReferences),
             manufacturing: {
                 status: result.manufacturing?.status,
                 currentStage: result.manufacturing?.currentStage,
-                files: viewer.role === "LaserSupervisor" ? (result.manufacturing?.files || []) : [],
-                engineerNotes: viewer.role === "LaserSupervisor" ? (result.manufacturing?.engineerNotes || "") : "",
+                files: ["ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(viewer.role) ? (result.manufacturing?.files || []) : [],
+                engineerNotes: ["ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(viewer.role) ? (result.manufacturing?.engineerNotes || "") : "",
                 productionNotes: result.manufacturing?.productionNotes || "",
                 productionStages: (result.manufacturing?.productionStages || []).filter((stage) => allowedStageKeys.has(stage.key)),
                 productionHistory: (result.manufacturing?.productionHistory || [])
@@ -233,18 +257,20 @@ const projectResponse = async (project, viewer = null) => {
         String(engineer._id),
         { _id: engineer._id, name: engineer.name }
     ]));
-    const responsePanels = projectPanels.map((panel) => isProductionSupervisor(viewer)
+    const responsePanels = projectPanels.map((panel) => isProductionRestrictedViewer(viewer)
         ? publicPanelForViewer(panel, object, viewer)
         : {
             ...publicPanel(panel),
             assignedEngineer: engineerMap.get(String(panel.engineerId)) || null
         });
-    if (isProductionSupervisor(viewer)) {
+    if (isProductionRestrictedViewer(viewer)) {
         return {
             _id: object._id,
             projectCode: object.projectCode,
             status: object.status,
             client: { name: object.client?.name || "" },
+            source: object.source,
+            marketingRepresentative: object.marketingId ? await users.select_one({ _id: object.marketingId, isDeleted: false }).then((user) => user ? { _id: user._id, name: user.name } : null) : null,
             panels: responsePanels,
             panelIds: projectPanels.map((panel) => panel._id),
             panelCount: projectPanels.length,
@@ -517,7 +543,9 @@ const uploadTo = (bucket) => async (req, res, next) => { try {
 } catch (error) { next(error); } };
 const downloadFile = (bucket) => async (req, res, next) => { try {
     const panel = await loadPanel(req.params.projectId, req.params.panelId); const file = panel?.[bucket]?.files?.id(req.params.fileId); if (!file) return res.status(404).json({ status: "error", message: "الملف غير موجود." });
-    const canDownloadExecutionPdf = isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || ["Marketer", "MarketingManager"].includes(req.user.role);
+    const supervisorCanDownloadExecutionPdf = canViewProductionReferences(req.user)
+        && (!isProductionSupervisor(req.user) || supervisorCanAccessStatus(req.user, panel.status));
+    const canDownloadExecutionPdf = isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || supervisorCanDownloadExecutionPdf || ["Marketer", "MarketingManager"].includes(req.user.role);
     const canDownloadManufacturing = isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || (req.user.role === "LaserSupervisor" && supervisorCanAccessStatus(req.user, panel.status));
     if ((bucket === "executionPdf" && !canDownloadExecutionPdf) || (bucket === "manufacturing" && !canDownloadManufacturing)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تنزيل هذا الملف." });
     const stored = await downloadStoredFile(file.storageFileId); res.setHeader("Content-Type", file.mimeType || stored.mimeType); res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`); res.send(stored.buffer);
@@ -621,6 +649,13 @@ const updateStage = async (req, res, next) => { try {
     const nextProductionNotes = req.body.action === "completed" ? "" : notes;
     const saved = await panels.update({ _id: panel._id }, { status: nextStatus, "manufacturing.productionNotes": nextProductionNotes, "manufacturing.stages": panel.manufacturing.stages, $push: { statusHistory: stageHistory } }); if (nextStatus === "completed") await refreshProjectCompletion(panel.projectId); const project = await loadProject(panel.projectId);
     await createInternalNotifications({ userIds: [project.marketingId], roles: ["MarketingManager", "OwnerManager"], excludeUserId: req.user._id, project, panel: saved, type: req.body.action === "delayed" ? "productionDelayed" : "productionStageCompleted", title: req.body.action === "delayed" ? "تأخير في مرحلة الإنتاج" : "تم تحديث مرحلة الإنتاج", body: `${saved.panelName} — ${req.body.action === "delayed" ? (current.delayReason || "توجد متابعة مطلوبة") : (nextStatus === "completed" ? "اكتمل تنفيذ اللوحة" : `بدأت مرحلة ${nextStatus}`)}`, actor: req.user });
+    if (req.body.action === "completed" && nextStatus === "completed") {
+        await notifyProjectMarketer(project, ["MarketingManager"], (recipient) => sendPanelCompleted(recipient.phoneNumber, project, saved));
+    }
+    if (req.body.action === "delayed") {
+        const delayReason = current.delayReason === "أخرى" ? (current.delayDetails || "سبب التأخير غير معروف") : (current.delayReason || "سبب التأخير غير معروف");
+        await notifyRoles(["MarketingManager", "OwnerManager"], (recipient) => sendPanelDelayNotice(recipient.phoneNumber, project, saved, productionStageNames[current.key], delayReason));
+    }
     const nextSupervisorRole = req.body.action === "completed" ? supervisorRoleForStatus(nextStatus) : null;
     if (nextSupervisorRole) await createInternalNotifications({ roles: [nextSupervisorRole], excludeUserId: req.user._id, project, panel: saved, type: "productionStageReady", title: "لوحة جديدة في مرحلتك", body: `${saved.panelName} — أصبحت جاهزة لبدء المرحلة`, actor: req.user });
     res.json({ status: "ok", panel: publicPanelForViewer(saved, project, req.user), project: await projectResponse(project, req.user) });

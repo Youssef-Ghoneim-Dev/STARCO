@@ -12,7 +12,9 @@ const {
     sendExecutionPdfRequested,
     sendExecutionPdfCompleted,
     sendExecutionConfirmed,
-    sendPanelFilesReady
+    sendPanelFilesReady,
+    sendPanelCompleted,
+    sendPanelDelayNotice
 } = require("../services/projectWhatsappNotifications");
 const whatsappMessages = require("../models/whatsappMessages");
 const { downloadStoredFile, deleteStoredFile, uploadFile, createResumableUploadSession, getVerifiedStoredFile } = require("../services/googleDrive");
@@ -1464,6 +1466,22 @@ const updateManufacturingStage = async (req, res, next) => {
             ? "completed"
             : deriveExecutionStatus(project.panels);
         const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: nextProjectStatus, updatedAt: Date.now() });
+        if (action === "completed" && manufacturing.currentStage === "completed") {
+            const [marketer, marketingManagers] = await Promise.all([
+                getProjectMarketer(updatedProject),
+                getActiveUsersByRoles(["MarketingManager"]),
+            ]);
+            const recipients = [...new Map([marketer, ...marketingManagers]
+                .filter((recipient) => recipient?.phoneNumber)
+                .map((recipient) => [String(recipient._id), recipient])).values()];
+            await Promise.allSettled(recipients.map((recipient) => sendPanelCompleted(recipient.phoneNumber, updatedProject, panel)));
+        }
+        if (action === "delayed") {
+            const stageNames = { awaitingLaserDownload: "تنزيل الملفات إلى الليزر", laser: "مرحلة الليزر", manufacturing: "مرحلة التصنيع", painting: "مرحلة الرش", assembly: "مرحلة التجميع" };
+            const reason = stage.delayReason === "أخرى" ? (stage.delayDetails || "سبب التأخير غير معروف") : (stage.delayReason || "سبب التأخير غير معروف");
+            const recipients = await getActiveUsersByRoles(["MarketingManager", "OwnerManager"]);
+            await Promise.allSettled(recipients.map((recipient) => sendPanelDelayNotice(recipient.phoneNumber, updatedProject, panel, stageNames[stageKey], reason)));
+        }
         return res.status(200).json({ status: "ok", message: action === "completed" ? "تم الانتقال إلى المرحلة التالية." : "تم حفظ تحديث المرحلة.", project: updatedProject });
     } catch (error) { next(error); }
 };

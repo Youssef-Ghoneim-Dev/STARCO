@@ -185,6 +185,60 @@
     color: color-mix(in srgb, #9f83e2 82%, var(--production-text)) !important;
 }
 
+.production-execution-reference {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    border: 1px solid color-mix(in srgb, var(--production-stage-laser) 38%, var(--production-border));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--production-stage-laser) 9%, var(--production-surface));
+}
+
+.production-execution-reference>div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.production-execution-reference>div>svg {
+    padding: 10px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--production-stage-laser) 17%, var(--production-surface));
+    color: var(--production-stage-laser);
+    font-size: 44px;
+}
+
+.production-execution-reference span,
+.production-execution-reference small {
+    display: block;
+}
+
+.production-execution-reference small {
+    margin-top: 3px;
+    color: var(--production-text-muted);
+}
+
+.production-execution-reference button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--production-stage-laser);
+    color: #fff;
+    cursor: pointer;
+}
+
+.production-execution-reference button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
 .production-state-badge {
     background: color-mix(in srgb, var(--production-accent) 18%, var(--production-surface));
     color: var(--production-accent) !important;
@@ -414,31 +468,31 @@
 .production-stages-board .production-stage-card.stage-1 {
     border-color: #b7d4e2;
     background: var(--surface-muted);
-    --stage-color: #2183aa;
+    --stage-color: var(--production-stage-download);
 }
 
 .production-stages-board .production-stage-card.stage-2 {
     border-color: #d9cef3;
     background: #fdfcff;
-    --stage-color: #7754c8;
+    --stage-color: var(--production-stage-laser);
 }
 
 .production-stages-board .production-stage-card.stage-3 {
     border-color: #efd7b0;
     background: #fffdf9;
-    --stage-color: #de8617;
+    --stage-color: var(--production-stage-manufacturing);
 }
 
 .production-stages-board .production-stage-card.stage-4 {
     border-color: #d8e3be;
     background: #fefff9;
-    --stage-color: #64a542;
+    --stage-color: var(--production-stage-painting);
 }
 
 .production-stages-board .production-stage-card.stage-5 {
     border-color: #b8dce0;
     background: #fbffff;
-    --stage-color: #15929d;
+    --stage-color: var(--production-stage-assembly);
 }
 
 .production-stages-board .production-stage-card.pending {
@@ -622,6 +676,15 @@
 }
 
 @media (max-width: 650px) {
+    .production-execution-reference {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .production-execution-reference button {
+        width: 100%;
+    }
+
     .production-tracking-page {
         gap: 12px;
         padding: 10px;

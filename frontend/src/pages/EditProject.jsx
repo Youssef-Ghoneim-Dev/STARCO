@@ -16,7 +16,7 @@ import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
 import PanelEditSummary from "../components/projects/PanelEditSummary";
 import { panelMarketingEditableStatuses } from "../utils/panelEditing";
-import { isProductionSupervisorRole } from "../utils/roles";
+import { isProductionSupervisorRole, PRODUCTION_EXECUTION_REFERENCE_ROLES } from "../utils/roles";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -271,6 +271,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
+  const canViewProductionReferences = PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
   const canViewQuoteReference = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
 
   if (marketingPanelEditing) return <MarketingProjectEditor />;
@@ -370,10 +371,17 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   if ((isExecutionPhase || isCompleted) && !hasEditableQuotePanels)
     return (
       <>
-        <ProjectPreviewLink />
+        {!canViewProductionReferences && <ProjectPreviewLink />}
         <ExecutionPdfWorkspace />
         <PanelEditSummary panel={activePanel} />
-        {!isProductionSupervisor && <details className="quote-reference-details">
+        {canViewProductionReferences ? <details className="quote-reference-details production-project-reference" open>
+          <summary>بيانات المشروع والمندوب</summary>
+          <section className="project-audit-summary" dir="rtl">
+            <div><span>المندوب المسؤول</span><strong>{project?.marketingRepresentative?.name || "غير محدد"}</strong></div>
+          </section>
+          <PanelsTabs readOnly />
+          <WhatsappProjectData />
+        </details> : !isProductionSupervisor && <details className="quote-reference-details">
           <summary>
             {isWhatsappProject
               ? canViewQuoteReference

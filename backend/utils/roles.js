@@ -1,5 +1,12 @@
 const DRAWING_ENGINEER_ROLES = ["Engineer", "FullEngineer"];
 const PRODUCTION_CONTROL_ROLES = ["ProductionManager", "ProductionEngineer", "FullEngineer"];
+const PRODUCTION_EXECUTION_REFERENCE_ROLES = [
+    "ProductionManager",
+    "ProductionEngineer",
+    "LaserSupervisor",
+    "ManufacturingSupervisor",
+    "AssemblySupervisor",
+];
 const SUPERVISOR_STAGE_BY_ROLE = {
     LaserSupervisor: ["manufacturingFilesReady", "pendingLaserDownload", "laser"],
     ManufacturingSupervisor: ["manufacturing"],
@@ -30,6 +37,7 @@ const supervisorCanAccessStatus = (user, status) => (SUPERVISOR_STAGE_BY_ROLE[us
 module.exports = {
     DRAWING_ENGINEER_ROLES,
     PRODUCTION_CONTROL_ROLES,
+    PRODUCTION_EXECUTION_REFERENCE_ROLES,
     PRODUCTION_VIEW_ROLES,
     SUPERVISOR_STAGE_BY_ROLE,
     OPERATIONAL_ROLE_ORDER,

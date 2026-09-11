@@ -14,6 +14,7 @@ const { currentProductionStageDueAt } = require("../utils/productionStageSchedul
 const {
     DRAWING_ENGINEER_ROLES,
     PRODUCTION_CONTROL_ROLES,
+    PRODUCTION_EXECUTION_REFERENCE_ROLES,
     SUPERVISOR_STAGE_BY_ROLE,
     isDrawingEngineer,
     isProductionController,
@@ -30,6 +31,24 @@ const productionStatusesFor = (user) => isProductionController(user)
     ? productionVisibleStatuses
     : (SUPERVISOR_STAGE_BY_ROLE[user?.role] || null);
 const isProductionRestrictedViewer = (user) => isProductionViewer(user) && user?.role !== "FullEngineer";
+const canViewProductionReferences = (user) => PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
+const publicExecutionPdf = (value, status, includeReference) => ({
+    status,
+    readyAt: value?.readyAt,
+    skipped: Boolean(value?.skipped),
+    ...(includeReference ? {
+        steelThickness: value?.steelThickness,
+        design: value?.design || {},
+        files: (value?.files || []).map((file) => ({
+            _id: file._id,
+            fileName: file.fileName,
+            mimeType: file.mimeType,
+            fileSize: file.fileSize,
+            purpose: file.purpose,
+            uploadedAt: file.uploadedAt,
+        })),
+    } : { files: [] }),
+});
 const whatsappFailureReason = (row) => {
     const error = row?.rawPayload?.errors?.[0];
     if (!error) return "لم ترسل Meta سببًا تفصيليًا.";
@@ -85,8 +104,11 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
             ["pricing", "dimensions", "parts", "prices", "copper", "statusHistory"].forEach((key) => delete hidden[key]);
             return hidden;
         }
-        if (!isProductionSupervisor(viewer)) return withEngineer;
-        const allowedStageKeys = new Set((SUPERVISOR_STAGE_BY_ROLE[viewer.role] || []).map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
+        if (!isProductionRestrictedViewer(viewer)) return withEngineer;
+        const allowedStatuses = SUPERVISOR_STAGE_BY_ROLE[viewer.role] || ["pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"];
+        const allowedStageKeys = new Set(allowedStatuses.map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
+        const includeReferences = canViewProductionReferences(viewer);
+        const marketerData = includeReferences ? (value.marketerData || {}) : {};
         return {
             _id: value._id,
             panelId: value._id,
@@ -94,14 +116,15 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
             panelCode: value.panelCode,
             sequence: value.sequence,
             panelName: value.panelName,
+            ...(includeReferences ? { marketerData, ...marketerData } : {}),
             status: value.status,
             deliverySchedule: withEngineer.deliverySchedule,
-            executionPdf: { status: executionStatus, readyAt: value.executionPdf?.readyAt },
+            executionPdf: publicExecutionPdf(value.executionPdf, executionStatus, includeReferences),
             manufacturing: {
                 status: manufacturingStatus,
                 currentStage: productionStages.find((stage) => stage.status === "active")?.key || "",
-                files: viewer.role === "LaserSupervisor" ? (value.manufacturing?.files || []) : [],
-                engineerNotes: viewer.role === "LaserSupervisor" ? (value.manufacturing?.engineerNotes || "") : "",
+                files: ["ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(viewer.role) ? (value.manufacturing?.files || []) : [],
+                engineerNotes: ["ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(viewer.role) ? (value.manufacturing?.engineerNotes || "") : "",
                 productionNotes: value.manufacturing?.productionNotes || "",
                 productionStages: productionStages.filter((stage) => allowedStageKeys.has(stage.key)),
                 productionHistory: productionHistory
@@ -126,12 +149,13 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         panelIds: projectPanels.map((panel) => panel._id), panelCount: projectPanels.length,
         quotePreviewUrl: object.previewGeneratedAt && object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : ""
     };
-    if (!isProductionSupervisor(viewer)) return response;
+    if (!isProductionRestrictedViewer(viewer)) return response;
     return {
         _id: response._id,
         projectCode: response.projectCode,
         status: response.status,
         client: { name: response.client?.name || "" },
+        source: response.source,
         marketingRepresentative: response.marketingRepresentative,
         panels: response.panels,
         panelIds: response.panelIds,
@@ -392,22 +416,26 @@ const permanentlyDeleteProject = async (req, res, next) => { try {
 const getProjectMedia = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
     if (!project || !canSeeProject(req.user, project)) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-    const projectPanels = await panels.find({ projectId: project._id, isDeleted: false });
+    if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.status(403).json({ status: "error", message: "مرفقات المشروع غير متاحة لهذا الحساب." });
+    const allowedStatuses = isProductionRestrictedViewer(req.user) ? productionStatusesFor(req.user) : null;
+    const projectPanels = await panels.find({ projectId: project._id, isDeleted: false, ...(allowedStatuses ? { status: { $in: allowedStatuses } } : {}) });
     res.json(projectPanels.flatMap((panel) => (panel.attachments || []).map((file) => ({
         id: file._id, panelId: panel._id, type: String(file.mimeType || "").startsWith("audio/") ? "audio" : "image",
         mimeType: file.mimeType, fileName: file.fileName, fileSize: file.fileSize, createdAt: file.uploadedAt
     }))));
 } catch (error) { next(error); } };
 
-const findMedia = async (projectId, mediaId) => {
-    const projectPanels = await panels.find({ projectId, isDeleted: false });
+const findMedia = async (projectId, mediaId, viewer = null) => {
+    const allowedStatuses = isProductionRestrictedViewer(viewer) ? productionStatusesFor(viewer) : null;
+    const projectPanels = await panels.find({ projectId, isDeleted: false, ...(allowedStatuses ? { status: { $in: allowedStatuses } } : {}) });
     for (const panel of projectPanels) { const file = panel.attachments?.id(mediaId); if (file) return { panel, file }; }
     return null;
 };
 const getProjectMediaFile = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
     if (!project || !canSeeProject(req.user, project)) return res.sendStatus(404);
-    const media = await findMedia(project._id, req.params.mediaId); if (!media) return res.sendStatus(404);
+    if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.sendStatus(403);
+    const media = await findMedia(project._id, req.params.mediaId, req.user); if (!media) return res.sendStatus(404);
     const stored = await downloadStoredFile(media.file.storageFileId); res.setHeader("Content-Type", media.file.mimeType || stored.mimeType); res.setHeader("Cache-Control", "private, max-age=300"); res.send(stored.buffer);
 } catch (error) { next(error); } };
 const uploadProjectMedia = async (req, res, next) => { try {

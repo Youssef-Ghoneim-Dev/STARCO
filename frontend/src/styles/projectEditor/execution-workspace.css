@@ -50,23 +50,23 @@
 }
 
 .production-stage-step.stage-1 {
-    --step-color: #2685a9;
+    --step-color: var(--production-stage-download);
 }
 
 .production-stage-step.stage-2 {
-    --step-color: #7652ca;
+    --step-color: var(--production-stage-laser);
 }
 
 .production-stage-step.stage-3 {
-    --step-color: #dc861d;
+    --step-color: var(--production-stage-manufacturing);
 }
 
 .production-stage-step.stage-4 {
-    --step-color: #65a442;
+    --step-color: var(--production-stage-painting);
 }
 
 .production-stage-step.stage-5 {
-    --step-color: #19929c;
+    --step-color: var(--production-stage-assembly);
 }
 
 .production-stage-step-number {
@@ -118,13 +118,12 @@
 }
 
 .production-stage-step.completed {
-    border-color: var(--production-success-border);
-    background: var(--production-success-bg);
-    --step-color: #24915c;
+    border-color: color-mix(in srgb, var(--step-color) 55%, var(--production-border));
+    background: color-mix(in srgb, var(--step-color) 13%, var(--production-surface));
 }
 
 .production-stage-step.completed small {
-    color: var(--production-success-text);
+    color: var(--step-color);
 }
 
 .production-stage-step.active {
