@@ -10,13 +10,16 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { getPanelNameDirection } from "../../utils/panelNameDirection";
+import { isProductionSupervisorRole } from "../../utils/roles";
 
 import { deleteProject } from "../../services/projectsAPI";
 import projectImage from "../../assets/images/1.svg";
 
 const formatProjectDate = (dateValue) => {
+  if (!dateValue) return "غير محدد";
   const date = new Date(dateValue);
-  const hours = Math.floor((Date.now() - date.getTime()) / 3_600_000);
+  if (Number.isNaN(date.getTime())) return "غير محدد";
+  const hours = Math.max(0, Math.floor((Date.now() - date.getTime()) / 3_600_000));
   const days = Math.floor(hours / 24);
 
   if (hours < 1) return "منذ أقل من ساعة";
@@ -51,6 +54,7 @@ const statusDetails = {
 function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProjectId }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isProductionSupervisor = isProductionSupervisorRole(user?.role);
   const { notifications } = useNotifications();
   const firstPanelName = project.panels?.[0]?.panelName?.trim();
   const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
@@ -112,13 +116,13 @@ function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProje
           </div>
         )}
 
-        <div className="project-date">
+        {!isProductionSupervisor && <div className="project-date">
           <HiOutlineCalendar />
 
           <span>
             أُنشئ: {formatProjectDate(project.createdAt)}
           </span>
-        </div>
+        </div>}
 
         <div className="project-date">
           <HiOutlineClock />

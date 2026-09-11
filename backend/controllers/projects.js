@@ -1335,8 +1335,8 @@ const finishManufacturingFiles = async (req, res, next) => {
         panel.manufacturing.currentStageStartedAt = new Date();
         panel.manufacturing.lastReminderAt = null;
         const updatedProject = await projectModels.update({ id: project._id, panels: project.panels, status: deriveExecutionStatus(project.panels), updatedAt: Date.now() });
-        const recipients = await getActiveUsersByRoles(["OwnerManager", "ProductionManager"]);
-        const results = await Promise.allSettled(recipients.map((recipient) => sendPanelFilesReady(recipient.phoneNumber, updatedProject, panel.panelName)));
+        const recipients = await getActiveUsersByRoles(["OwnerManager", "ProductionManager", "LaserSupervisor"]);
+        const results = await Promise.allSettled(recipients.map((recipient) => sendPanelFilesReady(recipient.phoneNumber, updatedProject, panel)));
         const sentCount = results.filter((result) => result.status === "fulfilled").length;
         const notification = sentCount ? `تم إشعار ${sentCount} من مسؤولي التنفيذ.` : `تم حفظ الملفات، لكن تعذر إرسال الإشعار: ${results[0]?.reason?.message || "لا يوجد مستلم"}`;
         return res.status(200).json({ status: "ok", message: "ملفات تصنيع اللوحة جاهزة.", notification, project: updatedProject });

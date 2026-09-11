@@ -27,14 +27,14 @@ const currentProductionStageDueAt = (panel) => {
     if (!activeStage) return null;
     const startedAt = activeStage.startedAt || latestStatusStart(panel, activeStage.key);
     if (!startedAt) return null;
+    if (activeStage.key === "pendingLaserDownload") {
+        return new Date(new Date(startedAt).getTime() + (2 * 60 * 60 * 1000));
+    }
+
     const startMinutes = cairoMinutes(startedAt);
-    // تنزيل الملفات إلى الليزر خطوة سريعة، لكن لو بدأت بعد الظهر فلا
-    // نحتسب بقية ذلك اليوم كمهلة كاملة لها.
     // باقي مراحل الإنتاج إذا بدأت قبل متابعة العاشرة صباحًا تظهر في
     // متابعة اليوم نفسه، دون أن يعني ذلك تسجيل تأخير عليها.
-    const workingDays = activeStage.key === "pendingLaserDownload"
-        ? (startMinutes > (12 * 60) ? 2 : 1)
-        : (startMinutes <= (10 * 60) ? 0 : 1);
+    const workingDays = startMinutes <= (10 * 60) ? 0 : 1;
     return addEgyptWorkingDays(startedAt, workingDays);
 };
 

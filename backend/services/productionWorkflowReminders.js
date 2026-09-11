@@ -32,7 +32,12 @@ const runProductionWorkflowReminders = async () => {
             // كل مرحلة تُحسب من وقت بدايتها الفعلي: يومان لملفات التصنيع،
             // ويوم عمل واحد لكل مرحلة إنتاج. بذلك يؤدي الإنجاز المبكر إلى
             // تقديم متابعة كل المراحل التالية تلقائيًا.
-            if (!dueAt || !reachedEgyptDate(now, dueAt)) continue;
+            if (!dueAt) continue;
+            const isLaserDownloadFollowup = activeStage?.key === "pendingLaserDownload";
+            const reminderIsDue = isLaserDownloadFollowup
+                ? now.getTime() >= new Date(dueAt).getTime()
+                : reachedEgyptDate(now, dueAt);
+            if (!reminderIsDue) continue;
             const lastReminderValue = waitingForEngineer ? workflow.engineerReminderAt : workflow.lastReminderAt;
             if (lastReminderValue && egyptDateValue(lastReminderValue) === egyptDateValue(now)) continue;
 
@@ -54,17 +59,12 @@ const runProductionWorkflowReminders = async () => {
             );
             remindersSent += results.filter((result) => result.status === "fulfilled").length;
             const update = { [waitingForEngineer ? "manufacturing.engineerReminderAt" : "manufacturing.lastReminderAt"]: now };
-            // سؤال المتابعة ديناميكي، أما التأخير فلا يُسجل لمجرد انتهاء
-            // يوم المرحلة إذا كانت اللوحة ما زالت متقدمة عن الخطة النهائية.
-            // الاستثناء هو تنزيل الملفات إلى الليزر: عدم تنفيذ الخطوة عند
-            // أول متابعة مستحقة يُعد تأخيرًا لأنها لا تحتاج دورة تصنيع.
-            const delayAt = activeStage?.key === "pendingLaserDownload"
-                ? dueAt
-                : baselineDueAt ? addEgyptWorkingDays(baselineDueAt, 1) : null;
+            // سؤال المتابعة ديناميكي، أما التأخير فلا يُسجل لمجرد مرور
+            // ساعتين على تنزيل الملفات أو انتهاء يوم المرحلة. يظل التأخير
+            // مرتبطًا بالخطة النهائية للوحة حتى لا نسجل تأخيرًا مبكرًا.
+            const delayAt = baselineDueAt ? addEgyptWorkingDays(baselineDueAt, 1) : null;
             if (!waitingForEngineer && delayAt && reachedEgyptDate(now, delayAt) && !activeStage.delayedAt) {
-                activeStage.delayReason = activeStage.key === "pendingLaserDownload"
-                    ? "سبب التأخير غير معروف"
-                    : `تجاوز الموعد المخطط لـ${stageName}`;
+                activeStage.delayReason = `تجاوز الموعد المخطط لـ${stageName}`;
                 activeStage.delayedAt = now;
                 update["manufacturing.stages"] = workflow.stages;
                 delaysRecorded += 1;

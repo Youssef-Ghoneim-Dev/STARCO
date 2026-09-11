@@ -4,6 +4,8 @@ const whatsappMessages = require("../models/whatsappMessages");
 const templateLanguage = () => process.env.WHATSAPP_TEMPLATE_LANGUAGE || "ar_EG";
 const frontendUrl = () => String(process.env.FRONTEND_URL || "").replace(/\/$/, "");
 const projectUrl = (project) => `${frontendUrl()}/projects/${project._id}`;
+const manufacturingArchiveUrl = (project, panel) => `${frontendUrl()}/projects/${project._id}/panels/${panel?._id || panel?.panelId}?download=manufacturing-zip`;
+const publicProjectCode = (project) => project?.projectCode || "غير محدد";
 
 const namedBody = (parameterNames, values) => {
     if (parameterNames.length !== values.length) {
@@ -73,7 +75,7 @@ const sendNewProjectAssigned = (to, project, marketerName = "غير محدد") =
     "WHATSAPP_TEMPLATE_NEW_PROJECT_ASSIGNED",
     "new_project_assigned",
     ["project_id", "client_name", "marketer_name", "panels_count", "project_url"],
-    [project.projectCode || project._id, project.client?.name || "غير محدد", marketerName, (project.panels || []).length, projectUrl(project)]
+    [publicProjectCode(project), project.client?.name || "غير محدد", marketerName, (project.panels || []).length, projectUrl(project)]
 );
 
 const sendProjectUpdatedReview = (to, project, marketerName = "غير محدد") => sendNamedTemplate(
@@ -82,7 +84,7 @@ const sendProjectUpdatedReview = (to, project, marketerName = "غير محدد")
     "WHATSAPP_TEMPLATE_PROJECT_UPDATED_REVIEW",
     "project_updated_review",
     ["project_id", "client_name", "marketer_name", "project_url"],
-    [project._id, project.client?.name || "غير محدد", marketerName, projectUrl(project)]
+    [publicProjectCode(project), project.client?.name || "غير محدد", marketerName, projectUrl(project)]
 );
 
 const sendProjectCompletedPreview = (to, project, previewLink) => sendNamedTemplate(
@@ -91,7 +93,7 @@ const sendProjectCompletedPreview = (to, project, previewLink) => sendNamedTempl
     "WHATSAPP_TEMPLATE_PROJECT_COMPLETED_PREVIEW",
     "project_completed_preview",
     ["project_id", "client_name", "panels_count", "preview_url"],
-    [project.projectCode || project._id, project.client?.name || "غير محدد", (project.panels || []).length, previewLink]
+    [publicProjectCode(project), project.client?.name || "غير محدد", (project.panels || []).length, previewLink]
 );
 
 const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
@@ -100,7 +102,7 @@ const sendExecutionPdfRequested = (to, project, panelName) => sendNamedTemplate(
     "WHATSAPP_TEMPLATE_EXECUTION_PDF_REQUESTED",
     "execution_pdf_requested",
     ["customer_name", "panel_name", "project_id", "project_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project.projectCode || project._id, projectUrl(project)],
+    [project.client?.name || "غير محدد", panelName || "غير محدد", publicProjectCode(project), projectUrl(project)],
     ["panel_name"],
     [panelName || "غير محدد"]
 );
@@ -111,7 +113,7 @@ const sendExecutionPdfCompleted = (to, project, panelName, previewLink) => sendN
     "WHATSAPP_TEMPLATE_EXECUTION_PDF_READY",
     "execution_pdf_ready",
     ["customer_name", "panel_name", "project_id", "execution_preview_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project.projectCode || project._id, previewLink || projectUrl(project)]
+    [project.client?.name || "غير محدد", panelName || "غير محدد", publicProjectCode(project), previewLink || projectUrl(project)]
 );
 
 const sendExecutionConfirmed = (to, project, panelName) => sendNamedTemplate(
@@ -120,18 +122,18 @@ const sendExecutionConfirmed = (to, project, panelName) => sendNamedTemplate(
     "WHATSAPP_TEMPLATE_EXECUTION_CONFIRMED",
     "execution_confirmed",
     ["customer_name", "panel_name", "project_id", "project_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project._id, projectUrl(project)],
+    [project.client?.name || "غير محدد", panelName || "غير محدد", publicProjectCode(project), projectUrl(project)],
     ["panel_name"],
     [panelName || "غير محدد"]
 );
 
-const sendPanelFilesReady = (to, project, panelName) => sendNamedTemplate(
+const sendPanelFilesReady = (to, project, panel) => sendNamedTemplate(
     to,
     project,
     "WHATSAPP_TEMPLATE_PANEL_FILES_READY",
     "panel_files_ready",
     ["customer_name", "panel_name", "project_id", "files_link"],
-    [project.client?.name || "غير محدد", panelName || "غير محدد", project._id, projectUrl(project)]
+    [project.client?.name || "غير محدد", panel?.panelName || "غير محدد", publicProjectCode(project), manufacturingArchiveUrl(project, panel)]
 );
 
 const sendProductionStageCheck = (to, project, panel, stageName, marketerName = "غير محدد", stageKey = "") => sendNamedTemplate(
@@ -140,7 +142,7 @@ const sendProductionStageCheck = (to, project, panel, stageName, marketerName = 
     "WHATSAPP_TEMPLATE_PRODUCTION_STAGE_CHECK",
     "production_stage_check",
     ["project_id", "client_name", "marketer_name", "panel_name", "stage_name"],
-    [project.projectCode || project._id, project.client?.name || "غير محدد", marketerName, panel?.panelName || "غير محدد", stageName],
+    [publicProjectCode(project), project.client?.name || "غير محدد", marketerName, panel?.panelName || "غير محدد", stageName],
     ["panel_name"],
     [panel?.panelName || "غير محدد"],
     { messageType: "production_stage_check", panelId: panel?._id || panel?.panelId, stageName, stageKey }

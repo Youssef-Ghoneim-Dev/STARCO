@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { HiOutlineArrowLeft, HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClipboardCopy, HiOutlineCloudDownload, HiOutlineCloudUpload, HiOutlineClock, HiOutlineColorSwatch, HiOutlineCube, HiOutlineDocumentText, HiOutlineEye, HiOutlineExclamationCircle, HiOutlineFolder, HiOutlineLightningBolt, HiOutlinePhotograph, HiOutlinePuzzle, HiOutlineUser, HiOutlineViewGrid, HiOutlineX } from "react-icons/hi";
 import { IoChevronDown } from "react-icons/io5";
 import toast from "react-hot-toast";
@@ -169,6 +169,7 @@ function ExecutionSelect({ value, options, placeholder, onChange }) {
 
 function ExecutionPdfWorkspace() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { project, setProject, activePanel, savingProject, beginEditing } = useProject();
   const [busy, setBusy] = useState(false);
@@ -188,6 +189,7 @@ function ExecutionPdfWorkspace() {
   const executionDesignSaveInFlightRef = useRef(false);
   const manufacturingInputRef = useRef(null);
   const manufacturingArchiveDownloadRef = useRef(false);
+  const automaticArchiveDownloadRef = useRef("");
   const panel = project.panels?.[activePanel];
   const executionPdfState = panel?.executionPdf;
   const workflow = useMemo(() => executionPdfState || { status: "notRequested", files: [] }, [executionPdfState]);
@@ -641,7 +643,7 @@ function ExecutionPdfWorkspace() {
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملف."); }
   };
 
-  const downloadAllManufacturingFiles = async () => {
+  const downloadAllManufacturingFiles = useCallback(async () => {
     if (manufacturingArchiveDownloadRef.current) return;
     manufacturingArchiveDownloadRef.current = true;
     setDownloadingManufacturingArchive(true);
@@ -662,7 +664,19 @@ function ExecutionPdfWorkspace() {
       manufacturingArchiveDownloadRef.current = false;
       setDownloadingManufacturingArchive(false);
     }
-  };
+  }, [panel?.panelName, panelRecordId, project._id]);
+
+  useEffect(() => {
+    if (searchParams.get("download") !== "manufacturing-zip" || !canDownloadManufacturing || !panelRecordId) return;
+    const downloadKey = `${project._id}:${panelRecordId}`;
+    if (automaticArchiveDownloadRef.current === downloadKey) return;
+    automaticArchiveDownloadRef.current = downloadKey;
+    downloadAllManufacturingFiles().finally(() => {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("download");
+      setSearchParams(nextParams, { replace: true });
+    });
+  }, [canDownloadManufacturing, downloadAllManufacturingFiles, panelRecordId, project._id, searchParams, setSearchParams]);
 
   const assignmentOptions = [
     { value: "page2", label: "المقاس والسمك" },
