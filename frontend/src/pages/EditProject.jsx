@@ -16,7 +16,11 @@ import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
 import PanelEditSummary from "../components/projects/PanelEditSummary";
 import { panelMarketingEditableStatuses } from "../utils/panelEditing";
-import { isProductionSupervisorRole, PRODUCTION_EXECUTION_REFERENCE_ROLES } from "../utils/roles";
+import {
+  isDrawingEngineerRole,
+  isProductionSupervisorRole,
+  PRODUCTION_EXECUTION_REFERENCE_ROLES,
+} from "../utils/roles";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -261,7 +265,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   const marketerCanEdit = project?.status === "draft" || marketingPanelEditing;
   const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
   const claimedByAnotherEngineer =
-    ["Engineer", "FullEngineer"].includes(user?.role) && project?.readOnlyForCurrentUser;
+    isDrawingEngineerRole(user?.role) && project?.readOnlyForCurrentUser;
   const editorReadOnly =
     readOnly || claimedByAnotherEngineer || !technicalCanEdit;
   const readOnlyMessage =
@@ -271,8 +275,9 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
+  const isDedicatedProductionRole = ["ProductionManager", "ProductionEngineer"].includes(user?.role);
   const canViewProductionReferences = PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
-  const canViewQuoteReference = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
+  const canViewQuoteReference = isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager";
 
   if (marketingPanelEditing) return <MarketingProjectEditor />;
   if (isMarketer) {
@@ -294,20 +299,20 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     );
   }
   if (isQuoteCompleted) {
-    if (["ProductionManager", "MarketingManager"].includes(user?.role))
+    if (isDedicatedProductionRole || user?.role === "MarketingManager")
       return (
         <>
-          {user.role === "ProductionManager" && (
+          {isDedicatedProductionRole && (
             <div className="project-read-only-notice" dir="rtl">
               لا يمكنك التعديل على هذا المشروع لأنه لم يصل إلى مرحلة التنفيذ
               بعد. بيانات طلب المندوب متاحة للعرض فقط.
             </div>
           )}
           <ProjectAuditSummary
-            showEngineer={user.role === "ProductionManager"}
+            showEngineer={isDedicatedProductionRole}
             showMarketer={user.role === "MarketingManager"}
           />
-          <ProjectPreviewLink />
+          {user.role === "MarketingManager" && <ProjectPreviewLink />}
           <PanelEditSummary panel={activePanel} />
           {user.role === "MarketingManager" && <ExecutionPdfWorkspace />}
           <PanelsTabs readOnly />
@@ -332,7 +337,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         <ProjectPreviewLink />
         <PanelEditSummary panel={activePanel} />
         {(user?.role === "OwnerManager" ||
-          (["Engineer", "FullEngineer"].includes(user?.role) && project?.source === "manual")) && (
+          (isDrawingEngineerRole(user?.role) && project?.source === "manual")) && (
           <ExecutionPdfWorkspace />
         )}
         <div className="whatsapp-project-tabs" dir="rtl">
@@ -478,15 +483,17 @@ function EditProject() {
     window.dispatchEvent(new CustomEvent("project:refresh", { detail: { projectId: id } }));
   }, [id, latestWorkflowNotificationId]);
   useEffect(() => {
-    if (user?.role !== "Engineer") return;
+    if (!isDrawingEngineerRole(user?.role)) return;
     const stopNotification = notifications.find((item) => !item.readAt && item.type === "panelMarketingEditStarted" && String(item.projectId) === String(id));
     if (!stopNotification) return;
     toast.error(stopNotification.title || "توقف عن العمل؛ المندوب يعدّل اللوحة الآن.", { duration: 7000 });
     navigate("/projects", { replace: true });
   }, [id, navigate, notifications, user?.role]);
   const isMarketer = user?.role === "Marketer";
-  const readOnly = !["OwnerManager", "Engineer", "Marketer"].includes(
-    user?.role,
+  const readOnly = !(
+    user?.role === "OwnerManager" ||
+    user?.role === "Marketer" ||
+    isDrawingEngineerRole(user?.role)
   );
 
   return (
@@ -516,12 +523,12 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [activePanel, panelId, project?.panels, setActivePanel]);
 
   useEffect(() => {
-    if (project?.status === "created" && ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role)) navigate(`/projects/${project._id}`, { replace: true });
+    if (project?.status === "created" && (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")) navigate(`/projects/${project._id}`, { replace: true });
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
   useEffect(() => {
-    if (user?.role !== "Engineer" || !panel?._id) return undefined;
+    if (!isDrawingEngineerRole(user?.role) || !panel?._id) return undefined;
     let active = true;
     const checkForMarketingEdit = async () => {
       try {
@@ -546,7 +553,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     };
   }, [navigate, panel?._id, panel?.panelId, project?._id, user?.role]);
   useEffect(() => {
-    if (["Engineer", "FullEngineer"].includes(user?.role) && panel?.marketingEditSession?.active) {
+    if (isDrawingEngineerRole(user?.role) && panel?.marketingEditSession?.active) {
       toast.error("المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.", { duration: 7000 });
       navigate("/projects", { replace: true });
     }
@@ -555,7 +562,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     if (
       !panel?._id ||
       panel.status !== "pendingPricing" ||
-      !["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role) ||
+      (!isDrawingEngineerRole(user?.role) && user?.role !== "OwnerManager") ||
       project.status !== "inProgress" ||
       locking
     )
@@ -586,7 +593,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     user?.role,
   ]);
 
-  if (project?.status === "created" && ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role)) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
+  if (project?.status === "created" && (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
   if (!panel)
     return (
       <div className="route-loading" dir="rtl">
