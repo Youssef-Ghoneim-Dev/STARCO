@@ -58,6 +58,32 @@
     min-width: 280px;
 }
 
+.projects-locked-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+    color: var(--text-light);
+    font-size: 12px;
+    cursor: default;
+}
+
+.projects-locked-status strong {
+    border-radius: 999px;
+    padding: 6px 11px;
+    color: #6d52bd;
+    background: #f0ebff;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+html[data-theme="dark"] .projects-locked-status strong {
+    color: #cbbaf8;
+    background: rgba(130, 94, 208, .2);
+}
+
 @media (min-width: 601px) and (max-width: 1300px) {
     .projects-header {
         flex-direction: column;
@@ -353,6 +379,12 @@
     width: 18px;
     height: 18px;
     color: #52778d;
+}
+
+.panel-index-card>.panel-unread-indicator {
+    top: 14px;
+    inset-inline-start: 14px;
+    border-color: var(--surface);
 }
 
 html[data-theme="dark"] .panel-index-card-icon {

@@ -319,6 +319,36 @@
     box-shadow: 0 0 0 4px rgba(61, 123, 152, .1);
 }
 
+.account-password-field {
+    position: relative;
+}
+
+.account-password-field input {
+    padding-right: 48px !important;
+}
+
+.account-password-field>button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    color: var(--primary);
+    background: var(--surface-soft);
+    font-size: 19px;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.account-password-field>button:hover {
+    color: #fff;
+    background: var(--primary);
+}
+
 .account-modal form .app-select {
     width: 100%;
 }

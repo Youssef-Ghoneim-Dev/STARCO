@@ -8,10 +8,14 @@ import ProjectsGrid from "../components/projects/ProjectsGrid";
 
 import { getProjects } from "../services/projectsAPI";
 import { matchesSearchText } from "../utils/textSearch";
+import { useAuth } from "../context/AuthContext";
+import { isProductionSupervisorRole } from "../utils/roles";
 
 import "../styles/projects.css";
 
 function Projects() {
+  const { user } = useAuth();
+  const supervisorOnly = isProductionSupervisorRole(user?.role);
   const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState([]);
 
@@ -33,7 +37,9 @@ function Projects() {
   }, []);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
-  useEffect(() => { setStatus((searchParams.get("statuses") || "").split(",").filter(Boolean)); }, [searchParams]);
+  useEffect(() => {
+    setStatus(supervisorOnly ? ["inProgress"] : (searchParams.get("statuses") || "").split(",").filter(Boolean));
+  }, [supervisorOnly, searchParams]);
 
   const filteredProjects = useMemo(() => {
     const statusPriority = {
@@ -61,7 +67,7 @@ function Projects() {
         (!query.trim() ||
           matchesSearchText(clientName, query) ||
           matchesSearchText(panelNames, query)) &&
-        (!status.length || status.includes(project.status))
+        (supervisorOnly ? project.status === "inProgress" : (!status.length || status.includes(project.status)))
       );
     }).sort((firstProject, secondProject) => {
       const statusDifference =
@@ -72,7 +78,7 @@ function Projects() {
 
       return new Date(secondProject.updatedAt || 0) - new Date(firstProject.updatedAt || 0);
     });
-  }, [projects, query, status]);
+  }, [projects, query, status, supervisorOnly]);
 
   return (
     <DashboardLayout notAllowed={true}>
@@ -83,6 +89,10 @@ function Projects() {
         onStatusChange={setStatus}
         onRefresh={fetchProjects}
         refreshing={loading}
+        title={supervisorOnly ? "المشاريع" : undefined}
+        subtitle={supervisorOnly ? "المشاريع الجارية التي تحتوي على لوحات في مرحلتك" : undefined}
+        searchPlaceholder={supervisorOnly ? "ابحث باسم المشروع..." : undefined}
+        lockedStatusLabel={supervisorOnly ? "قيد التنفيذ" : ""}
       />
 
       <ProjectsGrid

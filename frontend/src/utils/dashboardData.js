@@ -71,7 +71,7 @@ export const deliveryDate = (panel) => {
 };
 export const engineerDeadline = (panel) => {
   if (panel?.status !== "manufacturingFilesPending") return null;
-  const value = panel?.deliverySchedule?.deadlines?.manufacturingFilesDueAt;
+  const value = panel?.deliverySchedule?.currentStageDueAt || panel?.deliverySchedule?.deadlines?.manufacturingFilesDueAt;
   return validDate(value) ? new Date(value) : null;
 };
 export const daysLate = (panel, now = new Date()) => {

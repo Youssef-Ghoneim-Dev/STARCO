@@ -162,7 +162,7 @@ function CopperConfigurationEditor({ configuration, onChange, onSave, saving }) 
 
 function Configuration() {
   const { user } = useAuth();
-  const canManagePricing = ["OwnerManager", "Engineer"].includes(user?.role);
+  const canManagePricing = ["OwnerManager", "Engineer", "FullEngineer"].includes(user?.role);
   const canEditFormulas = user?.role === "OwnerManager";
   const canManageCopper = user?.role === "OwnerManager";
   const canManageTemplates = ["OwnerManager", "MarketingManager"].includes(user?.role);

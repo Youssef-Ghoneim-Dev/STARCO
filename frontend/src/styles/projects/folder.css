@@ -508,6 +508,19 @@
     }
 }
 
+.panel-unread-indicator {
+    position: absolute;
+    z-index: 3;
+    top: -5px;
+    inset-inline-start: -5px;
+    width: 15px;
+    height: 15px;
+    border: 3px solid var(--surface);
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, .18), 0 4px 12px rgba(185, 28, 28, .3);
+}
+
 @media (min-width: 701px) and (max-width: 1100px) {
     .dashboard-content.project-create-content {
         overflow-y: hidden;

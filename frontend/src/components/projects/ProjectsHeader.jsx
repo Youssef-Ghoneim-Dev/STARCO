@@ -11,7 +11,7 @@ const defaultStatuses = [
   { value: "completed", label: "Fully completed" },
 ];
 
-function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefresh, refreshing, title = "Projects", subtitle = "Manage all your projects in one place.", searchPlaceholder = "Search by project name...", statusOptions = defaultStatuses, showCreate = true, multipleStatus = true }) {
+function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefresh, refreshing, title = "Projects", subtitle = "Manage all your projects in one place.", searchPlaceholder = "Search by project name...", statusOptions = defaultStatuses, showCreate = true, multipleStatus = true, lockedStatusLabel = "" }) {
   const { user } = useAuth();
   return (
     <div className="projects-header">
@@ -28,7 +28,9 @@ function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefres
         </label>
         <div className="projects-filter">
           <FiFilter />
-          <StyledSelect value={status} onChange={onStatusChange} options={statusOptions} direction="ltr" multiple={multipleStatus} menuMatchParent />
+          {lockedStatusLabel
+            ? <div className="projects-locked-status" aria-label={`الحالة ثابتة على ${lockedStatusLabel}`}><span>الحالة ثابتة</span><strong>{lockedStatusLabel}</strong></div>
+            : <StyledSelect value={status} onChange={onStatusChange} options={statusOptions} direction="ltr" multiple={multipleStatus} menuMatchParent />}
         </div>
         {showCreate && user?.role === "Marketer" && <NavLink to="/new-project" className="new-project-link">
           <button className="new-project-btn"><FiPlus />New Project</button>

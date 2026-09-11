@@ -6,6 +6,7 @@ const users = require("../models/users");
 const createZipArchive = require("../utils/createZipArchive");
 const { createInternalNotifications } = require("../services/internalNotifications");
 const { addEgyptWorkingDays, subtractEgyptWorkingDays, isEgyptNonWorkingDate } = require("../utils/egyptWorkingDays");
+const { currentProductionStageDueAt } = require("../utils/productionStageSchedule");
 const {
     DRAWING_ENGINEER_ROLES,
     PRODUCTION_CONTROL_ROLES,
@@ -142,7 +143,7 @@ const publicPanel = (panel, useMarketingDraft = false) => {
         main: { optionKey: marketerCopper.mainKey || "" },
         branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) }))
     };
-    return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: useMarketingDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
+    return { ...safeObject, ...object.marketerData, ...object.pricing, copper, thickness: useMarketingDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: object._id, deliverySchedule: { ...(object.deliverySchedule || {}), currentStageDueAt: currentProductionStageDueAt(object) }, executionPdf: { ...(object.executionPdf || {}), status: executionStatus }, manufacturing: { ...(object.manufacturing || {}), status: manufacturingStatus, currentStage: activeStage?.key || "", productionStages: stageRows, productionHistory } };
 };
 const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false) => {
     const result = publicPanel(panel, useMarketingDraft);
@@ -150,12 +151,12 @@ const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false)
         const allowedStageKeys = new Set((SUPERVISOR_STAGE_BY_ROLE[viewer.role] || []).map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
         return {
             _id: result._id,
+            panelId: result._id,
             projectId: result.projectId,
             panelCode: result.panelCode,
             sequence: result.sequence,
             panelName: result.panelName,
             status: result.status,
-            assignedEngineer: result.assignedEngineer,
             deliverySchedule: result.deliverySchedule,
             executionPdf: { status: result.executionPdf?.status, readyAt: result.executionPdf?.readyAt },
             manufacturing: {
@@ -165,9 +166,17 @@ const publicPanelForViewer = (panel, project, viewer, useMarketingDraft = false)
                 engineerNotes: viewer.role === "LaserSupervisor" ? (result.manufacturing?.engineerNotes || "") : "",
                 productionNotes: result.manufacturing?.productionNotes || "",
                 productionStages: (result.manufacturing?.productionStages || []).filter((stage) => allowedStageKeys.has(stage.key)),
-                productionHistory: (result.manufacturing?.productionHistory || []).filter((entry) => allowedStageKeys.has(entry.stageKey)),
+                productionHistory: (result.manufacturing?.productionHistory || [])
+                    .filter((entry) => allowedStageKeys.has(entry.stageKey))
+                    .map((entry) => ({
+                        action: entry.action,
+                        stageKey: entry.stageKey,
+                        reason: entry.reason,
+                        details: entry.details,
+                        notes: entry.notes,
+                        createdAt: entry.createdAt,
+                    })),
             },
-            createdAt: result.createdAt,
             updatedAt: result.updatedAt,
         };
     }
@@ -224,13 +233,28 @@ const projectResponse = async (project, viewer = null) => {
         String(engineer._id),
         { _id: engineer._id, name: engineer.name }
     ]));
+    const responsePanels = projectPanels.map((panel) => isProductionSupervisor(viewer)
+        ? publicPanelForViewer(panel, object, viewer)
+        : {
+            ...publicPanel(panel),
+            assignedEngineer: engineerMap.get(String(panel.engineerId)) || null
+        });
+    if (isProductionSupervisor(viewer)) {
+        return {
+            _id: object._id,
+            projectCode: object.projectCode,
+            status: object.status,
+            client: { name: object.client?.name || "" },
+            panels: responsePanels,
+            panelIds: projectPanels.map((panel) => panel._id),
+            panelCount: projectPanels.length,
+            updatedAt: object.updatedAt,
+        };
+    }
     return {
         ...object,
         quotePreviewUrl: object.clientPreviewToken ? `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${object.clientPreviewToken}` : "",
-        panels: projectPanels.map((panel) => ({
-            ...publicPanel(panel),
-            assignedEngineer: engineerMap.get(String(panel.engineerId)) || null
-        }))
+        panels: responsePanels
     };
 };
 

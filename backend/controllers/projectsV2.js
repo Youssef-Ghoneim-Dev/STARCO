@@ -10,6 +10,7 @@ const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendNewProjectAssigned, sendProjectCompletedPreview } = require("../services/projectWhatsappNotifications");
 const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
 const { createInternalNotifications } = require("../services/internalNotifications");
+const { currentProductionStageDueAt } = require("../utils/productionStageSchedule");
 const {
     DRAWING_ENGINEER_ROLES,
     PRODUCTION_CONTROL_ROLES,
@@ -70,7 +71,7 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const pricingCopper = value.pricing?.copper || {};
         const marketerCopper = value.marketerData?.copperDetails || {};
         const copper = Object.keys(pricingCopper).length ? pricingCopper : { enabled: Boolean(value.marketerData?.hasCopper), main: { optionKey: marketerCopper.mainKey || "" }, branches: (Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : []).map((group, index) => ({ branchId: group.id || `marketer-branch-${index}`, branchGroupId: group.id || `marketer-branch-${index}`, optionKey: group.optionKey || "", direction: "one", barCount: 1, quantity: Math.max(1, Number(group.count || group.quantity) || 1) })) };
-        const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: viewerOwnsPanelDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
+        const withEngineer = { ...safeValue, ...(value.marketerData || {}), ...(value.pricing || {}), copper, thickness: viewerOwnsPanelDraft && marketerThickness.length ? marketerThickness : pricingThickness.length ? pricingThickness : marketerThickness, panelId: value._id, assignedEngineer: engineerMap.get(String(panel.engineerId)) || null, deliverySchedule: { ...(value.deliverySchedule || {}), currentStageDueAt: currentProductionStageDueAt(value) }, executionPdf: { ...(value.executionPdf || {}), status: executionStatus }, manufacturing: { ...(value.manufacturing || {}), status: manufacturingStatus, currentStage: productionStages.find((stage) => stage.status === "active")?.key || "", productionStages, productionHistory } };
         if (isMarketer(viewer) && !object.previewGeneratedAt && value.status === "quoteCompleted" && !viewerOwnsPanelDraft) {
             const hidden = {
                 ...withEngineer,
@@ -88,13 +89,13 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         const allowedStageKeys = new Set((SUPERVISOR_STAGE_BY_ROLE[viewer.role] || []).map((status) => ["manufacturingFilesReady", "pendingLaserDownload"].includes(status) ? "awaitingLaserDownload" : status));
         return {
             _id: value._id,
+            panelId: value._id,
             projectId: value.projectId,
             panelCode: value.panelCode,
             sequence: value.sequence,
             panelName: value.panelName,
             status: value.status,
-            assignedEngineer: withEngineer.assignedEngineer,
-            deliverySchedule: value.deliverySchedule,
+            deliverySchedule: withEngineer.deliverySchedule,
             executionPdf: { status: executionStatus, readyAt: value.executionPdf?.readyAt },
             manufacturing: {
                 status: manufacturingStatus,
@@ -103,9 +104,17 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
                 engineerNotes: viewer.role === "LaserSupervisor" ? (value.manufacturing?.engineerNotes || "") : "",
                 productionNotes: value.manufacturing?.productionNotes || "",
                 productionStages: productionStages.filter((stage) => allowedStageKeys.has(stage.key)),
-                productionHistory: productionHistory.filter((entry) => allowedStageKeys.has(entry.stageKey)),
+                productionHistory: productionHistory
+                    .filter((entry) => allowedStageKeys.has(entry.stageKey))
+                    .map((entry) => ({
+                        action: entry.action,
+                        stageKey: entry.stageKey,
+                        reason: entry.reason,
+                        details: entry.details,
+                        notes: entry.notes,
+                        createdAt: entry.createdAt,
+                    })),
             },
-            createdAt: value.createdAt,
             updatedAt: value.updatedAt,
         };
     });
@@ -127,7 +136,6 @@ const hydrate = async (project, includeDeleted = false, viewer = null) => {
         panels: response.panels,
         panelIds: response.panelIds,
         panelCount: response.panelCount,
-        createdAt: response.createdAt,
         updatedAt: response.updatedAt,
     };
 };
@@ -158,6 +166,7 @@ const buildSimilarityReview = async (client) => {
 const getProjects = async (req, res, next) => { try {
     const condition = { isDeleted: false };
     if (isMarketer(req.user)) condition.marketingId = req.user._id;
+    else if (isProductionSupervisor(req.user)) condition.status = "inProgress";
     else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
     let result = await projects.find(condition);
     if (isProductionRestrictedViewer(req.user)) {
@@ -171,6 +180,7 @@ const getProject = async (req, res, next) => { try {
     const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
     if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
     if (!canSeeProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذا المشروع." });
+    if (isProductionSupervisor(req.user) && project.status !== "inProgress") return res.status(403).json({ status: "error", message: "مشرف المرحلة يمكنه عرض المشاريع قيد التنفيذ فقط." });
     if (isProductionRestrictedViewer(req.user)) {
         const visiblePanel = await panels.findOne({ projectId: project._id, isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
         if (!visiblePanel) return res.status(403).json({ status: "error", message: "لا توجد لوحة في مرحلة الإنتاج المتاحة لهذا الحساب." });

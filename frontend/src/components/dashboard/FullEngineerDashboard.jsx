@@ -10,10 +10,9 @@ function FullEngineerDashboard(props) {
       <button type="button" className={workspace === "production" ? "active" : ""} onClick={() => setWorkspace("production")}>متابعة الإنتاج</button>
     </nav>
     {workspace === "drawing"
-      ? <EngineerDashboard {...props} title="Full Engineer — الرسم والتسعير" />
-      : <ProductionManagerDashboard {...props} role="FullEngineer" title="Full Engineer — متابعة الإنتاج" />}
+      ? <EngineerDashboard {...props} title="المهندس الشامل — الرسم والتسعير" />
+      : <ProductionManagerDashboard {...props} role="FullEngineer" title="المهندس الشامل — متابعة الإنتاج" />}
   </div>;
 }
 
 export default FullEngineerDashboard;
-

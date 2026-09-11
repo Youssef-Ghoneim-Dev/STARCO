@@ -16,6 +16,7 @@ import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
 import PanelEditSummary from "../components/projects/PanelEditSummary";
 import { panelMarketingEditableStatuses } from "../utils/panelEditing";
+import { isProductionSupervisorRole } from "../utils/roles";
 import "../styles/ProjectEditor.css";
 
 function QuoteEditor({
@@ -269,6 +270,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       : readOnly && user?.role !== "MarketingManager"
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
+  const isProductionSupervisor = isProductionSupervisorRole(user?.role);
   const canViewQuoteReference = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
 
   if (marketingPanelEditing) return <MarketingProjectEditor />;
@@ -371,7 +373,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         <ProjectPreviewLink />
         <ExecutionPdfWorkspace />
         <PanelEditSummary panel={activePanel} />
-        <details className="quote-reference-details">
+        {!isProductionSupervisor && <details className="quote-reference-details">
           <summary>
             {isWhatsappProject
               ? canViewQuoteReference
@@ -390,7 +392,7 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
           ) : (
             <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
           )}
-        </details>
+        </details>}
       </>
     );
   if (!isWhatsappProject)
@@ -454,7 +456,13 @@ function EditProject() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications } = useNotifications();
+  const { notifications, readProject } = useNotifications();
+  const hasUnreadProjectNotification = notifications.some((item) =>
+    !item.readAt && String(item.projectId) === String(id)
+  );
+  useEffect(() => {
+    if (id) readProject(id);
+  }, [hasUnreadProjectNotification, id, readProject]);
   const latestWorkflowNotification = notifications.find((item) => String(item.projectId) === String(id));
   const latestWorkflowNotificationId = latestWorkflowNotification?._id;
   useEffect(() => {

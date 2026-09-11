@@ -232,8 +232,9 @@ function ExecutionPdfWorkspace() {
   const deliveryScheduleAvailable = deliveryScheduleStatuses.has(panel?.status);
   const canRequestDeliverySchedule = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["none", "pending"].includes(deliverySchedule.status || "none");
   const canRespondDeliverySchedule = ["ProductionManager", "ProductionEngineer", "FullEngineer", "OwnerManager"].includes(user?.role) && deliveryScheduleAvailable && ["pending", "rejected"].includes(deliverySchedule.status);
-  const executionDesignStorageKey = project?._id && panel?.panelId
-    ? `starco:execution-pdf-draft:${project._id}:${panel.panelId}:${workflow.requestedAt || "initial"}`
+  const panelRecordId = panel?._id || panel?.panelId;
+  const executionDesignStorageKey = project?._id && panelRecordId
+    ? `starco:execution-pdf-draft:${project._id}:${panelRecordId}:${workflow.requestedAt || "initial"}`
     : "";
   const withProjectMetadata = (nextProject, updatedByName = project.lastUpdatedByName) => ({
     ...nextProject,
@@ -248,13 +249,13 @@ function ExecutionPdfWorkspace() {
     setStageDecision("");
     setDelayReason("");
     setDelayDetails("");
-  }, [panel?.panelId, manufacturing.engineerNotes, manufacturing.notes, manufacturing.productionNotes, manufacturing.currentStage]);
+  }, [panelRecordId, manufacturing.engineerNotes, manufacturing.notes, manufacturing.productionNotes, manufacturing.currentStage]);
 
   useEffect(() => {
     setRequestedDeliveryDate(dateInputValue(deliverySchedule.requestedDate) || minimumDeliveryDateValue());
     setReplacementDeliveryDate(dateInputValue(deliverySchedule.approvedDate) || minimumDeliveryDateValue());
     setDeliveryResponseNote(deliverySchedule.responseNote || "");
-  }, [panel?.panelId, deliverySchedule.requestedDate, deliverySchedule.approvedDate, deliverySchedule.responseNote]);
+  }, [panelRecordId, deliverySchedule.requestedDate, deliverySchedule.approvedDate, deliverySchedule.responseNote]);
 
   useEffect(() => () => {
     window.clearTimeout(stageSavedTimerRef.current);
@@ -262,7 +263,7 @@ function ExecutionPdfWorkspace() {
   }, []);
 
   useEffect(() => {
-    const designKey = `${panel?.panelId || ""}:${workflow.status || ""}:${workflow.requestedAt || ""}`;
+    const designKey = `${panelRecordId || ""}:${workflow.status || ""}:${workflow.requestedAt || ""}`;
     if (loadedExecutionDesignKey.current === designKey) return;
     loadedExecutionDesignKey.current = designKey;
     setSelectedSteelThickness(workflow.steelThickness || "");
@@ -280,7 +281,7 @@ function ExecutionPdfWorkspace() {
     latestExecutionDesignRef.current = JSON.stringify(nextDesign);
     setExecutionDesign(nextDesign);
     setExecutionDesignSaveState(restoredDesign ? "pending" : workflow?.design && Object.keys(workflow.design).length ? "saved" : "idle");
-  }, [executionDesignStorageKey, panel, workflow]);
+  }, [executionDesignStorageKey, panel, panelRecordId, workflow]);
 
   useEffect(() => {
     if (!executionDesignStorageKey || workflow.status !== "requested" || !canPreparePdf) return undefined;
@@ -302,7 +303,7 @@ function ExecutionPdfWorkspace() {
       let saveCompleted = false;
       setExecutionDesignSaveState("saving");
       try {
-        await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+        await saveExecutionPdfDesign(project._id, panelRecordId, executionDesign);
         saveCompleted = true;
         lastSavedExecutionDesignRef.current = serialized;
         if (latestExecutionDesignRef.current === serialized) {
@@ -324,7 +325,7 @@ function ExecutionPdfWorkspace() {
       }
     }, EXECUTION_DESIGN_AUTOSAVE_DELAY);
     return () => window.clearTimeout(timer);
-  }, [canPreparePdf, executionDesign, executionDesignRetry, executionDesignStorageKey, panel?.panelId, project?._id, workflow.status]);
+  }, [canPreparePdf, executionDesign, executionDesignRetry, executionDesignStorageKey, panelRecordId, project?._id, workflow.status]);
 
   const productionStages = useMemo(() => {
     const currentKey = productionStageDefinitions.some((stage) => stage.key === manufacturing.currentStage)
@@ -376,7 +377,7 @@ function ExecutionPdfWorkspace() {
     setBusy(true);
     try {
       if (!selectedSteelThickness) return toast.error("اختر سمك الصاج الذي أكده العميل أولًا.");
-      const { data } = await requestExecutionPdf(project._id, panel.panelId, { steelThickness: Number(selectedSteelThickness) });
+      const { data } = await requestExecutionPdf(project._id, panelRecordId, { steelThickness: Number(selectedSteelThickness) });
       setProject({
         ...data.project,
         marketingRepresentative: project.marketingRepresentative || data.project.marketingRepresentative,
@@ -399,7 +400,7 @@ function ExecutionPdfWorkspace() {
     try {
       let latestProject = project;
       for (const file of filesToUpload) {
-        const { data } = await uploadExecutionPdfFile(project._id, panel.panelId, file, purpose);
+        const { data } = await uploadExecutionPdfFile(project._id, panelRecordId, file, purpose);
         latestProject = data.project;
       }
       setProject(latestProject);
@@ -416,7 +417,7 @@ function ExecutionPdfWorkspace() {
     const loadPreviews = async () => {
       const entries = await Promise.all(executionImageFiles.map(async (file) => {
         try {
-          const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
+          const { data } = await getExecutionPdfFile(project._id, panelRecordId, file._id);
           const url = URL.createObjectURL(data);
           urls.push(url);
           return [String(file._id), url];
@@ -426,7 +427,7 @@ function ExecutionPdfWorkspace() {
     };
     loadPreviews();
     return () => { active = false; urls.forEach((url) => URL.revokeObjectURL(url)); };
-  }, [executionImageFiles, project._id, panel.panelId]);
+  }, [executionImageFiles, project._id, panelRecordId]);
 
   const isImageAssigned = (fileId, destination) => {
     const id = String(fileId);
@@ -473,7 +474,7 @@ function ExecutionPdfWorkspace() {
       for (const fileId of assignedIds) {
         const file = executionImageFiles.find((item) => String(item._id) === fileId);
         if (!file) throw new Error("تعذر العثور على إحدى الصور المختارة. أعد اختيار الصور وحاول مرة أخرى.");
-        const { data } = await getExecutionPdfFile(project._id, panel.panelId, file._id);
+        const { data } = await getExecutionPdfFile(project._id, panelRecordId, file._id);
         const url = URL.createObjectURL(data);
         generationUrls.push(url);
         images[fileId] = url;
@@ -489,7 +490,7 @@ function ExecutionPdfWorkspace() {
     if (validationError) return toast.error(validationError);
     setGeneratingExecution(true);
     try {
-      await saveExecutionPdfDesign(project._id, panel.panelId, executionDesign);
+      await saveExecutionPdfDesign(project._id, panelRecordId, executionDesign);
       const savedDesign = JSON.stringify(executionDesign);
       lastSavedExecutionDesignRef.current = savedDesign;
       latestExecutionDesignRef.current = savedDesign;
@@ -498,7 +499,7 @@ function ExecutionPdfWorkspace() {
       // Generate once locally to verify the persisted design. The resulting
       // PDF is intentionally not uploaded; it is rebuilt on demand.
       await buildExecutionPdf(executionDesign);
-      const { data: finishData } = await finishExecutionPdf(project._id, panel.panelId);
+      const { data: finishData } = await finishExecutionPdf(project._id, panelRecordId);
       setProject(withProjectMetadata(finishData.project, user?.name || project.lastUpdatedByName));
       toast.success("تم إنشاء PDF التنفيذ وإرساله للمراجعة بنجاح.");
       if (finishData.notification?.includes("تعذر")) toast.error(finishData.notification);
@@ -541,7 +542,7 @@ function ExecutionPdfWorkspace() {
   const removeExecutionFile = async (file) => {
     setBusy(true);
     try {
-      const { data } = await deleteExecutionPdfFile(project._id, panel.panelId, file._id);
+      const { data } = await deleteExecutionPdfFile(project._id, panelRecordId, file._id);
       setProject(withProjectMetadata(data.project));
       const removedId = String(file._id);
       setExecutionDesign((current) => ({
@@ -561,7 +562,7 @@ function ExecutionPdfWorkspace() {
   const skip = async () => {
     setBusy(true);
     try {
-      const { data } = await skipExecutionPdf(project._id, panel.panelId);
+      const { data } = await skipExecutionPdf(project._id, panelRecordId);
       setProject(data.project);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تخطي المرحلة."); }
     finally { setBusy(false); }
@@ -570,7 +571,7 @@ function ExecutionPdfWorkspace() {
   const confirmExecution = async () => {
     setBusy(true);
     try {
-      const { data } = await confirmProjectExecution(project._id, panel.panelId);
+      const { data } = await confirmProjectExecution(project._id, panelRecordId);
       setProject(data.project);
       if (data.notification?.includes("تعذر")) toast.error(data.notification);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تأكيد التنفيذ."); }
@@ -583,7 +584,7 @@ function ExecutionPdfWorkspace() {
     if (isEgyptNonWorkingDate(requestedDeliveryDate)) return toast.error("لا يمكن اختيار يوم الجمعة أو عطلة رسمية موعدًا للتسليم.");
     setBusy(true);
     try {
-      const { data } = await requestPanelDeliverySchedule(project._id, panel.panelId, requestedDeliveryDate);
+      const { data } = await requestPanelDeliverySchedule(project._id, panelRecordId, requestedDeliveryDate);
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       toast.success(data.message || "تم إرسال الموعد لمدير التنفيذ.");
     } catch (error) { toast.error(error.response?.data?.message || "تعذر إرسال الموعد."); }
@@ -595,7 +596,7 @@ function ExecutionPdfWorkspace() {
     if (decision === "rejected" && isEgyptNonWorkingDate(replacementDeliveryDate)) return toast.error("لا يمكن اعتماد يوم الجمعة أو عطلة رسمية موعدًا بديلًا.");
     setBusy(true);
     try {
-      const { data } = await respondPanelDeliverySchedule(project._id, panel.panelId, decision, deliveryResponseNote, decision === "rejected" ? replacementDeliveryDate : "");
+      const { data } = await respondPanelDeliverySchedule(project._id, panelRecordId, decision, deliveryResponseNote, decision === "rejected" ? replacementDeliveryDate : "");
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       toast.success(data.message || "تم حفظ قرار الموعد.");
       setShowReplacementDeliveryDialog(false);
@@ -615,7 +616,7 @@ function ExecutionPdfWorkspace() {
     try {
       let latestProject = project;
       for (const file of selected) {
-        const { data } = await uploadManufacturingFile(project._id, panel.panelId, file);
+        const { data } = await uploadManufacturingFile(project._id, panelRecordId, file);
         latestProject = data.project;
       }
       setProject(latestProject);
@@ -626,7 +627,7 @@ function ExecutionPdfWorkspace() {
   const finishManufacturing = async () => {
     setFinishingManufacturing(true);
     try {
-      const { data } = await finishManufacturingFiles(project._id, panel.panelId, engineerFileNotes);
+      const { data } = await finishManufacturingFiles(project._id, panelRecordId, engineerFileNotes);
       setProject(withProjectMetadata(data.project, user?.name || project.lastUpdatedByName));
       if (data.notification?.includes("تعذر")) toast.error(data.notification);
     } catch (error) { toast.error(error.response?.data?.message || "تعذر إتمام ملفات التصنيع."); }
@@ -635,7 +636,7 @@ function ExecutionPdfWorkspace() {
 
   const downloadManufacturingFile = async (file) => {
     try {
-      const { data } = await getManufacturingFile(project._id, panel.panelId, file._id);
+      const { data } = await getManufacturingFile(project._id, panelRecordId, file._id);
       saveBlob(data, file.fileName || "manufacturing-file");
     } catch (error) { toast.error(error.response?.data?.message || "تعذر تنزيل الملف."); }
   };
@@ -645,7 +646,7 @@ function ExecutionPdfWorkspace() {
     manufacturingArchiveDownloadRef.current = true;
     setDownloadingManufacturingArchive(true);
     try {
-      const { data } = await getManufacturingArchive(project._id, panel.panelId);
+      const { data } = await getManufacturingArchive(project._id, panelRecordId);
       const downloadDate = new Date();
       const formattedDate = [
         String(downloadDate.getDate()).padStart(2, "0"),
@@ -685,7 +686,7 @@ function ExecutionPdfWorkspace() {
     setBusy(true);
     try {
       const { data } = await updateManufacturingStage(project._id, {
-        panelId: panel.panelId,
+        panelId: panelRecordId,
         stageKey: activeProductionStage?.key || manufacturing.currentStage,
         action: stageDecision || "notes",
         reason: delayReason,
@@ -780,13 +781,13 @@ function ExecutionPdfWorkspace() {
         <div>
           <h2><bdi dir={getPanelNameDirection(panel.panelName)}>{panel.panelName}</bdi> - مشروع {project.client?.name || "غير محدد"}</h2>
           <button type="button" onClick={copyId} className="production-code-copy" title="نسخ رقم اللوحة"><HiOutlineClipboardCopy /><bdi dir="ltr">{panelReferenceCode}</bdi></button>
-          <p>العميل: {project.client?.name || "غير محدد"}<i />المهندس: {assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</p>
+          <p>العميل: {project.client?.name || "غير محدد"}{!isProductionSupervisor && <><i />المهندس: {assignedEngineer?.name || "غير محدد"}<i />تاريخ إنشاء المشروع: {formatProjectDate(project.createdAt)}</>}</p>
         </div>
       </div>
       <div className={`production-project-facts ${canManageProductionStages ? "" : "compact"}`}>
-        <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{lastProductionUpdater}</b></div>
+        {!isProductionSupervisor && <div><span><HiOutlineUser /> آخر تحديث بواسطة</span><b>{lastProductionUpdater}</b></div>}
         <div><span><HiOutlineClock /> تاريخ آخر تحديث</span><b>{formatProjectDate(lastProductionUpdateAt, true)}</b></div>
-        {isProductionSupervisor && activeProductionStage && <div><span><HiOutlineCalendar /> الموعد النهائي للمرحلة</span><b>{formatProjectDate(deliverySchedule.deadlines?.[activeProductionStage.key === "awaitingLaserDownload" ? "pendingLaserDownload" : activeProductionStage.key] || deliverySchedule.approvedDate, true)}</b></div>}
+        {isProductionSupervisor && activeProductionStage && <div><span><HiOutlineCalendar /> موعد متابعة المرحلة</span><b>{formatProjectDate(deliverySchedule.currentStageDueAt || deliverySchedule.deadlines?.[activeProductionStage.key === "awaitingLaserDownload" ? "pendingLaserDownload" : activeProductionStage.key] || deliverySchedule.approvedDate, true)}</b></div>}
         {canManageProductionStages && <><div><span><HiOutlinePuzzle /> مرحلة المشروع</span><b className="production-phase-badge">{activeProductionStage?.title || "مكتمل"}</b></div>
         <div><span>الحالة الحالية</span><b className="production-state-badge">في الإنتاج</b></div></>}
       </div>
@@ -951,7 +952,7 @@ function ExecutionPdfWorkspace() {
     {workflow.status === "ready" && <>
       <ExecutionStatusCard tone="success" icon={<HiOutlineCheckCircle />} title="ملف التنفيذ جاهز للمراجعة" description="راجع الملف، ثم اختر تعديل اللوحة أو تأكيد التنفيذ." />
       {canReviewPdf && <div className="execution-review-actions">
-        <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel._id || panel.panelId, options)} className="request-changes-btn" label="تعديل اللوحة" />
+        <PanelEditAction panel={panel} onStart={(options) => beginEditing(panelRecordId, options)} className="request-changes-btn" label="تعديل اللوحة" />
         <button type="button" className="confirm-execution-btn" onClick={confirmExecution} disabled={busy}>تأكيد التنفيذ</button>
       </div>}
     </>}
