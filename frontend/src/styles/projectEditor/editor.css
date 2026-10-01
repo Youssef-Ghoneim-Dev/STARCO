@@ -4,6 +4,126 @@
     gap: 24px;
 }
 
+.engineer-assignment-guard {
+    min-height: calc(100vh - 190px);
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+}
+
+.engineer-assignment-guard-card {
+    position: relative;
+    width: min(100%, 620px);
+    overflow: hidden;
+    padding: 42px;
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: 0 22px 55px color-mix(in srgb, var(--text) 12%, transparent);
+    text-align: center;
+}
+
+.engineer-assignment-guard-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary), var(--production-warning-text), var(--primary));
+}
+
+.engineer-assignment-guard-icon {
+    width: 82px;
+    height: 82px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.engineer-assignment-guard-icon svg { width: 42px; height: 42px; }
+
+.engineer-assignment-guard-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 13px;
+    border-radius: 999px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+    font-weight: 800;
+}
+
+.engineer-assignment-guard-card h1 {
+    margin: 18px 0 10px;
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+}
+
+.engineer-assignment-guard-card p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 1.05rem;
+    line-height: 1.9;
+}
+
+.engineer-assignment-guard-card p strong { color: var(--text); }
+
+.engineer-assignment-guard-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 24px 0 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-muted);
+    text-align: start;
+}
+
+.engineer-assignment-guard-panel span { color: var(--text-light); font-weight: 700; }
+.engineer-assignment-guard-panel bdi { font-weight: 900; overflow-wrap: anywhere; }
+
+.engineer-assignment-guard-card small {
+    display: block;
+    color: var(--text-light);
+    line-height: 1.7;
+}
+
+.engineer-assignment-guard-card button {
+    width: 100%;
+    min-height: 54px;
+    margin-top: 25px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 0;
+    border-radius: 14px;
+    color: var(--primary-contrast);
+    background: var(--primary);
+    font: inherit;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+
+.engineer-assignment-guard-card button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.07);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+@media (max-width: 600px) {
+    .engineer-assignment-guard { min-height: calc(100vh - 170px); padding: 20px 0; }
+    .engineer-assignment-guard-card { padding: 30px 18px 22px; border-radius: 22px; }
+    .engineer-assignment-guard-icon { width: 68px; height: 68px; border-radius: 20px; }
+    .engineer-assignment-guard-icon svg { width: 34px; height: 34px; }
+}
+
 .project-editor-card {
     background: var(--surface);
     border-radius: 20px;

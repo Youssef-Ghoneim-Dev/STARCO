@@ -42,6 +42,21 @@ function PdfPage({ pdfDocument, pageNumber, title }) {
 
 const executionReadyStatuses = new Set(["ready", "confirmed"]);
 const panelKey = (panel) => String(panel?.panelId || panel?._id || "");
+const executionLoadErrorMessage = async (error) => {
+  const payload = error?.response?.data;
+  if (payload instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await payload.text());
+      if (parsed?.message) return parsed.message;
+    } catch {
+      // The response was not a JSON error body.
+    }
+  }
+  if (payload?.message) return payload.message;
+  if (error?.response?.status === 503) return "تعذر الوصول إلى ملفات PDF التنفيذ مؤقتًا. يرجى إعادة ربط Google Drive من الإعدادات ثم المحاولة مرة أخرى.";
+  if (error?.response?.status === 404) return "أحد ملفات PDF التنفيذ غير موجود في مساحة التخزين.";
+  return error?.message || "تعذر تجهيز PDF التنفيذ.";
+};
 
 function ClientProjectPreview() {
   const { id, previewKey } = useParams();
@@ -52,43 +67,42 @@ function ClientProjectPreview() {
   const [activeDocument, setActiveDocument] = useState("quote");
   const [selectedPanelId, setSelectedPanelId] = useState("");
   const [executionNotice, setExecutionNotice] = useState("");
-  const [state, setState] = useState({ loading: true, executionLoading: false, error: "" });
+  const [state, setState] = useState({ loading: true, executionLoading: false, error: "", executionError: "" });
   const documentsRef = useRef({ quote: null, executions: {} });
   const executionLoadKeyRef = useRef("");
   const executionNoticeTimerRef = useRef(null);
   const key = previewKey || searchParams.get("key") || "";
-  const executionPanels = useMemo(() => (project?.panels || []).filter((panel) => (
+  const allPanels = useMemo(() => project?.panels || [], [project]);
+  const executionPanels = useMemo(() => allPanels.filter((panel) => (
     executionReadyStatuses.has(panel.executionPdf?.status)
     && !panel.executionPdf?.skipped
     && panel.executionPdf?.design?.assignments?.page2
-  )), [project]);
-  const selectedPanel = executionPanels.find((panel) => panelKey(panel) === String(selectedPanelId)) || executionPanels[0];
+  )), [allPanels]);
+  const selectedPanel = allPanels.find((panel) => panelKey(panel) === String(selectedPanelId))
+    || executionPanels[0]
+    || allPanels[0];
   const selectedExecutionDocument = executionDocuments[panelKey(selectedPanel)] || null;
   const displayedDocument = activeDocument === "execution" ? selectedExecutionDocument : quoteDocument;
-  const executionWasRequested = (project?.panels || []).some((panel) => (
-    panel.executionPdf?.status && panel.executionPdf.status !== "notRequested"
-  ));
-  const executionWasSkipped = (project?.panels || []).some((panel) => panel.executionPdf?.skipped);
+  const selectedExecutionWasRequested = Boolean(
+    selectedPanel?.executionPdf?.status && selectedPanel.executionPdf.status !== "notRequested",
+  );
+  const selectedExecutionWasSkipped = Boolean(selectedPanel?.executionPdf?.skipped);
+  const selectedExecutionStatusMessage = selectedExecutionWasSkipped
+    ? "تم تخطي PDF التنفيذ لهذه اللوحة. يرجى التواصل مع مسؤول المشروع."
+    : !selectedExecutionWasRequested
+      ? "لم يتم طلب PDF التنفيذ لهذه اللوحة. يرجى طلبه من مسؤول المشروع."
+      : "ملف PDF التنفيذ لهذه اللوحة قيد التجهيز، وسيظهر هنا بمجرد اعتماده.";
   const showExecutionNotice = (message) => {
     window.clearTimeout(executionNoticeTimerRef.current);
     setExecutionNotice(message);
     executionNoticeTimerRef.current = window.setTimeout(() => setExecutionNotice(""), 3000);
   };
   const openExecutionDocument = () => {
-    if (!executionWasRequested) {
-      showExecutionNotice("لطلب ملف PDF التنفيذ، يرجى التواصل مع مسؤول المشروع.");
-      return;
-    }
-    if (executionWasSkipped && !executionPanels.length) {
-      showExecutionNotice("لا يتوفر ملف PDF تنفيذ لهذا المشروع. يرجى التواصل مع مسؤول المشروع.");
-      return;
-    }
-    if (!executionPanels.length || state.executionLoading || !selectedExecutionDocument) {
-      showExecutionNotice("ملف PDF التنفيذ قيد التجهيز، وسيظهر هنا بمجرد اعتماده.");
-      return;
-    }
     setExecutionNotice("");
     setActiveDocument("execution");
+    if (!selectedExecutionDocument) {
+      showExecutionNotice(state.executionError || selectedExecutionStatusMessage);
+    }
   };
 
   useEffect(() => {
@@ -96,7 +110,7 @@ function ClientProjectPreview() {
     let loadingTask;
     let loadedDocument;
     const loadPreview = async () => {
-      if (!key) return active && setState({ loading: false, executionLoading: false, error: "رابط المعاينة غير مكتمل." });
+        if (!key) return active && setState({ loading: false, executionLoading: false, error: "رابط المعاينة غير مكتمل.", executionError: "" });
       try {
         const response = previewKey ? await getClientProjectPreviewByKey(previewKey) : await getClientProjectPreview(id, key);
         const { project: loadedProject, copperConfiguration } = response.data || {};
@@ -107,10 +121,10 @@ function ClientProjectPreview() {
         documentsRef.current.quote = loadedDocument;
         setProject(loadedProject);
         setQuoteDocument(loadedDocument);
-        setState({ loading: false, executionLoading: false, error: "" });
+        setState({ loading: false, executionLoading: false, error: "", executionError: "" });
       } catch (error) {
         console.error("Could not open the public project preview:", error);
-        if (active) setState({ loading: false, executionLoading: false, error: error.response?.data?.message || "تعذر فتح معاينة المشروع." });
+        if (active) setState({ loading: false, executionLoading: false, error: error.response?.data?.message || "تعذر فتح معاينة المشروع.", executionError: "" });
       }
     };
     loadPreview();
@@ -118,8 +132,8 @@ function ClientProjectPreview() {
   }, [id, key, previewKey]);
 
   useEffect(() => {
-    if (executionPanels.length && !selectedPanelId) setSelectedPanelId(panelKey(executionPanels[0]));
-  }, [executionPanels, selectedPanelId]);
+    if (!selectedPanelId) setSelectedPanelId(panelKey(executionPanels[0] || allPanels[0]));
+  }, [allPanels, executionPanels, selectedPanelId]);
 
   useEffect(() => {
     if (!key || !executionPanels.length) return undefined;
@@ -127,11 +141,11 @@ function ClientProjectPreview() {
     if (executionLoadKeyRef.current === loadKey) return undefined;
     executionLoadKeyRef.current = loadKey;
     let active = true;
-    setState((current) => ({ ...current, executionLoading: true, error: "" }));
+    setState((current) => ({ ...current, executionLoading: true, executionError: "" }));
 
     const preloadExecutionPdfs = async () => {
       try {
-        const loadedEntries = await Promise.all(executionPanels.map(async (panel) => {
+        const results = await Promise.allSettled(executionPanels.map(async (panel) => {
           const design = panel.executionPdf.design;
           const assignments = design.assignments || {};
           const fileIds = [...new Set([assignments.page2, assignments.page3, assignments.page4, ...(assignments.gallery || [])].filter(Boolean).map(String))];
@@ -150,12 +164,21 @@ function ClientProjectPreview() {
             objectUrls.forEach((url) => URL.revokeObjectURL(url));
           }
         }));
+        const loadedEntries = results
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value);
         const loadedDocuments = Object.fromEntries(loadedEntries);
         if (!active) return Object.values(loadedDocuments).forEach(safeDestroyPdf);
         documentsRef.current.executions = loadedDocuments;
         setExecutionDocuments(loadedDocuments);
+        const firstLoadedPanelId = loadedEntries[0]?.[0] || "";
+        if (firstLoadedPanelId) setSelectedPanelId((current) => current || firstLoadedPanelId);
+        const firstFailure = results.find((result) => result.status === "rejected");
+        const executionError = firstFailure ? await executionLoadErrorMessage(firstFailure.reason) : "";
+        setState((current) => ({ ...current, executionError }));
       } catch (error) {
-        if (active) setState((current) => ({ ...current, error: error.response?.data?.message || error.message || "تعذر تجهيز PDF التنفيذ." }));
+        const executionError = await executionLoadErrorMessage(error);
+        if (active) setState((current) => ({ ...current, executionError }));
       } finally {
         if (active) setState((current) => ({ ...current, executionLoading: false }));
       }
@@ -180,19 +203,22 @@ function ClientProjectPreview() {
     </header>
     <section className="client-preview-document-controls" aria-label="اختيار المستند">
       <button type="button" className={activeDocument === "quote" ? "active" : ""} onClick={() => { setActiveDocument("quote"); setExecutionNotice(""); }}><strong>رؤية عرض السعر</strong><span>المستند الأساسي للمشروع</span></button>
-      <button type="button" className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`} onClick={openExecutionDocument} aria-disabled={!selectedExecutionDocument}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : executionWasRequested ? "قيد التجهيز" : "لم يتم طلبه بعد"}</span></button>
-      {activeDocument === "execution" && executionPanels.length > 1 && <section className="client-execution-panel-switcher" aria-label="لوحات PDF التنفيذ">
+      <button type="button" className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`} onClick={openExecutionDocument} aria-disabled={!allPanels.length}><strong>{state.executionLoading ? "جاري تجهيز PDF التنفيذ…" : "رؤية PDF التنفيذ"}</strong><span>{selectedExecutionDocument ? "جاهز للعرض الفوري" : state.executionError ? "تعذر تحميله مؤقتًا" : selectedExecutionWasSkipped ? "تم تخطيه لهذه اللوحة" : selectedExecutionWasRequested ? "قيد التجهيز لهذه اللوحة" : "لم يتم طلبه لهذه اللوحة"}</span></button>
+      {activeDocument === "execution" && allPanels.length > 1 && <section className="client-execution-panel-switcher" aria-label="لوحات PDF التنفيذ">
         <header>
           <div><strong>لوحات التنفيذ</strong><span>اختر اللوحة لعرض ملفها فورًا</span></div>
-          <bdi dir="ltr">{Math.max(1, executionPanels.findIndex((panel) => panelKey(panel) === String(selectedPanelId)) + 1)} / {executionPanels.length}</bdi>
+          <bdi dir="ltr">{Math.max(1, allPanels.findIndex((panel) => panelKey(panel) === String(selectedPanelId)) + 1)} / {allPanels.length}</bdi>
         </header>
         <div className="client-execution-panel-track">
-          {executionPanels.map((panel, index) => {
+          {allPanels.map((panel, index) => {
             const id = panelKey(panel);
             const selected = id === String(selectedPanelId);
-            return <button type="button" key={id} className={selected ? "is-active" : ""} onClick={() => setSelectedPanelId(id)} aria-pressed={selected}>
+            const documentReady = Boolean(executionDocuments[id]);
+            const requested = Boolean(panel.executionPdf?.status && panel.executionPdf.status !== "notRequested");
+            const statusText = documentReady ? "جاهز" : panel.executionPdf?.skipped ? "تم التخطي" : requested ? "قيد التجهيز" : "لم يتم الطلب";
+            return <button type="button" key={id} className={`${selected ? "is-active" : ""}${documentReady ? " is-ready" : " is-unavailable"}`} onClick={() => { setSelectedPanelId(id); setExecutionNotice(""); }} aria-pressed={selected}>
               <span className="client-execution-panel-number">{String(index + 1).padStart(2, "0")}</span>
-              <span className="client-execution-panel-name"><small>لوحة التنفيذ</small><bdi dir={getPanelNameDirection(panel.panelName || panel.panelCode)}>{panel.panelName || panel.panelCode}</bdi></span>
+              <span className="client-execution-panel-name"><small>{statusText}</small><bdi dir={getPanelNameDirection(panel.panelName || panel.panelCode)}>{panel.panelName || panel.panelCode}</bdi></span>
               <span className="client-execution-panel-indicator" aria-hidden="true" />
             </button>;
           })}
@@ -200,6 +226,7 @@ function ClientProjectPreview() {
       </section>}
     </section>
     {executionNotice && <p className="client-preview-document-notice" role="status">{executionNotice}</p>}
+    {activeDocument === "execution" && !selectedExecutionDocument && !executionNotice && <p className="client-preview-document-notice" role="status">{state.executionError || selectedExecutionStatusMessage}</p>}
     {state.error && <p className="client-preview-inline-error">{state.error}</p>}
     <section className="client-preview-pdf" aria-label={activeDocument === "execution" ? "معاينة PDF التنفيذ" : "معاينة ملف عرض السعر STARCO"}>
       {Array.from({ length: displayedDocument?.numPages || 0 }, (_, index) => <PdfPage key={`${activeDocument}-${selectedPanelId}-${index + 1}`} pdfDocument={displayedDocument} pageNumber={index + 1} title={activeDocument === "execution" ? "PDF التنفيذ" : "عرض السعر"} />)}

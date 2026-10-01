@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
+import { HiOutlineArrowLeft, HiOutlineLockClosed, HiOutlineUser } from "react-icons/hi";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import PanelsTabs from "../components/projects/projectEditor/PanelsTabs";
 import PanelEditor from "../components/projects/projectEditor/PanelEditor";
@@ -22,6 +23,16 @@ import {
   PRODUCTION_EXECUTION_REFERENCE_ROLES,
 } from "../utils/roles";
 import "../styles/ProjectEditor.css";
+
+const FULL_ENGINEER_PRODUCTION_ENTRY_STATUSES = new Set([
+  "manufacturingFilesReady",
+  "pendingLaserDownload",
+  "laser",
+  "manufacturing",
+  "painting",
+  "assembly",
+  "completed",
+]);
 
 function QuoteEditor({
   readOnly = false,
@@ -264,12 +275,27 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
   );
   const marketerCanEdit = project?.status === "draft" || marketingPanelEditing;
   const technicalCanEdit = ["pricing", "editing"].includes(activePanel?.status);
+  const currentUserId = user?._id || user?.id;
+  const assignedEngineerId =
+    activePanel?.engineerId?._id ||
+    activePanel?.engineerId ||
+    activePanel?.assignedEngineer?._id ||
+    activePanel?.assignedEngineer?.id;
+  const assignedEngineerName =
+    activePanel?.assignedEngineer?.name ||
+    project?.workingEngineerName ||
+    project?.assignedEngineer?.name ||
+    "مهندس آخر";
   const claimedByAnotherEngineer =
-    isDrawingEngineerRole(user?.role) && project?.readOnlyForCurrentUser;
+    isDrawingEngineerRole(user?.role) &&
+    Boolean(assignedEngineerId) &&
+    String(assignedEngineerId) !== String(currentUserId || "");
   const editorReadOnly =
     readOnly || claimedByAnotherEngineer || !technicalCanEdit;
   const readOnlyMessage =
-    !readOnly && isCompleted
+    claimedByAnotherEngineer
+      ? `المهندس المسؤول عن رسم وتسعير هذه اللوحة هو ${assignedEngineerName}، لذلك تظهر لك بياناتها الهندسية للمعاينة فقط.`
+      : !readOnly && isCompleted
       ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط."
       : readOnly && user?.role !== "MarketingManager"
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
@@ -321,13 +347,10 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
       );
     return (
       <>
-        {claimedByAnotherEngineer && (
+        {claimedByAnotherEngineer && project?.source !== "manual" && (
           <div className="project-read-only-notice" dir="rtl">
-            هذا المشروع يعمل عليه{" "}
-            {project.workingEngineerName ||
-              project.assignedEngineer?.name ||
-              "مهندس آخر"}
-            ، لذلك يظهر لك للمعاينة فقط.
+            المهندس المسؤول عن رسم وتسعير هذه اللوحة هو {assignedEngineerName}،
+            لذلك تظهر لك بياناتها الهندسية للمعاينة فقط.
           </div>
         )}
         <ProjectAuditSummary
@@ -420,13 +443,10 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     );
   return (
     <>
-      {claimedByAnotherEngineer && (
+      {claimedByAnotherEngineer && !isExecutionPhase && (
         <div className="project-read-only-notice" dir="rtl">
-          هذا المشروع يعمل عليه{" "}
-          {project.workingEngineerName ||
-            project.assignedEngineer?.name ||
-            "مهندس آخر"}
-          ، لذلك يظهر لك للمعاينة فقط.
+          المهندس المسؤول عن رسم وتسعير هذه اللوحة هو {assignedEngineerName}،
+          لذلك تظهر لك بياناتها الهندسية للمعاينة فقط.
         </div>
       )}
       {isExecutionPhase && <ExecutionPdfWorkspace />}
@@ -527,6 +547,21 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
+  const currentUserId = user?._id || user?.id;
+  const assignedEngineerId =
+    panel?.engineerId?._id ||
+    panel?.engineerId ||
+    panel?.assignedEngineer?._id ||
+    panel?.assignedEngineer?.id;
+  const assignedToAnotherDrawingEngineer =
+    isDrawingEngineerRole(user?.role) &&
+    Boolean(assignedEngineerId) &&
+    String(assignedEngineerId) !== String(currentUserId || "");
+  const canEnterAsProductionEngineer =
+    user?.role === "FullEngineer" &&
+    FULL_ENGINEER_PRODUCTION_ENTRY_STATUSES.has(panel?.status);
+  const blockForAnotherEngineer =
+    assignedToAnotherDrawingEngineer && !canEnterAsProductionEngineer;
   useEffect(() => {
     if (!isDrawingEngineerRole(user?.role) || !panel?._id) return undefined;
     let active = true;
@@ -561,6 +596,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   useEffect(() => {
     if (
       !panel?._id ||
+      blockForAnotherEngineer ||
       panel.status !== "pendingPricing" ||
       (!isDrawingEngineerRole(user?.role) && user?.role !== "OwnerManager") ||
       project.status !== "inProgress" ||
@@ -585,6 +621,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
       .finally(() => setLocking(false));
   }, [
     locking,
+    blockForAnotherEngineer,
     panel?._id,
     panel?.status,
     project._id,
@@ -599,6 +636,37 @@ function PanelRouteGate({ readOnly, isMarketer }) {
       <div className="route-loading" dir="rtl">
         اللوحة غير موجودة داخل هذا المشروع.
       </div>
+    );
+  if (blockForAnotherEngineer)
+    return (
+      <section className="engineer-assignment-guard" dir="rtl">
+        <div className="engineer-assignment-guard-card">
+          <div className="engineer-assignment-guard-icon">
+            <HiOutlineLockClosed />
+          </div>
+          <span className="engineer-assignment-guard-badge">
+            <HiOutlineUser /> تم إسناد اللوحة من قبل
+          </span>
+          <h1>هذه اللوحة يعمل عليها مهندس آخر</h1>
+          <p>
+            حفاظًا على شغل كل مهندس ومنع تداخل التعديلات، تم إسناد اللوحة إلى
+            <strong> {panel?.assignedEngineer?.name || "مهندس آخر"}</strong>.
+          </p>
+          <div className="engineer-assignment-guard-panel">
+            <span>اللوحة</span>
+            <bdi dir={getPanelNameDirection(panel?.panelName)}>
+              {panel?.panelName || "لوحة بدون اسم"}
+            </bdi>
+          </div>
+          <small>
+            يمكنك العمل على لوحة أخرى متاحة لك. وإذا تم تحويل هذه اللوحة إليك،
+            ستظهر أدوات العمل تلقائيًا.
+          </small>
+          <button type="button" onClick={() => navigate("/projects")}>
+            <HiOutlineArrowLeft /> الرجوع إلى المشاريع
+          </button>
+        </div>
+      </section>
     );
   return <ProjectWorkspace readOnly={readOnly} isMarketer={isMarketer} />;
 }

@@ -374,12 +374,17 @@ html[data-theme="dark"] .project-image::after {
 
         flex-direction: column;
 
-        align-items: flex-start;
+        align-items: stretch;
 
         gap: 18px;
 
     }
 
+    .projects-header>div:first-child {
+        width: 100%;
+        direction: rtl;
+        text-align: right;
+    }
 }
 
 @media (min-width: 651px) and (max-width: 1200px) {
@@ -410,6 +415,12 @@ html[data-theme="dark"] .project-image::after {
         gap: 5px;
         margin-bottom: 7px;
         font-size: 11px;
+    }
+
+    .projects-header>div:first-child {
+        width: 100%;
+        direction: rtl;
+        text-align: right;
     }
 }
 
@@ -483,4 +494,3 @@ html[data-theme="dark"] .project-status-badge.editing {
     }
 
 }
-

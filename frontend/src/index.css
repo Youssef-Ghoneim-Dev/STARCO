@@ -1,5 +1,6 @@
 :root {
     --primary: #355f7a;
+    --primary-contrast: #FFFFFF;
     --primary-hover: #1c5b84;
     --secondary: #0F172A;
     --acade: #a1cada;
@@ -42,6 +43,7 @@
 
 :root[data-theme="dark"] {
     --primary: #355f7a;
+    --primary-contrast: #FFFFFF;
     --primary-hover: #1c5b84;
     --secondary: #F3F8FB;
     --acade: #a1cada;

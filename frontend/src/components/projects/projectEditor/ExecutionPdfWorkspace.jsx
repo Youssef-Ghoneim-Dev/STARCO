@@ -27,6 +27,7 @@ import {
 } from "../../../services/projectsAPI";
 import { createExecutionPdf } from "../../../utils/executionPdf";
 import {
+  isDrawingEngineerRole,
   isProductionControlRole,
   isProductionSupervisorRole,
   PRODUCTION_EXECUTION_REFERENCE_ROLES,
@@ -218,14 +219,30 @@ function ExecutionPdfWorkspace() {
   const [executionDesignRetry, setExecutionDesignRetry] = useState(0);
   const [executionPreviews, setExecutionPreviews] = useState({});
   const [cropFileId, setCropFileId] = useState("");
+  const currentUserId = user?._id || user?.id;
+  const assignedEngineerId =
+    panel?.engineerId?._id ||
+    panel?.engineerId ||
+    panel?.assignedEngineer?._id ||
+    panel?.assignedEngineer?.id;
+  const isAssignedDrawingEngineer =
+    isDrawingEngineerRole(user?.role) &&
+    Boolean(assignedEngineerId) &&
+    String(assignedEngineerId) === String(currentUserId || "");
+  const drawingWorkAssignedElsewhere =
+    isDrawingEngineerRole(user?.role) &&
+    Boolean(assignedEngineerId) &&
+    !isAssignedDrawingEngineer;
+  const canManageDrawingWork =
+    user?.role === "OwnerManager" || isAssignedDrawingEngineer;
   const canIssueOrder = user?.role === "OwnerManager"
     || user?.role === "MarketingManager"
     || user?.role === "Marketer"
-    || (["Engineer", "FullEngineer"].includes(user?.role) && project?.source === "manual");
-  const canPreparePdf = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
+    || (isAssignedDrawingEngineer && project?.source === "manual");
+  const canPreparePdf = canManageDrawingWork;
   const canReviewPdf = ["Marketer", "MarketingManager", "OwnerManager"].includes(user?.role)
-    || (project?.source === "manual" && ["Engineer", "FullEngineer"].includes(user?.role));
-  const canPrepareManufacturing = ["Engineer", "FullEngineer", "OwnerManager"].includes(user?.role);
+    || (project?.source === "manual" && isAssignedDrawingEngineer);
+  const canPrepareManufacturing = canManageDrawingWork;
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
   const canViewExecutionPdfReference = PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
   const canDownloadManufacturing = ["Engineer", "FullEngineer", "OwnerManager", "ProductionManager", "ProductionEngineer", "LaserSupervisor"].includes(user?.role);
@@ -810,6 +827,15 @@ function ExecutionPdfWorkspace() {
     </section>
 
     {renderDeliverySchedule()}
+
+    {drawingWorkAssignedElsewhere && (
+      <ExecutionStatusCard
+        tone="info"
+        icon={<HiOutlineUser />}
+        title="هذه اللوحة مسندة إلى مهندس رسم آخر"
+        description={`المهندس المسؤول: ${panel?.assignedEngineer?.name || "مهندس آخر"}. يمكنك متابعة مهام الإنتاج عند وصول اللوحة إلى مرحلتها، لكن لا يمكنك تعديل الرسم أو PDF التنفيذ أو ملفات التصنيع.`}
+      />
+    )}
 
     {canViewExecutionPdfReference && !workflow.skipped && ["ready", "confirmed"].includes(workflow.status) && <section className="production-execution-reference">
       <div><HiOutlineDocumentText /><span><b>PDF التنفيذ</b><small>ملف التنفيذ فقط — لا يتضمن عرض السعر</small></span></div>

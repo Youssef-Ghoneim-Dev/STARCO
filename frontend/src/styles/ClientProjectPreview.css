@@ -97,13 +97,13 @@
     cursor: wait;
 }
 
-.client-preview-document-controls>button.unavailable {
+.client-preview-document-controls>button.unavailable:not(.active) {
     opacity: .62;
     cursor: not-allowed;
     background: var(--surface-muted);
 }
 
-.client-preview-document-controls>button.unavailable:hover {
+.client-preview-document-controls>button.unavailable:not(.active):hover {
     border-color: var(--border);
     transform: none;
     box-shadow: none;
@@ -221,6 +221,16 @@
     transform: translateY(-1px);
     border-color: #8fb6c9;
     box-shadow: 0 5px 14px rgb(39 92 119 / 8%);
+}
+
+.client-execution-panel-track>button.is-unavailable:not(.is-active) {
+    color: var(--text-light);
+    background: var(--surface-muted);
+}
+
+.client-execution-panel-track>button.is-ready:not(.is-active) .client-execution-panel-indicator {
+    border-color: #2aa969;
+    background: #2aa969;
 }
 
 .client-execution-panel-track>button.is-active {
