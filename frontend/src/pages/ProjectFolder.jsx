@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { showWhatsAppNotificationErrorToast } from "../utils/whatsappErrorToast";
 import {
   FiArrowRight,
   FiCheck,
@@ -405,11 +406,9 @@ export default function ProjectFolder() {
       if (operation.skipped) return;
       const { data } = operation.value;
       setProject(data.project);
-      if (data.notified === 0 || data.notificationFailed > 0)
-        toast.error(
-          data.notificationMessage ||
-            "تم إرسال المشروع، لكن لم تصل رسالة WhatsApp لأي مهندس.",
-        );
+      if (data.notificationFailed > 0) {
+        showWhatsAppNotificationErrorToast(data.notificationErrors);
+      }
     } catch (error) {
       showApiErrorToast(error, "تعذر إرسال المشروع.");
     } finally {
