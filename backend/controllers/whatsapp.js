@@ -421,27 +421,28 @@ const createProjectFromSession = async (session) => {
         panelIds: []
     });
     const createdPanels = await Promise.all(session.panels.map((panel, index) => {
-            const basePanel = JSON.parse(JSON.stringify(baseProject.panels[0]));
-            const typeConfig = (systemConfig.panelTypes || []).find((item) => item.key === panelTypeKeyFor(panel.panelType, systemConfig.panelTypes));
-            return panelsModel.create({
-                projectId: project._id,
-                panelCode: `${projectCode}-P${String(index + 1).padStart(2, "0")}`,
-                sequence: index + 1,
-                source: "whatsapp",
-                status: "pendingPricing",
-                marketerSaved: true,
-                marketingId: session.marketingRepId,
-                panelName: panel.panelName || `لوحة ${index + 1}`,
-                marketerData: {
-                    thickness: panel.requestedThicknesses,
-                    panelType: panel.panelType,
-                    panelTypeKey: typeConfig?.key || panelTypeKeyFor(panel.panelType, systemConfig.panelTypes),
-                    hasCopper: panel.hasCopper,
-                    additionalDetails: panel.details,
-                    controlInstallation: panel.controlInstallation || "",
-                    copperDetails: panel.copperDetails || {}
-                },
-                pricing: { parts: (typeConfig?.parts || []).map((part) => ({ name: part.name, quantity: part.quantity || 1 })), prices: {
+        const basePanel = JSON.parse(JSON.stringify(baseProject.panels[0]));
+        const typeConfig = (systemConfig.panelTypes || []).find((item) => item.key === panelTypeKeyFor(panel.panelType, systemConfig.panelTypes));
+        return panelsModel.create({
+            projectId: project._id,
+            panelCode: `${projectCode}-P${String(index + 1).padStart(2, "0")}`,
+            sequence: index + 1,
+            source: "whatsapp",
+            status: "pendingPricing",
+            marketerSaved: true,
+            marketingId: session.marketingRepId,
+            panelName: panel.panelName || `لوحة ${index + 1}`,
+            marketerData: {
+                thickness: panel.requestedThicknesses,
+                panelType: panel.panelType,
+                panelTypeKey: typeConfig?.key || panelTypeKeyFor(panel.panelType, systemConfig.panelTypes),
+                hasCopper: panel.hasCopper,
+                additionalDetails: panel.details,
+                controlInstallation: panel.controlInstallation || "",
+                copperDetails: panel.copperDetails || {}
+            },
+            pricing: {
+                parts: (typeConfig?.parts || []).map((part) => ({ name: part.name, quantity: part.quantity || 1 })), prices: {
                     ...basePanel.prices,
                     manufacturing: typeConfig?.prices?.manufacturing ?? configuredPanelPrices.manufacturing ?? basePanel.prices.manufacturing,
                     locks: typeConfig?.prices?.locks ?? configuredPanelPrices.locks ?? basePanel.prices.locks,
@@ -449,10 +450,11 @@ const createProjectFromSession = async (session) => {
                     transport: typeConfig?.prices?.transport ?? configuredPanelPrices.transport ?? basePanel.prices.transport,
                     screws: typeConfig?.prices?.screws ?? configuredPanelPrices.screws ?? basePanel.prices.screws,
                     stretch: typeConfig?.prices?.stretch ?? configuredPanelPrices.stretch ?? basePanel.prices.stretch
-                } },
-                statusHistory: [{ from: "draft", to: "pendingPricing", action: "whatsappProjectSubmitted", actorId: session.marketingRepId, actorRole: "Marketer" }]
-            });
-        }));
+                }
+            },
+            statusHistory: [{ from: "draft", to: "pendingPricing", action: "whatsappProjectSubmitted", actorId: session.marketingRepId, actorRole: "Marketer" }]
+        });
+    }));
     const saved = await projects.update({ _id: project._id }, { panelIds: createdPanels.map((panel) => panel._id) });
     saved.panels = createdPanels;
     return saved;
@@ -510,14 +512,18 @@ const attachMessagesToProject = async (session, project) => {
             status: "attached"
         });
         if (panelId && message.media?.storageFileId) {
-            await panelsModel.update({ _id: panelId, projectId: project._id }, { $addToSet: { attachments: {
-                storageFileId: message.media.storageFileId,
-                fileName: message.media.fileName || `whatsapp-${message._id}`,
-                mimeType: message.media.mimeType || "application/octet-stream",
-                fileSize: Number(message.media.fileSize || 0),
-                uploadedAt: message.media.uploadedAt || new Date(),
-                uploadedBy: session.marketingRepId
-            } } });
+            await panelsModel.update({ _id: panelId, projectId: project._id }, {
+                $addToSet: {
+                    attachments: {
+                        storageFileId: message.media.storageFileId,
+                        fileName: message.media.fileName || `whatsapp-${message._id}`,
+                        mimeType: message.media.mimeType || "application/octet-stream",
+                        fileSize: Number(message.media.fileSize || 0),
+                        uploadedAt: message.media.uploadedAt || new Date(),
+                        uploadedBy: session.marketingRepId
+                    }
+                }
+            });
         }
     }));
 };
@@ -690,8 +696,8 @@ const completeRequestedFinishIfReady = async (sessionId) => {
         const replies = session.mode === "media"
             ? ["تم حفظ الصور والتسجيلات في المشروع بنجاح. ارجع إلى صفحة المشروع في الموقع وستجدها مضافة."]
             : session.mode === "edit"
-            ? [projectUpdatedReply(result.project)]
-            : projectCreatedReply(result.project);
+                ? [projectUpdatedReply(result.project)]
+                : projectCreatedReply(result.project);
         for (const body of replies) {
             await sendSafeText(session.senderPhone, body);
         }
@@ -1079,13 +1085,17 @@ const handleIncomingMessage = async (message, value) => {
                     status: "stored"
                 });
                 await completeRequestedFinishIfReady(activeSession._id);
-            } catch (error) {
-                console.error("R2 media upload failed:", error.message);
+            } } catch (error) {
+                console.error("R2 media upload failed:", error);
+
                 await messages.updateByProviderMessageId(message.id, {
-                    "media.uploadError": error.message,
+                    "media.uploadError": error?.message || "Unknown storage error",
+                    "media.uploadErrorCode": error?.code || null,
                     status: "media_upload_failed"
                 });
+
                 const latestSession = await sessions.findById(activeSession._id);
+
                 if (latestSession?.finishRequestedByMessageId) {
                     await sendSafeText(
                         senderPhone,
@@ -1093,26 +1103,26 @@ const handleIncomingMessage = async (message, value) => {
                     );
                 }
             }
-        } else {
-            await messages.updateByProviderMessageId(message.id, { status: "attached" });
-        }
-        await sessions.updateById(activeSession._id, {
-            expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
-        });
-        return;
+    } else {
+        await messages.updateByProviderMessageId(message.id, { status: "attached" });
     }
+    await sessions.updateById(activeSession._id, {
+        expiresAt: new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000)
+    });
+    return;
+}
 
-    if (activeSession?.mode === "edit") {
-        await sendSafeText(
-            senderPhone,
-            "حدد رقم اللوحة أولًا برسالة مثل: رقم اللوحة: 1، ثم أرسل الصور أو التسجيلات الخاصة بها."
-        );
-        return;
-    }
+if (activeSession?.mode === "edit") {
+    await sendSafeText(
+        senderPhone,
+        "حدد رقم اللوحة أولًا برسالة مثل: رقم اللوحة: 1، ثم أرسل الصور أو التسجيلات الخاصة بها."
+    );
+    return;
+}
 
-    for (const body of await gettingStartedReplies()) {
-        await sendSafeText(senderPhone, body);
-    }
+for (const body of await gettingStartedReplies()) {
+    await sendSafeText(senderPhone, body);
+}
 };
 
 const receiveWebhook = async (req, res) => {

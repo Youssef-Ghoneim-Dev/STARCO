@@ -194,12 +194,6 @@ function MarketingProjectEditor() {
     else toast.error(result.message || "تعذر حفظ بيانات المشروع.");
   };
   const cancelEditing = async () => {
-    if (
-      !window.confirm(
-        "إنهاء التعديلات دون حفظ؟ سيتم تجاهل أي تغييرات وإرجاع بيانات اللوحة الأصلية.",
-      )
-    )
-      return;
     const result = await cancelMarketingEdits();
     if (!result.success) {
       if (result.error)
