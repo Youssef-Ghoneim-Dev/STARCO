@@ -1,5 +1,4 @@
 module.exports = (error, req, res, next) => {
-    // MongoDB duplicate key
     if (error?.code === 11000) {
         const duplicatedField = Object.keys(
             error.keyPattern || error.keyValue || {}
@@ -19,7 +18,7 @@ module.exports = (error, req, res, next) => {
 
     const statusCode = error?.statusCode || 500;
 
-    // Expected user errors
+    // Expected user-facing errors
     if (statusCode >= 400 && statusCode < 500) {
         return res.status(statusCode).json({
             status: "error",
@@ -27,10 +26,10 @@ module.exports = (error, req, res, next) => {
         });
     }
 
-    // Unexpected server / service errors
+    // Unexpected server / infrastructure errors
     console.error("Unhandled Server Error:", error);
 
-    return res.status(500).json({
+    return res.status(statusCode).json({
         status: "error",
         message: "حدث خطأ غير متوقع في الخادم.",
         errorDetails: {
@@ -39,6 +38,9 @@ module.exports = (error, req, res, next) => {
             endpoint: req.originalUrl,
             errorType: error?.name || "Error",
             errorCode: error?.code || null,
+
+            // مهم جدًا:
+            // هنا نرجع الخطأ الأصلي، وليس الرسالة العامة.
             backendMessage: error?.message || "Unknown server error"
         }
     });
