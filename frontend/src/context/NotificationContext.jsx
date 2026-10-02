@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAuth } from "./AuthContext";
 import {
   getNotifications,
@@ -22,28 +30,49 @@ export function NotificationProvider({ children }) {
   const { user, pending } = useAuth();
   const userId = String(user?.id || user?._id || "");
   const activeUserIdRef = useRef(userId);
+  const refreshSequenceRef = useRef(0);
+  const notificationRevisionRef = useRef(0);
+  const readAllInFlightRef = useRef(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [pushState, setPushState] = useState(() => typeof Notification === "undefined" ? "unsupported" : Notification.permission);
+  const [readAllPending, setReadAllPending] = useState(false);
+  const [pushState, setPushState] = useState(() =>
+    typeof Notification === "undefined"
+      ? "unsupported"
+      : Notification.permission,
+  );
 
-  const refresh = useCallback(async ({ quiet = false } = {}) => {
-    if (!userId || pending) return;
-    const requestedUserId = userId;
-    if (!quiet) setLoading(true);
-    try {
-      const { data } = await getNotifications(40);
-      if (activeUserIdRef.current !== requestedUserId) return;
-      setNotifications(data.notifications || []);
-      setUnreadCount(Number(data.unreadCount) || 0);
-    } catch {
-      // A notification refresh must never interrupt the main workflow.
-    } finally {
-      if (!quiet) setLoading(false);
-    }
-  }, [pending, userId]);
+  const refresh = useCallback(
+    async ({ quiet = false } = {}) => {
+      if (!userId || pending) return;
+      const requestedUserId = userId;
+      const requestId = ++refreshSequenceRef.current;
+      const requestedRevision = notificationRevisionRef.current;
+      if (!quiet) setLoading(true);
+      try {
+        const { data } = await getNotifications(40);
+        if (
+          activeUserIdRef.current !== requestedUserId ||
+          requestId !== refreshSequenceRef.current ||
+          requestedRevision !== notificationRevisionRef.current ||
+          readAllInFlightRef.current
+        )
+          return;
+        setNotifications(data.notifications || []);
+        setUnreadCount(Number(data.unreadCount) || 0);
+      } catch {
+        // A notification refresh must never interrupt the main workflow.
+      } finally {
+        if (!quiet) setLoading(false);
+      }
+    },
+    [pending, userId],
+  );
 
   useEffect(() => {
+    refreshSequenceRef.current += 1;
+    notificationRevisionRef.current += 1;
     activeUserIdRef.current = userId;
     setNotifications([]);
     setUnreadCount(0);
@@ -62,23 +91,36 @@ export function NotificationProvider({ children }) {
       if (document.visibilityState === "visible") refresh({ quiet: true });
     };
     const onServiceWorkerMessage = (event) => {
-      if (event.data?.type === "STARCO_NOTIFICATION_RECEIVED") refresh({ quiet: true });
+      if (event.data?.type === "STARCO_NOTIFICATION_RECEIVED")
+        refresh({ quiet: true });
     };
     window.addEventListener("notifications:refresh", onRefresh);
     window.addEventListener("focus", onRefresh);
     document.addEventListener("visibilitychange", onVisibilityChange);
-    navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
+    navigator.serviceWorker?.addEventListener(
+      "message",
+      onServiceWorkerMessage,
+    );
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("notifications:refresh", onRefresh);
       window.removeEventListener("focus", onRefresh);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
+      navigator.serviceWorker?.removeEventListener(
+        "message",
+        onServiceWorkerMessage,
+      );
     };
   }, [pending, refresh, userId]);
 
   useEffect(() => {
-    if (!user || pending || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    if (
+      !user ||
+      pending ||
+      typeof Notification === "undefined" ||
+      Notification.permission !== "granted"
+    )
+      return;
     navigator.serviceWorker?.ready
       .then(async (registration) => {
         const existing = await registration.pushManager.getSubscription();
@@ -88,15 +130,24 @@ export function NotificationProvider({ children }) {
   }, [pending, user]);
 
   const enablePush = useCallback(async () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    if (
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window) ||
+      !("Notification" in window)
+    ) {
       setPushState("unsupported");
       return { success: false, message: "هذا المتصفح لا يدعم إشعارات الجهاز." };
     }
     const permission = await Notification.requestPermission();
     setPushState(permission);
-    if (permission !== "granted") return { success: false, message: "لم يتم السماح بإشعارات الجهاز." };
+    if (permission !== "granted")
+      return { success: false, message: "لم يتم السماح بإشعارات الجهاز." };
     const { data } = await getPushConfig();
-    if (!data.enabled || !data.publicKey) return { success: false, message: "مفاتيح إشعارات الجهاز لم تُضبط في السيرفر بعد." };
+    if (!data.enabled || !data.publicKey)
+      return {
+        success: false,
+        message: "مفاتيح إشعارات الجهاز لم تُضبط في السيرفر بعد.",
+      };
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
@@ -111,35 +162,118 @@ export function NotificationProvider({ children }) {
   }, []);
 
   const readOne = useCallback(async (id) => {
-    setNotifications((current) => current.map((item) => item._id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item));
+    notificationRevisionRef.current += 1;
+    refreshSequenceRef.current += 1;
+    setNotifications((current) =>
+      current.map((item) =>
+        item._id === id
+          ? { ...item, readAt: item.readAt || new Date().toISOString() }
+          : item,
+      ),
+    );
     setUnreadCount((current) => Math.max(0, current - 1));
     await markNotificationRead(id);
   }, []);
 
   const readProject = useCallback(async (projectId) => {
     if (!projectId) return;
+    notificationRevisionRef.current += 1;
+    refreshSequenceRef.current += 1;
     setNotifications((current) => {
-      const unreadForProject = current.filter((item) => String(item.projectId) === String(projectId) && !item.readAt).length;
-      if (unreadForProject) setUnreadCount((count) => Math.max(0, count - unreadForProject));
-      return current.map((item) => String(item.projectId) === String(projectId) ? { ...item, readAt: item.readAt || new Date().toISOString() } : item);
+      const unreadForProject = current.filter(
+        (item) => String(item.projectId) === String(projectId) && !item.readAt,
+      ).length;
+      if (unreadForProject)
+        setUnreadCount((count) => Math.max(0, count - unreadForProject));
+      return current.map((item) =>
+        String(item.projectId) === String(projectId)
+          ? { ...item, readAt: item.readAt || new Date().toISOString() }
+          : item,
+      );
     });
-    try { await markProjectNotificationsRead(projectId); } catch { /* Retry on the next project visit. */ }
+    try {
+      await markProjectNotificationsRead(projectId);
+    } catch {
+      /* Retry on the next project visit. */
+    }
   }, []);
 
   const readAll = useCallback(async () => {
-    setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
+    if (readAllInFlightRef.current) return { skipped: true };
+    readAllInFlightRef.current = true;
+    setReadAllPending(true);
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+    notificationRevisionRef.current += 1;
+    refreshSequenceRef.current += 1;
+    const readAt = new Date().toISOString();
+    setNotifications((current) =>
+      current.map((item) => ({ ...item, readAt: item.readAt || readAt })),
+    );
     setUnreadCount(0);
-    await markAllNotificationsRead();
-  }, []);
+    let requestError = null;
+    try {
+      await markAllNotificationsRead();
+      notificationRevisionRef.current += 1;
+      refreshSequenceRef.current += 1;
+    } catch (error) {
+      requestError = error;
+      notificationRevisionRef.current += 1;
+      refreshSequenceRef.current += 1;
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
+    } finally {
+      readAllInFlightRef.current = false;
+      setReadAllPending(false);
+    }
+    if (requestError) {
+      await refresh({ quiet: true });
+      throw requestError;
+    }
+    return { success: true };
+  }, [notifications, refresh, unreadCount]);
 
   const resetForAccountSwitch = useCallback(() => {
+    refreshSequenceRef.current += 1;
+    notificationRevisionRef.current += 1;
     activeUserIdRef.current = "";
     setNotifications([]);
     setUnreadCount(0);
   }, []);
 
-  const value = useMemo(() => ({ notifications, unreadCount, loading, pushState, refresh, enablePush, readOne, readProject, readAll, resetForAccountSwitch }), [enablePush, loading, notifications, pushState, readAll, readOne, readProject, refresh, resetForAccountSwitch, unreadCount]);
-  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
+  const value = useMemo(
+    () => ({
+      notifications,
+      unreadCount,
+      loading,
+      readAllPending,
+      pushState,
+      refresh,
+      enablePush,
+      readOne,
+      readProject,
+      readAll,
+      resetForAccountSwitch,
+    }),
+    [
+      enablePush,
+      loading,
+      notifications,
+      pushState,
+      readAll,
+      readAllPending,
+      readOne,
+      readProject,
+      refresh,
+      resetForAccountSwitch,
+      unreadCount,
+    ],
+  );
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

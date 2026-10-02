@@ -8,50 +8,131 @@ import logo from "../../assets/images/logo.jpg";
 import { normalizeEgyptianPhone } from "../../utils/phoneNumber";
 import StyledSelect from "../common/StyledSelect";
 import { PUBLIC_REGISTRATION_ROLES, rolesToOptions } from "../../utils/roles";
+import { showApiErrorToast } from "../../utils/errorToast";
+import { useActivityAction } from "../common/activity/ActivityContext";
 
 function GoogleRegistrationCompletion() {
+  const runActivity = useActivityAction();
   const navigate = useNavigate();
   const { reloadProfile, setPending } = useAuth();
-  const credential = sessionStorage.getItem("starco_google_registration_credential");
+  const credential = sessionStorage.getItem(
+    "starco_google_registration_credential",
+  );
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [formData, setFormData] = useState({ phoneNumber: "", role: "" });
   const handleChange = (event) => {
     if (event.target.name === "phoneNumber") setPhoneError("");
-    setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
+    setFormData((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!credential) return navigate("/register", { replace: true });
-    if (!formData.phoneNumber || !formData.role) return toast.error("أدخل رقم الهاتف واختر الدور.");
+    if (!formData.phoneNumber || !formData.role)
+      return toast.error("أدخل رقم الهاتف واختر الدور.");
     const phoneNumber = normalizeEgyptianPhone(formData.phoneNumber);
-    if (!phoneNumber) return setPhoneError("Enter a valid Egyptian mobile number, such as 01012345678.");
+    if (!phoneNumber)
+      return setPhoneError(
+        "Enter a valid Egyptian mobile number, such as 01012345678.",
+      );
     setLoading(true);
     try {
-      const response = await googleRegister({ credential, ...formData, phoneNumber });
-      localStorage.setItem("token", response.headers["x-auth-token"]);
-      sessionStorage.removeItem("starco_google_registration_credential");
-      await reloadProfile();
-      setPending(response.data.status === "pending");
-      navigate("/dashboard");
-      if (!["pending", "whatsappPending"].includes(response.data.status)) toast.success("Account created successfully.");
+      const operation = await runActivity(
+        "complete-google-registration",
+        {
+          title: "إكمال التسجيل عبر Google",
+          message: "يتم إنشاء الحساب وتجهيز الجلسة...",
+          type: "save",
+          successMessage: "تم إنشاء الحساب.",
+          errorMessage: "تعذر إكمال التسجيل عبر Google.",
+        },
+        async () => {
+          const response = await googleRegister({
+            credential,
+            ...formData,
+            phoneNumber,
+          });
+          localStorage.setItem("token", response.headers["x-auth-token"]);
+          sessionStorage.removeItem("starco_google_registration_credential");
+          await reloadProfile();
+          setPending(response.data.status === "pending");
+          navigate("/dashboard");
+          return response;
+        },
+      );
+      if (operation.skipped) return;
+      if (
+        !operation.visible &&
+        !["pending", "whatsappPending"].includes(operation.value.data.status)
+      )
+        toast.success("Account created successfully.");
     } catch (error) {
-      const message = error?.response?.data?.message || "تعذر إكمال التسجيل عبر Google.";
+      const message =
+        error?.response?.data?.message || "تعذر إكمال التسجيل عبر Google.";
       if (/phone number|WhatsApp/.test(message)) setPhoneError(message);
-      else toast.error(message);
-    } finally { setLoading(false); }
+      else showApiErrorToast(error, "تعذر إكمال التسجيل عبر Google.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return <div className="auth-card google-completion-card">
-    <div className="auth-header"><img src={logo} alt="Starco" className="auth-logo" /><h1>Complete your account</h1><p>Add your phone number and role to complete registration.</p></div>
-    <form onSubmit={handleSubmit} className="auth-body" style={{ width: "100%" }}>
-      <div className="phone-input-field"><AuthInput label="WhatsApp number" type="tel" name="phoneNumber" placeholder="1012345678" value={formData.phoneNumber} onChange={handleChange} />{phoneError && <p className="field-error">{phoneError}</p>}</div>
-      <div className="input-group"><label>Role</label><div className="select-wrapper"><StyledSelect value={formData.role} placeholder="Choose your role" ariaLabel="Role" onChange={(value) => setFormData((current) => ({ ...current, role: value }))} options={rolesToOptions(PUBLIC_REGISTRATION_ROLES)} /></div></div>
-      <button className="auth-btn" type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
-    </form>
-    <button type="button" className="auth-text-btn" onClick={() => { sessionStorage.removeItem("starco_google_registration_credential"); navigate("/register"); }}>Back to registration</button>
-  </div>;
+  return (
+    <div className="auth-card google-completion-card">
+      <div className="auth-header">
+        <img src={logo} alt="Starco" className="auth-logo" />
+        <h1>Complete your account</h1>
+        <p>Add your phone number and role to complete registration.</p>
+      </div>
+      <form
+        onSubmit={handleSubmit}
+        className="auth-body"
+        style={{ width: "100%" }}
+      >
+        <div className="phone-input-field">
+          <AuthInput
+            label="WhatsApp number"
+            type="tel"
+            name="phoneNumber"
+            placeholder="1012345678"
+            value={formData.phoneNumber}
+            onChange={handleChange}
+          />
+          {phoneError && <p className="field-error">{phoneError}</p>}
+        </div>
+        <div className="input-group">
+          <label>Role</label>
+          <div className="select-wrapper">
+            <StyledSelect
+              value={formData.role}
+              placeholder="Choose your role"
+              ariaLabel="Role"
+              onChange={(value) =>
+                setFormData((current) => ({ ...current, role: value }))
+              }
+              options={rolesToOptions(PUBLIC_REGISTRATION_ROLES)}
+            />
+          </div>
+        </div>
+        <button className="auth-btn" type="submit" disabled={loading}>
+          {loading ? "Creating account..." : "Create account"}
+        </button>
+      </form>
+      <button
+        type="button"
+        className="auth-text-btn"
+        onClick={() => {
+          sessionStorage.removeItem("starco_google_registration_credential");
+          navigate("/register");
+        }}
+      >
+        Back to registration
+      </button>
+    </div>
+  );
 }
 
 export default GoogleRegistrationCompletion;

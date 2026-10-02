@@ -11,15 +11,20 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { getPanelNameDirection } from "../../utils/panelNameDirection";
 import { isProductionSupervisorRole } from "../../utils/roles";
+import { useActivityAction } from "../common/activity/ActivityContext";
 
 import { deleteProject } from "../../services/projectsAPI";
 import projectImage from "../../assets/images/1.svg";
+import { showApiErrorToast } from "../../utils/errorToast";
 
 const formatProjectDate = (dateValue) => {
   if (!dateValue) return "غير محدد";
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "غير محدد";
-  const hours = Math.max(0, Math.floor((Date.now() - date.getTime()) / 3_600_000));
+  const hours = Math.max(
+    0,
+    Math.floor((Date.now() - date.getTime()) / 3_600_000),
+  );
   const days = Math.floor(hours / 24);
 
   if (hours < 1) return "منذ أقل من ساعة";
@@ -27,7 +32,11 @@ const formatProjectDate = (dateValue) => {
   if (days <= 7) return `منذ ${days} يوم`;
 
   return new Intl.DateTimeFormat("ar-EG", {
-    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 };
 
@@ -44,23 +53,40 @@ const statusDetails = {
   quoteCompleted: { label: "عرض سعر مكتمل", className: "completed" },
   executionPdfRequested: { label: "مطلوب PDF تنفيذ", className: "pending" },
   executionPdfReady: { label: "PDF التنفيذ جاهز", className: "in-progress" },
-  manufacturingFilesPending: { label: "بانتظار ملفات التصنيع", className: "pending" },
-  manufacturingFilesReady: { label: "ملفات التصنيع جاهزة", className: "in-progress" },
-  laserFilesDownloaded: { label: "تم التنزيل إلى الليزر", className: "in-progress" },
+  manufacturingFilesPending: {
+    label: "بانتظار ملفات التصنيع",
+    className: "pending",
+  },
+  manufacturingFilesReady: {
+    label: "ملفات التصنيع جاهزة",
+    className: "in-progress",
+  },
+  laserFilesDownloaded: {
+    label: "تم التنزيل إلى الليزر",
+    className: "in-progress",
+  },
   executionOrdered: { label: "أمر تنفيذ", className: "in-progress" },
   completed: { label: "مكتمل نهائيًا", className: "completed" },
 };
 
-function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProjectId }) {
+function ProjectCard({
+  project,
+  setProjects,
+  deletingProjectId,
+  setDeletingProjectId,
+}) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
   const { notifications } = useNotifications();
+  const runActivity = useActivityAction();
   const firstPanelName = project.panels?.[0]?.panelName?.trim();
   const clientPrefix = project.client?.type === "company" ? "السادة" : "السيد";
   const projectStatus = statusDetails[project.status] || statusDetails.pending;
-  const projectNotification = notifications.find((notification) =>
-    !notification.readAt && String(notification.projectId) === String(project._id)
+  const projectNotification = notifications.find(
+    (notification) =>
+      !notification.readAt &&
+      String(notification.projectId) === String(project._id),
   );
   const attentionLabel = projectNotification?.title || "";
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -75,17 +101,32 @@ function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProje
     setConfirmDelete(false);
     setDeletingProjectId(project._id);
     try {
-      await deleteProject(project._id);
-      toast.success("تم نقل المشروع إلى سلة المحذوفات.");
+      const operation = await runActivity(
+        "delete-project",
+        {
+          title: "حذف المشروع",
+          message: "يتم نقل المشروع إلى سلة المحذوفات...",
+          type: "delete",
+          successMessage: "تم نقل المشروع إلى سلة المحذوفات.",
+          errorMessage: "تعذر حذف المشروع.",
+        },
+        () => deleteProject(project._id),
+      );
+      if (operation.skipped) return;
+      if (!operation.visible)
+        toast.success("تم نقل المشروع إلى سلة المحذوفات.");
       setProjects((prev) => prev.filter((item) => item._id !== project._id));
     } catch (error) {
-      toast.error(error.response?.data?.message || "تعذر حذف المشروع.");
+      showApiErrorToast(error, "تعذر حذف المشروع.");
     } finally {
       setDeletingProjectId("");
     }
   };
   return (
-    <div className={`project-card${deleting ? " is-deleting" : ""}`} onClick={deletionBusy ? undefined : handleOpen}>
+    <div
+      className={`project-card${deleting ? " is-deleting" : ""}`}
+      onClick={deletionBusy ? undefined : handleOpen}
+    >
       <div className="project-image">
         <img src={projectImage} alt="Project" />
 
@@ -93,16 +134,39 @@ function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProje
           {clientPrefix} / {project.client?.name}
         </div>
 
-        {(user?.role === "OwnerManager" || (user?.role === "Marketer" && project.status === "draft")) && <button type="button" className="delete-project-btn" aria-label="حذف المشروع" disabled={deletionBusy} onClick={(event) => { event.stopPropagation(); setConfirmDelete(true); }}>
-          <HiOutlineTrash />
-        </button>}
+        {(user?.role === "OwnerManager" ||
+          (user?.role === "Marketer" && project.status === "draft")) && (
+          <button
+            type="button"
+            className="delete-project-btn"
+            aria-label="حذف المشروع"
+            disabled={deletionBusy}
+            onClick={(event) => {
+              event.stopPropagation();
+              setConfirmDelete(true);
+            }}
+          >
+            <HiOutlineTrash />
+          </button>
+        )}
       </div>
 
       <div className="project-body">
         <div className="project-title-row">
           <h3 dir="auto">
             {project.client?.name}
-            {firstPanelName ? <> (<bdi dir={getPanelNameDirection(firstPanelName)}>{firstPanelName}</bdi>)</> : ""}
+            {firstPanelName ? (
+              <>
+                {" "}
+                (
+                <bdi dir={getPanelNameDirection(firstPanelName)}>
+                  {firstPanelName}
+                </bdi>
+                )
+              </>
+            ) : (
+              ""
+            )}
           </h3>
           <span className={`project-status-badge ${projectStatus.className}`}>
             {projectStatus.label}
@@ -116,30 +180,61 @@ function ProjectCard({ project, setProjects, deletingProjectId, setDeletingProje
           </div>
         )}
 
-        {!isProductionSupervisor && <div className="project-date">
-          <HiOutlineCalendar />
+        {!isProductionSupervisor && (
+          <div className="project-date">
+            <HiOutlineCalendar />
 
-          <span>
-            أُنشئ: {formatProjectDate(project.createdAt)}
-          </span>
-        </div>}
+            <span>أُنشئ: {formatProjectDate(project.createdAt)}</span>
+          </div>
+        )}
 
         <div className="project-date">
           <HiOutlineClock />
 
-          <span>
-            آخر تعديل: {formatProjectDate(project.updatedAt)}
-          </span>
+          <span>آخر تعديل: {formatProjectDate(project.updatedAt)}</span>
         </div>
       </div>
-      {deleting && <div className="project-card-delete-progress" role="status">جاري نقل المشروع إلى سلة المحذوفات...</div>}
-      {confirmDelete && createPortal(<div className="project-delete-modal-backdrop" dir="rtl" role="dialog" aria-modal="true" aria-labelledby={`delete-project-${project._id}`} onClick={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) setConfirmDelete(false); }}>
-        <div className="project-delete-dialog" dir="rtl" onClick={(event) => event.stopPropagation()}>
-          <h2 id={`delete-project-${project._id}`}>حذف المشروع؟</h2>
-          <p>سيُنقل مشروع <strong>{project.client?.name || "هذا العميل"}</strong> إلى سلة المحذوفات، ويمكن استعادته لاحقًا.</p>
-          <div><button type="button" onClick={() => setConfirmDelete(false)}>إلغاء</button><button type="button" className="danger" onClick={handleDelete}>نقل إلى السلة</button></div>
+      {deleting && (
+        <div className="project-card-delete-progress" role="status">
+          جاري نقل المشروع إلى سلة المحذوفات...
         </div>
-      </div>, document.body)}
+      )}
+      {confirmDelete &&
+        createPortal(
+          <div
+            className="project-delete-modal-backdrop"
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`delete-project-${project._id}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (event.target === event.currentTarget) setConfirmDelete(false);
+            }}
+          >
+            <div
+              className="project-delete-dialog"
+              dir="rtl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 id={`delete-project-${project._id}`}>حذف المشروع؟</h2>
+              <p>
+                سيُنقل مشروع{" "}
+                <strong>{project.client?.name || "هذا العميل"}</strong> إلى سلة
+                المحذوفات، ويمكن استعادته لاحقًا.
+              </p>
+              <div>
+                <button type="button" onClick={() => setConfirmDelete(false)}>
+                  إلغاء
+                </button>
+                <button type="button" className="danger" onClick={handleDelete}>
+                  نقل إلى السلة
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

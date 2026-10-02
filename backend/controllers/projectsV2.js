@@ -8,7 +8,7 @@ const clients = require("../models/clients");
 const systemConfiguration = require("../models/systemConfiguration");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { sendNewProjectAssigned, sendProjectCompletedPreview } = require("../services/projectWhatsappNotifications");
-const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
+const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/r2Storage");
 const { createInternalNotifications } = require("../services/internalNotifications");
 const { currentProductionStageDueAt } = require("../utils/productionStageSchedule");
 const {
@@ -187,243 +187,275 @@ const buildSimilarityReview = async (client) => {
     const candidates = existing.map((item) => ({ item, ...compareClientNames(enteredName, item.name) })).filter((entry) => entry.isCandidate).sort((a, b) => b.similarity - a.similarity).slice(0, 5).map(({ item, similarity }) => ({ clientId: item._id, name: item.name, type: item.type, profitPercentage: item.profitPercentage, similarity }));
     return { enteredName, resolved: candidates.length === 0, resolution: candidates.length ? "" : "new", candidates };
 };
-const getProjects = async (req, res, next) => { try {
-    const condition = { isDeleted: false };
-    if (isMarketer(req.user)) condition.marketingId = req.user._id;
-    else if (isProductionSupervisor(req.user)) condition.status = "inProgress";
-    else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
-    let result = await projects.find(condition);
-    if (isProductionRestrictedViewer(req.user)) {
-        const executionPanels = await panels.find({ isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
-        const ids = new Set(executionPanels.map((panel) => String(panel.projectId)));
-        result = result.filter((project) => ids.has(String(project._id)));
-    }
-    res.json(await Promise.all(result.map((project) => hydrate(project, false, req.user))));
-} catch (error) { next(error); } };
-const getProject = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
-    if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-    if (!canSeeProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذا المشروع." });
-    if (isProductionSupervisor(req.user) && project.status !== "inProgress") return res.status(403).json({ status: "error", message: "مشرف المرحلة يمكنه عرض المشاريع قيد التنفيذ فقط." });
-    if (isProductionRestrictedViewer(req.user)) {
-        const visiblePanel = await panels.findOne({ projectId: project._id, isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
-        if (!visiblePanel) return res.status(403).json({ status: "error", message: "لا توجد لوحة في مرحلة الإنتاج المتاحة لهذا الحساب." });
-    }
-    res.json(await hydrate(project, false, req.user));
-} catch (error) { next(error); } };
-const createProject = async (req, res, next) => { try {
-    if (!isMarketer(req.user)) return res.status(403).json({ status: "error", message: "إنشاء المشاريع متاح للمندوب فقط." });
-    const client = { id: req.body?.client?.id || null, name: String(req.body?.client?.name || "").trim(), type: req.body?.client?.type || "", profitPercentage: req.body?.client?.profitPercentage ?? null };
-    if (!client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
-    // The source is derived from the authenticated workflow, never from a
-    // client-controlled request field. WhatsApp creates its own projects in
-    // the webhook controller.
-    const source = "marketing";
-    const project = await projects.create({ projectCode: await nextProjectCode(), marketingId: req.user._id, client, clientNameReview: await buildSimilarityReview(client), source, status: "draft" });
-    res.status(201).json({ status: "ok", project: await hydrate(project, false, req.user) });
-} catch (error) { next(error); } };
-const updateProject = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
-    if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-    const marketerDraft = isMarketer(req.user) && sameId(project.marketingId, req.user._id) && project.status === "draft";
-    const manualEngineer = isEngineer(req.user) && project.source === "manual";
-    if (!marketerDraft && !isOwner(req.user) && !manualEngineer) return res.status(403).json({ status: "error", message: "المشروع غير مفتوح للتعديل." });
-    const update = {};
-    // The marketer chooses the client once in the creation dialog. Shared
-    // pricing data is completed through setup, while manual projects remain
-    // editable by their engineer.
-    if ((isOwner(req.user) || manualEngineer) && req.body.client) update.client = { ...project.client.toObject(), ...req.body.client };
-    if ((isOwner(req.user) || manualEngineer) && req.body.prices) update.prices = { ...project.prices.toObject(), ...req.body.prices };
-    const saved = await projects.update({ _id: project._id }, update);
-    res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
-} catch (error) { next(error); } };
-const acquireSetupLock = async (req, res, next) => { try {
-    if (!isEngineer(req.user) && !isOwner(req.user)) return res.status(403).json({ status: "error", message: "إعداد المشروع متاح للمهندس فقط." });
-    const now = new Date(); const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
-    const project = await projects.update({ _id: req.params.id, isDeleted: false, status: "created", $or: [{ "setupLock.userId": null }, { "setupLock.userId": req.user._id }, { "setupLock.expiresAt": { $lte: now } }] }, { setupLock: { userId: req.user._id, acquiredAt: now, expiresAt } });
-    if (!project) return res.status(409).json({ status: "error", message: "مهندس آخر يكمل بيانات المشروع حاليًا." });
-    res.json({ status: "ok", project: await hydrate(project, false, req.user), expiresAt });
-} catch (error) { next(error); } };
-const completeSetup = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false, status: "created" });
-    if (!project) return res.status(409).json({ status: "error", message: "المشروع ليس في مرحلة استكمال البيانات." });
-    if (!isOwner(req.user) && !sameId(project.setupLock?.userId, req.user._id)) return res.status(409).json({ status: "error", message: "يجب حجز إعداد المشروع أولًا." });
-    const client = { ...project.client.toObject(), ...req.body.client }; const prices = { ...project.prices.toObject(), ...req.body.prices };
-    const clientNameReview = { ...(project.clientNameReview || {}), ...(req.body.clientNameReview || {}) };
-    if (!client.name || !client.type || !Number(client.profitPercentage) || !Number(prices.sheetPrice) || !Number(prices.paintPrice)) return res.status(400).json({ status: "error", message: "أكمل نوع العميل ونسبة الربح وسعر الصاج والدهان." });
-    if (client.id) {
-        const existingClient = await clients.select_one({ _id: client.id });
-        if (!existingClient) return res.status(400).json({ status: "error", message: "سجل العميل المختار غير موجود." });
-        client.name = existingClient.name; client.type = existingClient.type; client.profitPercentage = existingClient.profitPercentage;
-        clientNameReview.resolved = true; clientNameReview.resolution = "existing";
-    } else {
-        if ((clientNameReview.candidates || []).length && (!clientNameReview.resolved || clientNameReview.resolution !== "new")) return res.status(409).json({ status: "error", message: "راجع الأسماء المتشابهة واختر سجلًا موجودًا أو أكد أنه عميل جديد." });
-        const createdClient = await clients.add_one({ name: client.name.trim(), type: client.type, profitPercentage: Number(client.profitPercentage) });
-        client.id = createdClient._id; clientNameReview.resolved = true; clientNameReview.resolution = "new";
-    }
-    const saved = await projects.update({ _id: project._id }, { client, clientNameReview, prices, status: "inProgress", setupLock: { userId: null, acquiredAt: null, expiresAt: null } });
-    res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
-} catch (error) { next(error); } };
-const submitProject = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false, status: "draft" });
-    if (!project || (!isOwner(req.user) && !sameId(project.marketingId, req.user._id))) return res.status(403).json({ status: "error", message: "لا يمكنك إرسال هذا المشروع." });
-    const list = await panels.find({ projectId: project._id, isDeleted: false });
-    if (!list.length) return res.status(400).json({ status: "error", message: "أضف لوحة واحفظها قبل إرسال المشروع." });
-    if (list.some((panel) => !panel.marketerSaved)) return res.status(400).json({ status: "error", message: "افتح كل لوحة واضغط حفظ اللوحة قبل إرسال المشروع للمهندسين." });
-    if (list.some((panel) => !marketerPanelIsComplete(panel))) return res.status(400).json({ status: "error", message: "توجد لوحة محفوظة ببيانات ناقصة. افتح كل لوحة وأكمل الحقول الإلزامية قبل الإرسال." });
-    await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
-    const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
-    await createInternalNotifications({
-        roles: [...DRAWING_ENGINEER_ROLES, "OwnerManager"],
-        excludeUserId: req.user._id,
-        project: saved,
-        type: "projectPendingPricing",
-        title: "مشروع جديد في انتظار التسعير",
-        body: `${saved.projectCode} — ${saved.client?.name || "عميل غير محدد"}`,
-        actor: req.user,
-    });
-    const recipients = await users.selectall({ role: { $in: [...DRAWING_ENGINEER_ROLES, "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
-    const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
-    const notifications = await Promise.allSettled(recipients.map((recipient) => sendNewProjectAssigned(recipient.phoneNumber, notificationProject, req.user.name || "غير محدد")));
-    const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);
-    if (acceptedIds.length) await new Promise((resolve) => setTimeout(resolve, 1800));
-    const deliveryRows = await Promise.all(acceptedIds.map((id) => whatsappMessages.findByProviderMessageId(id)));
-    const failedDeliveryRows = deliveryRows.filter((row) => row?.status === "failed");
-    const notificationFailed = failedDeliveryRows.length;
-    const notified = notifications.filter((item) => item.status === "fulfilled").length - notificationFailed;
-    const notificationMessage = !recipients.length
-        ? "لا يوجد مهندس أو Owner Manager معتمد لديه رقم WhatsApp مسجل."
-        : notificationFailed > 0
-            ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مستلم. سبب Meta: ${whatsappFailureReason(failedDeliveryRows[0])}`
-        : notified === 0
-            ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب."
-            : notified < recipients.length
-                ? `وصل القالب إلى ${notified} من أصل ${recipients.length} مستلم.`
-                : `تم إرسال قالب المشروع إلى ${notified} مستلم.`;
-    notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
-    res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, notificationErrors: failedDeliveryRows.map(whatsappFailureReason), project: await hydrate(saved, false, req.user) });
-} catch (error) { next(error); } };
-const regeneratePreview = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
-    if (!project || (!isOwner(req.user) && !isEngineer(req.user))) return res.status(403).json({ status: "error", message: "لا تملك صلاحية استخراج عرض السعر." });
-    const list = await panels.find({ projectId: project._id, isDeleted: false });
-    const allowed = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
-    if (!list.length || list.some((panel) => !allowed.includes(panel.status))) return res.status(409).json({ status: "error", message: "يجب إتمام تسعير جميع اللوحات المطلوبة أولًا." });
-    const token = project.clientPreviewToken || crypto.randomBytes(32).toString("hex");
-    const saved = await projects.update({ _id: project._id }, { clientPreviewToken: token, previewVersion: Number(project.previewVersion || 0) + 1, previewGeneratedAt: new Date(), status: "inProgress" });
-    await createInternalNotifications({
-        userIds: [project.marketingId],
-        roles: ["MarketingManager", "OwnerManager"],
-        excludeUserId: req.user._id,
-        project: saved,
-        type: "projectQuoteReady",
-        title: "عرض سعر المشروع جاهز",
-        body: `${saved.projectCode} — تم تسعير جميع اللوحات وإصدار رابط المعاينة`,
-        actor: req.user,
-    });
-    const previewUrl = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`;
-    let notificationMessage = "";
-    let notified = 0;
-    if (["marketing", "whatsapp"].includes(project.source)) {
-        const recipients = await users.selectall({ role: { $in: ["Marketer", "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
-        const uniqueRecipients = [...new Map(recipients.map((recipient) => [String(recipient._id), recipient])).values()];
-        if (!uniqueRecipients.length) notificationMessage = "تم حفظ المشروع وإصدار العرض المجمع، لكن لا يوجد مسوّق أو Owner Manager لديه رقم WhatsApp مسجل.";
-        else {
-            const results = await Promise.allSettled(uniqueRecipients.map((recipient) => sendProjectCompletedPreview(recipient.phoneNumber, { ...(saved.toObject?.() || saved), panels: list }, previewUrl)));
-            notified = results.filter((result) => result.status === "fulfilled").length;
-            const failed = results.find((result) => result.status === "rejected");
-            if (failed) notificationMessage = `تم حفظ المشروع وإصدار العرض المجمع، ووصل WhatsApp إلى ${notified} من أصل ${uniqueRecipients.length}. سبب أول فشل: ${failed.reason?.message || "خطأ غير معروف"}`;
+const getProjects = async (req, res, next) => {
+    try {
+        const condition = { isDeleted: false };
+        if (isMarketer(req.user)) condition.marketingId = req.user._id;
+        else if (isProductionSupervisor(req.user)) condition.status = "inProgress";
+        else if (!isOwner(req.user)) condition.status = { $ne: "draft" };
+        let result = await projects.find(condition);
+        if (isProductionRestrictedViewer(req.user)) {
+            const executionPanels = await panels.find({ isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
+            const ids = new Set(executionPanels.map((panel) => String(panel.projectId)));
+            result = result.filter((project) => ids.has(String(project._id)));
         }
-    }
-    res.json({ status: "ok", previewUrl, notified, notificationMessage, project: await hydrate(saved, false, req.user) });
-} catch (error) { next(error); } };
-const getPreview = async (req, res, next) => { try {
-    const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false }).select("+clientPreviewToken");
-    if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
-    const hydrated = await hydrate(project);
-    const configuration = await systemConfiguration.get();
-    res.json({
-        project: { ...hydrated, panels: hydrated.panels.map((panel) => {
-            const executionIsVisible = ["ready", "confirmed"].includes(panel.executionPdf?.status) && !panel.executionPdf?.skipped;
-            return {
-                ...panel,
-                ...(panel.marketerData || {}),
-                ...(panel.pricing || {}),
-                panelId: panel._id,
-                executionPdf: executionIsVisible ? {
-                    ...(panel.executionPdf || {}),
-                    files: (panel.executionPdf?.files || []).filter((file) => file.purpose !== "generatedPdf").map((file) => ({
-                        _id: file._id, fileName: file.fileName, mimeType: file.mimeType, fileSize: file.fileSize, purpose: file.purpose
-                    }))
-                } : { status: panel.executionPdf?.status || "notRequested", skipped: Boolean(panel.executionPdf?.skipped) }
-            };
-        }) },
-        copperConfiguration: configuration?.copperConfiguration || {}
-    });
-} catch (error) { next(error); } };
-const getPreviewExecutionPdfFile = async (req, res, next) => { try {
-    const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false });
-    if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
-    const panel = await panels.findOne({ _id: req.params.panelId, projectId: project._id, isDeleted: false });
-    const executionIsVisible = panel && ["executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(panel.status) && !panel.executionPdf?.skipped;
-    const file = executionIsVisible ? panel.executionPdf?.files?.id(req.params.fileId) : null;
-    if (!file || file.purpose === "generatedPdf" || !String(file.mimeType || "").startsWith("image/")) {
-        return res.status(404).json({ status: "error", message: "صورة PDF التنفيذ غير موجودة." });
-    }
-    const stored = await downloadStoredFile(file.storageFileId);
-    res.setHeader("Content-Type", file.mimeType || stored.mimeType || "application/octet-stream");
-    res.setHeader("Cache-Control", "private, max-age=300");
-    res.send(stored.buffer);
-} catch (error) { next(error); } };
-const removeProject = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
-    const marketerCanDelete = project && isMarketer(req.user) && sameId(project.marketingId, req.user._id) && project.status === "draft";
-    if (!project || (!isOwner(req.user) && !marketerCanDelete)) return res.status(403).json({ status: "error", message: "لا يمكن حذف المشروع بعد إرساله؛ الحذف متاح للـOwner Manager." });
-    const now = new Date(); await projects.update({ _id: project._id }, { isDeleted: true, deletedAt: now, deletedBy: req.user._id }); await panels.updateMany({ projectId: project._id }, { $set: { isDeleted: true, deletedAt: now, deletedBy: req.user._id } });
-    res.json({ status: "ok", message: "تم نقل المشروع ولوحاته إلى سلة المحذوفات." });
-} catch (error) { next(error); } };
+        res.json(await Promise.all(result.map((project) => hydrate(project, false, req.user))));
+    } catch (error) { next(error); }
+};
+const getProject = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (!canSeeProject(req.user, project)) return res.status(403).json({ status: "error", message: "لا تملك صلاحية عرض هذا المشروع." });
+        if (isProductionSupervisor(req.user) && project.status !== "inProgress") return res.status(403).json({ status: "error", message: "مشرف المرحلة يمكنه عرض المشاريع قيد التنفيذ فقط." });
+        if (isProductionRestrictedViewer(req.user)) {
+            const visiblePanel = await panels.findOne({ projectId: project._id, isDeleted: false, status: { $in: productionStatusesFor(req.user) } });
+            if (!visiblePanel) return res.status(403).json({ status: "error", message: "لا توجد لوحة في مرحلة الإنتاج المتاحة لهذا الحساب." });
+        }
+        res.json(await hydrate(project, false, req.user));
+    } catch (error) { next(error); }
+};
+const createProject = async (req, res, next) => {
+    try {
+        if (!isMarketer(req.user)) return res.status(403).json({ status: "error", message: "إنشاء المشاريع متاح للمندوب فقط." });
+        const client = { id: req.body?.client?.id || null, name: String(req.body?.client?.name || "").trim(), type: req.body?.client?.type || "", profitPercentage: req.body?.client?.profitPercentage ?? null };
+        if (!client.name) return res.status(400).json({ status: "error", message: "اكتب اسم العميل أو اختر عميلًا موجودًا." });
+        // The source is derived from the authenticated workflow, never from a
+        // client-controlled request field. WhatsApp creates its own projects in
+        // the webhook controller.
+        const source = "marketing";
+        const project = await projects.create({ projectCode: await nextProjectCode(), marketingId: req.user._id, client, clientNameReview: await buildSimilarityReview(client), source, status: "draft" });
+        res.status(201).json({ status: "ok", project: await hydrate(project, false, req.user) });
+    } catch (error) { next(error); }
+};
+const updateProject = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        const marketerDraft = isMarketer(req.user) && sameId(project.marketingId, req.user._id) && project.status === "draft";
+        const manualEngineer = isEngineer(req.user) && project.source === "manual";
+        if (!marketerDraft && !isOwner(req.user) && !manualEngineer) return res.status(403).json({ status: "error", message: "المشروع غير مفتوح للتعديل." });
+        const update = {};
+        // The marketer chooses the client once in the creation dialog. Shared
+        // pricing data is completed through setup, while manual projects remain
+        // editable by their engineer.
+        if ((isOwner(req.user) || manualEngineer) && req.body.client) update.client = { ...project.client.toObject(), ...req.body.client };
+        if ((isOwner(req.user) || manualEngineer) && req.body.prices) update.prices = { ...project.prices.toObject(), ...req.body.prices };
+        const saved = await projects.update({ _id: project._id }, update);
+        res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
+    } catch (error) { next(error); }
+};
+const acquireSetupLock = async (req, res, next) => {
+    try {
+        if (!isEngineer(req.user) && !isOwner(req.user)) return res.status(403).json({ status: "error", message: "إعداد المشروع متاح للمهندس فقط." });
+        const now = new Date(); const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
+        const project = await projects.update({ _id: req.params.id, isDeleted: false, status: "created", $or: [{ "setupLock.userId": null }, { "setupLock.userId": req.user._id }, { "setupLock.expiresAt": { $lte: now } }] }, { setupLock: { userId: req.user._id, acquiredAt: now, expiresAt } });
+        if (!project) return res.status(409).json({ status: "error", message: "مهندس آخر يكمل بيانات المشروع حاليًا." });
+        res.json({ status: "ok", project: await hydrate(project, false, req.user), expiresAt });
+    } catch (error) { next(error); }
+};
+const completeSetup = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false, status: "created" });
+        if (!project) return res.status(409).json({ status: "error", message: "المشروع ليس في مرحلة استكمال البيانات." });
+        if (!isOwner(req.user) && !sameId(project.setupLock?.userId, req.user._id)) return res.status(409).json({ status: "error", message: "يجب حجز إعداد المشروع أولًا." });
+        const client = { ...project.client.toObject(), ...req.body.client }; const prices = { ...project.prices.toObject(), ...req.body.prices };
+        const clientNameReview = { ...(project.clientNameReview || {}), ...(req.body.clientNameReview || {}) };
+        if (!client.name || !client.type || !Number(client.profitPercentage) || !Number(prices.sheetPrice) || !Number(prices.paintPrice)) return res.status(400).json({ status: "error", message: "أكمل نوع العميل ونسبة الربح وسعر الصاج والدهان." });
+        if (client.id) {
+            const existingClient = await clients.select_one({ _id: client.id });
+            if (!existingClient) return res.status(400).json({ status: "error", message: "سجل العميل المختار غير موجود." });
+            client.name = existingClient.name; client.type = existingClient.type; client.profitPercentage = existingClient.profitPercentage;
+            clientNameReview.resolved = true; clientNameReview.resolution = "existing";
+        } else {
+            if ((clientNameReview.candidates || []).length && (!clientNameReview.resolved || clientNameReview.resolution !== "new")) return res.status(409).json({ status: "error", message: "راجع الأسماء المتشابهة واختر سجلًا موجودًا أو أكد أنه عميل جديد." });
+            const createdClient = await clients.add_one({ name: client.name.trim(), type: client.type, profitPercentage: Number(client.profitPercentage) });
+            client.id = createdClient._id; clientNameReview.resolved = true; clientNameReview.resolution = "new";
+        }
+        const saved = await projects.update({ _id: project._id }, { client, clientNameReview, prices, status: "inProgress", setupLock: { userId: null, acquiredAt: null, expiresAt: null } });
+        res.json({ status: "ok", project: await hydrate(saved, false, req.user) });
+    } catch (error) { next(error); }
+};
+const submitProject = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false, status: "draft" });
+        if (!project || (!isOwner(req.user) && !sameId(project.marketingId, req.user._id))) return res.status(403).json({ status: "error", message: "لا يمكنك إرسال هذا المشروع." });
+        const list = await panels.find({ projectId: project._id, isDeleted: false });
+        if (!list.length) return res.status(400).json({ status: "error", message: "أضف لوحة واحفظها قبل إرسال المشروع." });
+        if (list.some((panel) => !panel.marketerSaved)) return res.status(400).json({ status: "error", message: "افتح كل لوحة واضغط حفظ اللوحة قبل إرسال المشروع للمهندسين." });
+        if (list.some((panel) => !marketerPanelIsComplete(panel))) return res.status(400).json({ status: "error", message: "توجد لوحة محفوظة ببيانات ناقصة. افتح كل لوحة وأكمل الحقول الإلزامية قبل الإرسال." });
+        await panels.updateMany({ projectId: project._id, isDeleted: false }, { $set: { status: "pendingPricing" }, $push: { statusHistory: { from: "draft", to: "pendingPricing", action: "projectSubmitted", actorId: req.user._id, actorName: req.user.name || "", actorRole: req.user.role } } });
+        const saved = await projects.update({ _id: project._id }, { status: "created", marketingEditSession: { active: false, openedBy: null, openedAt: null } });
+        await createInternalNotifications({
+            roles: [...DRAWING_ENGINEER_ROLES, "OwnerManager"],
+            excludeUserId: req.user._id,
+            project: saved,
+            type: "projectPendingPricing",
+            title: "مشروع جديد في انتظار التسعير",
+            body: `${saved.projectCode} — ${saved.client?.name || "عميل غير محدد"}`,
+            actor: req.user,
+        });
+        const recipients = await users.selectall({ role: { $in: [...DRAWING_ENGINEER_ROLES, "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+        const notificationProject = { ...(saved.toObject?.() || saved), panels: list };
+        const notifications = await Promise.allSettled(recipients.map((recipient) => sendNewProjectAssigned(recipient.phoneNumber, notificationProject, req.user.name || "غير محدد")));
+        const acceptedIds = notifications.filter((item) => item.status === "fulfilled").map((item) => item.value?.messages?.[0]?.id).filter(Boolean);
+        if (acceptedIds.length) await new Promise((resolve) => setTimeout(resolve, 1800));
+        const deliveryRows = await Promise.all(acceptedIds.map((id) => whatsappMessages.findByProviderMessageId(id)));
+        const failedDeliveryRows = deliveryRows.filter((row) => row?.status === "failed");
+        const notificationFailed = failedDeliveryRows.length;
+        const notified = notifications.filter((item) => item.status === "fulfilled").length - notificationFailed;
+        const notificationMessage = !recipients.length
+            ? "لا يوجد مهندس أو Owner Manager معتمد لديه رقم WhatsApp مسجل."
+            : notificationFailed > 0
+                ? `قبلت Meta القالب أولًا، ثم فشل تسليمه إلى ${notificationFailed} مستلم. سبب Meta: ${whatsappFailureReason(failedDeliveryRows[0])}`
+                : notified === 0
+                    ? "تم إرسال المشروع للنظام، لكن رفض WhatsApp كل محاولات إرسال القالب."
+                    : notified < recipients.length
+                        ? `وصل القالب إلى ${notified} من أصل ${recipients.length} مستلم.`
+                        : `تم إرسال قالب المشروع إلى ${notified} مستلم.`;
+        notifications.forEach((item) => { if (item.status === "rejected") console.error("New project WhatsApp template failed:", item.reason?.message || item.reason); });
+        res.json({ status: "ok", message: "تم إرسال المشروع للمهندسين.", notified, notificationFailed, notificationMessage, notificationErrors: failedDeliveryRows.map(whatsappFailureReason), project: await hydrate(saved, false, req.user) });
+    } catch (error) { next(error); }
+};
+const regeneratePreview = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false }).select("+clientPreviewToken");
+        if (!project || (!isOwner(req.user) && !isEngineer(req.user))) return res.status(403).json({ status: "error", message: "لا تملك صلاحية استخراج عرض السعر." });
+        const list = await panels.find({ projectId: project._id, isDeleted: false });
+        const allowed = ["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"];
+        if (!list.length || list.some((panel) => !allowed.includes(panel.status))) return res.status(409).json({ status: "error", message: "يجب إتمام تسعير جميع اللوحات المطلوبة أولًا." });
+        const token = project.clientPreviewToken || crypto.randomBytes(32).toString("hex");
+        const saved = await projects.update({ _id: project._id }, { clientPreviewToken: token, previewVersion: Number(project.previewVersion || 0) + 1, previewGeneratedAt: new Date(), status: "inProgress" });
+        await createInternalNotifications({
+            userIds: [project.marketingId],
+            roles: ["MarketingManager", "OwnerManager"],
+            excludeUserId: req.user._id,
+            project: saved,
+            type: "projectQuoteReady",
+            title: "عرض سعر المشروع جاهز",
+            body: `${saved.projectCode} — تم تسعير جميع اللوحات وإصدار رابط المعاينة`,
+            actor: req.user,
+        });
+        const previewUrl = `${String(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/p/${token}`;
+        let notificationMessage = "";
+        let notified = 0;
+        if (["marketing", "whatsapp"].includes(project.source)) {
+            const recipients = await users.selectall({ role: { $in: ["Marketer", "OwnerManager"] }, approved: true, isDeleted: false, phoneNumber: { $nin: [null, ""] } });
+            const uniqueRecipients = [...new Map(recipients.map((recipient) => [String(recipient._id), recipient])).values()];
+            if (!uniqueRecipients.length) notificationMessage = "تم حفظ المشروع وإصدار العرض المجمع، لكن لا يوجد مسوّق أو Owner Manager لديه رقم WhatsApp مسجل.";
+            else {
+                const results = await Promise.allSettled(uniqueRecipients.map((recipient) => sendProjectCompletedPreview(recipient.phoneNumber, { ...(saved.toObject?.() || saved), panels: list }, previewUrl)));
+                notified = results.filter((result) => result.status === "fulfilled").length;
+                const failed = results.find((result) => result.status === "rejected");
+                if (failed) notificationMessage = `تم حفظ المشروع وإصدار العرض المجمع، ووصل WhatsApp إلى ${notified} من أصل ${uniqueRecipients.length}. سبب أول فشل: ${failed.reason?.message || "خطأ غير معروف"}`;
+            }
+        }
+        res.json({ status: "ok", previewUrl, notified, notificationMessage, project: await hydrate(saved, false, req.user) });
+    } catch (error) { next(error); }
+};
+const getPreview = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false }).select("+clientPreviewToken");
+        if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
+        const hydrated = await hydrate(project);
+        const configuration = await systemConfiguration.get();
+        res.json({
+            project: {
+                ...hydrated, panels: hydrated.panels.map((panel) => {
+                    const executionIsVisible = ["ready", "confirmed"].includes(panel.executionPdf?.status) && !panel.executionPdf?.skipped;
+                    return {
+                        ...panel,
+                        ...(panel.marketerData || {}),
+                        ...(panel.pricing || {}),
+                        panelId: panel._id,
+                        executionPdf: executionIsVisible ? {
+                            ...(panel.executionPdf || {}),
+                            files: (panel.executionPdf?.files || []).filter((file) => file.purpose !== "generatedPdf").map((file) => ({
+                                _id: file._id, fileName: file.fileName, mimeType: file.mimeType, fileSize: file.fileSize, purpose: file.purpose
+                            }))
+                        } : { status: panel.executionPdf?.status || "notRequested", skipped: Boolean(panel.executionPdf?.skipped) }
+                    };
+                })
+            },
+            copperConfiguration: configuration?.copperConfiguration || {}
+        });
+    } catch (error) { next(error); }
+};
+const getPreviewExecutionPdfFile = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
+        const panel = await panels.findOne({ _id: req.params.panelId, projectId: project._id, isDeleted: false });
+        const executionIsVisible = panel && ["executionPdfReady", "executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly", "completed"].includes(panel.status) && !panel.executionPdf?.skipped;
+        const file = executionIsVisible ? panel.executionPdf?.files?.id(req.params.fileId) : null;
+        if (!file || file.purpose === "generatedPdf" || !String(file.mimeType || "").startsWith("image/")) {
+            return res.status(404).json({ status: "error", message: "صورة PDF التنفيذ غير موجودة." });
+        }
+        const stored = await downloadStoredFile(file.storageFileId);
+        res.setHeader("Content-Type", file.mimeType || stored.mimeType || "application/octet-stream");
+        res.setHeader("Cache-Control", "private, max-age=300");
+        res.send(stored.buffer);
+    } catch (error) { next(error); }
+};
+const removeProject = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+        const marketerCanDelete = project && isMarketer(req.user) && sameId(project.marketingId, req.user._id) && project.status === "draft";
+        if (!project || (!isOwner(req.user) && !marketerCanDelete)) return res.status(403).json({ status: "error", message: "لا يمكن حذف المشروع بعد إرساله؛ الحذف متاح للـOwner Manager." });
+        const now = new Date(); await projects.update({ _id: project._id }, { isDeleted: true, deletedAt: now, deletedBy: req.user._id }); await panels.updateMany({ projectId: project._id }, { $set: { isDeleted: true, deletedAt: now, deletedBy: req.user._id } });
+        res.json({ status: "ok", message: "تم نقل المشروع ولوحاته إلى سلة المحذوفات." });
+    } catch (error) { next(error); }
+};
 
-const getDeletedProjects = async (req, res, next) => { try {
-    const condition = { isDeleted: true };
-    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
-    const deleted = await projects.find(condition);
-    res.json(await Promise.all(deleted.map((project) => hydrate(project, true, req.user))));
-} catch (error) { next(error); } };
+const getDeletedProjects = async (req, res, next) => {
+    try {
+        const condition = { isDeleted: true };
+        if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+        const deleted = await projects.find(condition);
+        res.json(await Promise.all(deleted.map((project) => hydrate(project, true, req.user))));
+    } catch (error) { next(error); }
+};
 
-const restoreProject = async (req, res, next) => { try {
-    const condition = { _id: req.params.id, isDeleted: true };
-    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
-    const project = await projects.update(condition, { isDeleted: false, deletedAt: null, deletedBy: null });
-    if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
-    await panels.updateMany({ projectId: project._id }, { $set: { isDeleted: false, deletedAt: null, deletedBy: null } });
-    res.json({ status: "ok", project: await hydrate(project, false, req.user) });
-} catch (error) { next(error); } };
+const restoreProject = async (req, res, next) => {
+    try {
+        const condition = { _id: req.params.id, isDeleted: true };
+        if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+        const project = await projects.update(condition, { isDeleted: false, deletedAt: null, deletedBy: null });
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
+        await panels.updateMany({ projectId: project._id }, { $set: { isDeleted: false, deletedAt: null, deletedBy: null } });
+        res.json({ status: "ok", project: await hydrate(project, false, req.user) });
+    } catch (error) { next(error); }
+};
 
-const permanentlyDeleteProject = async (req, res, next) => { try {
-    const condition = { _id: req.params.id, isDeleted: true };
-    if (!isOwner(req.user)) condition.deletedBy = req.user._id;
-    const project = await projects.findOne(condition);
-    if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
-    const projectPanels = await panels.find({ projectId: project._id });
-    const storageIds = projectPanels.flatMap((panel) => [
-        ...(panel.attachments || []), ...(panel.executionPdf?.files || []), ...(panel.manufacturing?.files || [])
-    ]).map((file) => file.storageFileId).filter(Boolean);
-    await Promise.allSettled(storageIds.map(deleteStoredFile));
-    await panels.deleteMany({ projectId: project._id }); await projects.deleteOne({ _id: project._id });
-    res.json({ status: "ok", message: "تم حذف المشروع ولوحاته وملفاته نهائيًا." });
-} catch (error) { next(error); } };
+const permanentlyDeleteProject = async (req, res, next) => {
+    try {
+        const condition = { _id: req.params.id, isDeleted: true };
+        if (!isOwner(req.user)) condition.deletedBy = req.user._id;
+        const project = await projects.findOne(condition);
+        if (!project) return res.status(404).json({ status: "error", message: "المشروع المحذوف غير موجود." });
+        const projectPanels = await panels.find({ projectId: project._id });
+        const storageIds = projectPanels.flatMap((panel) => [
+            ...(panel.attachments || []), ...(panel.executionPdf?.files || []), ...(panel.manufacturing?.files || [])
+        ]).map((file) => file.storageFileId).filter(Boolean);
+        await Promise.allSettled(storageIds.map(deleteStoredFile));
+        await panels.deleteMany({ projectId: project._id }); await projects.deleteOne({ _id: project._id });
+        res.json({ status: "ok", message: "تم حذف المشروع ولوحاته وملفاته نهائيًا." });
+    } catch (error) { next(error); }
+};
 
-const getProjectMedia = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
-    if (!project || !canSeeProject(req.user, project)) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
-    if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.status(403).json({ status: "error", message: "مرفقات المشروع غير متاحة لهذا الحساب." });
-    const allowedStatuses = isProductionRestrictedViewer(req.user) ? productionStatusesFor(req.user) : null;
-    const projectPanels = await panels.find({ projectId: project._id, isDeleted: false, ...(allowedStatuses ? { status: { $in: allowedStatuses } } : {}) });
-    res.json(projectPanels.flatMap((panel) => (panel.attachments || []).map((file) => ({
-        id: file._id, panelId: panel._id, type: String(file.mimeType || "").startsWith("audio/") ? "audio" : "image",
-        mimeType: file.mimeType, fileName: file.fileName, fileSize: file.fileSize, createdAt: file.uploadedAt
-    }))));
-} catch (error) { next(error); } };
+const getProjectMedia = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+        if (!project || !canSeeProject(req.user, project)) return res.status(404).json({ status: "error", message: "المشروع غير موجود." });
+        if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.status(403).json({ status: "error", message: "مرفقات المشروع غير متاحة لهذا الحساب." });
+        const allowedStatuses = isProductionRestrictedViewer(req.user) ? productionStatusesFor(req.user) : null;
+        const projectPanels = await panels.find({ projectId: project._id, isDeleted: false, ...(allowedStatuses ? { status: { $in: allowedStatuses } } : {}) });
+        res.json(projectPanels.flatMap((panel) => (panel.attachments || []).map((file) => ({
+            id: file._id, panelId: panel._id, type: String(file.mimeType || "").startsWith("audio/") ? "audio" : "image",
+            mimeType: file.mimeType, fileName: file.fileName, fileSize: file.fileSize, createdAt: file.uploadedAt
+        }))));
+    } catch (error) { next(error); }
+};
 
 const findMedia = async (projectId, mediaId, viewer = null) => {
     const allowedStatuses = isProductionRestrictedViewer(viewer) ? productionStatusesFor(viewer) : null;
@@ -431,37 +463,45 @@ const findMedia = async (projectId, mediaId, viewer = null) => {
     for (const panel of projectPanels) { const file = panel.attachments?.id(mediaId); if (file) return { panel, file }; }
     return null;
 };
-const getProjectMediaFile = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
-    if (!project || !canSeeProject(req.user, project)) return res.sendStatus(404);
-    if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.sendStatus(403);
-    const media = await findMedia(project._id, req.params.mediaId, req.user); if (!media) return res.sendStatus(404);
-    const stored = await downloadStoredFile(media.file.storageFileId); res.setHeader("Content-Type", media.file.mimeType || stored.mimeType); res.setHeader("Cache-Control", "private, max-age=300"); res.send(stored.buffer);
-} catch (error) { next(error); } };
-const uploadProjectMedia = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.body?.panelId, projectId: req.params.id, isDeleted: false });
-    if (!project || !panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
-    const ownsPanelEditSession = panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id);
-    const canEdit = (isOwner(req.user) && (panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || ownsPanelEditSession));
-    if (!canEdit) return res.status(403).json({ status: "error", message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية." });
-    if (!req.file || (!req.file.mimetype.startsWith("image/") && !req.file.mimetype.startsWith("audio/"))) return res.status(400).json({ status: "error", message: "اختر صورة أو تسجيلًا صوتيًا أولًا." });
-    const stored = await uploadFile({ buffer: req.file.buffer, fileName: `panel-${panel.panelCode}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`, mimeType: req.file.mimetype });
-    const saved = await panels.update({ _id: panel._id }, { $push: { attachments: { storageFileId: stored.id, fileName: stored.name || req.file.originalname, mimeType: req.file.mimetype, fileSize: Number(stored.size || req.file.size), uploadedAt: new Date(), uploadedBy: req.user._id } } });
-    const file = saved.attachments[saved.attachments.length - 1]; res.status(201).json({ id: file._id, panelId: panel._id, type: req.file.mimetype.startsWith("audio/") ? "audio" : "image", fileName: file.fileName, mimeType: file.mimeType, fileSize: file.fileSize });
-} catch (error) { next(error); } };
-const deleteProjectMedia = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const media = project && await findMedia(project._id, req.params.mediaId);
-    if (!project || !media) return res.status(404).json({ status: "error", message: "المرفق غير موجود." });
-    const ownsPanelEditSession = media.panel.marketingEditSession?.active && sameId(media.panel.marketingEditSession?.openedBy, req.user._id);
-    const canEdit = (isOwner(req.user) && (media.panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || ownsPanelEditSession));
-    if (!canEdit) return res.status(403).json({ status: "error", message: "لا يمكنك حذف هذا المرفق الآن." });
-    await deleteStoredFile(media.file.storageFileId); await panels.update({ _id: media.panel._id }, { $pull: { attachments: { _id: media.file._id } } }); res.json({ status: "ok" });
-} catch (error) { next(error); } };
-const getProjectMediaWhatsappLink = async (req, res, next) => { try {
-    const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.query.panelId, projectId: req.params.id, isDeleted: false });
-    if (!project || !panel || !isMarketer(req.user) || !sameId(project.marketingId, req.user._id)) return res.status(404).json({ status: "error", message: "المشروع أو اللوحة غير موجودين." });
-    const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, ""); if (!businessPhone) return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
-    const text = `STARCO MEDIA #${project.projectCode} PANEL ${panel.sequence}`; res.json({ status: "ok", text, url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}` });
-} catch (error) { next(error); } };
+const getProjectMediaFile = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+        if (!project || !canSeeProject(req.user, project)) return res.sendStatus(404);
+        if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.sendStatus(403);
+        const media = await findMedia(project._id, req.params.mediaId, req.user); if (!media) return res.sendStatus(404);
+        const stored = await downloadStoredFile(media.file.storageFileId); res.setHeader("Content-Type", media.file.mimeType || stored.mimeType); res.setHeader("Cache-Control", "private, max-age=300"); res.send(stored.buffer);
+    } catch (error) { next(error); }
+};
+const uploadProjectMedia = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.body?.panelId, projectId: req.params.id, isDeleted: false });
+        if (!project || !panel) return res.status(400).json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
+        const ownsPanelEditSession = panel.marketingEditSession?.active && sameId(panel.marketingEditSession?.openedBy, req.user._id);
+        const canEdit = (isOwner(req.user) && (panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (panel.status === "draft" || ownsPanelEditSession));
+        if (!canEdit) return res.status(403).json({ status: "error", message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية." });
+        if (!req.file || (!req.file.mimetype.startsWith("image/") && !req.file.mimetype.startsWith("audio/"))) return res.status(400).json({ status: "error", message: "اختر صورة أو تسجيلًا صوتيًا أولًا." });
+        const stored = await uploadFile({ buffer: req.file.buffer, fileName: `panel-${panel.panelCode}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`, mimeType: req.file.mimetype });
+        const saved = await panels.update({ _id: panel._id }, { $push: { attachments: { storageFileId: stored.id, fileName: stored.name || req.file.originalname, mimeType: req.file.mimetype, fileSize: Number(stored.size || req.file.size), uploadedAt: new Date(), uploadedBy: req.user._id } } });
+        const file = saved.attachments[saved.attachments.length - 1]; res.status(201).json({ id: file._id, panelId: panel._id, type: req.file.mimetype.startsWith("audio/") ? "audio" : "image", fileName: file.fileName, mimeType: file.mimeType, fileSize: file.fileSize });
+    } catch (error) { next(error); }
+};
+const deleteProjectMedia = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const media = project && await findMedia(project._id, req.params.mediaId);
+        if (!project || !media) return res.status(404).json({ status: "error", message: "المرفق غير موجود." });
+        const ownsPanelEditSession = media.panel.marketingEditSession?.active && sameId(media.panel.marketingEditSession?.openedBy, req.user._id);
+        const canEdit = (isOwner(req.user) && (media.panel.status === "draft" || ownsPanelEditSession)) || (isMarketer(req.user) && sameId(project.marketingId, req.user._id) && (media.panel.status === "draft" || ownsPanelEditSession));
+        if (!canEdit) return res.status(403).json({ status: "error", message: "لا يمكنك حذف هذا المرفق الآن." });
+        await deleteStoredFile(media.file.storageFileId); await panels.update({ _id: media.panel._id }, { $pull: { attachments: { _id: media.file._id } } }); res.json({ status: "ok" });
+    } catch (error) { next(error); }
+};
+const getProjectMediaWhatsappLink = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false }); const panel = await panels.findOne({ _id: req.query.panelId, projectId: req.params.id, isDeleted: false });
+        if (!project || !panel || !isMarketer(req.user) || !sameId(project.marketingId, req.user._id)) return res.status(404).json({ status: "error", message: "المشروع أو اللوحة غير موجودين." });
+        const businessPhone = String(process.env.WHATSAPP_BUSINESS_NUMBER || "").replace(/\D/g, ""); if (!businessPhone) return res.status(503).json({ status: "error", message: "رقم WhatsApp الخاص بالشركة غير مضبوط بعد." });
+        const text = `STARCO MEDIA #${project.projectCode} PANEL ${panel.sequence}`; res.json({ status: "ok", text, url: `https://wa.me/${businessPhone}?text=${encodeURIComponent(text)}` });
+    } catch (error) { next(error); }
+};
 
 module.exports = { getProjects, getProject, createProject, updateProject, acquireSetupLock, completeSetup, submitProject, regeneratePreview, getPreview, getPreviewExecutionPdfFile, removeProject, getDeletedProjects, restoreProject, permanentlyDeleteProject, getProjectMedia, getProjectMediaFile, uploadProjectMedia, deleteProjectMedia, getProjectMediaWhatsappLink };

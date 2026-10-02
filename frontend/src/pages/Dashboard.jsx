@@ -15,11 +15,14 @@ import { useAuth } from "../context/AuthContext";
 import { getAllPanels, getProjects } from "../services/projectsAPI";
 import { getAllClients } from "../services/clientsAPI";
 import { getUsers } from "../services/usersAPI";
-import toast from "react-hot-toast";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiRefreshCw } from "react-icons/fi";
 import "../styles/dashboardHome.css";
-import { isDrawingEngineerRole, isProductionSupervisorRole } from "../utils/roles";
+import {
+  isDrawingEngineerRole,
+  isProductionSupervisorRole,
+} from "../utils/roles";
+import { showApiErrorToast } from "../utils/errorToast";
 
 function Dashboard() {
   const { loading, accountStatus, user, reloadProfile, refreshing } = useAuth();
@@ -28,22 +31,61 @@ function Dashboard() {
   const [clientsCount, setClientsCount] = useState(0);
   const [users, setUsers] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
-  const canManageClients = ["OwnerManager", "MarketingManager"].includes(user?.role) || isDrawingEngineerRole(user?.role);
+  const canManageClients =
+    ["OwnerManager", "MarketingManager"].includes(user?.role) ||
+    isDrawingEngineerRole(user?.role);
 
   const loadDashboard = useCallback(() => {
-    if (loading || !user || accountStatus === "pending" || accountStatus === "whatsappPending" || accountStatus === "deleted") {
+    if (
+      loading ||
+      !user ||
+      accountStatus === "pending" ||
+      accountStatus === "whatsappPending" ||
+      accountStatus === "deleted"
+    ) {
       setDashboardLoading(false);
       return;
     }
     setDashboardLoading(true);
-    const canLoadTeam = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
-    const requests = [getProjects(), getAllPanels(), canManageClients ? getAllClients() : Promise.resolve(null), canLoadTeam ? getUsers() : Promise.resolve(null)];
-    return Promise.all(requests).then(([projectsResponse, panelsResponse, clientsResponse, usersResponse]) => {
-      setProjects(Array.isArray(projectsResponse.data) ? projectsResponse.data : []);
-      setPanels(Array.isArray(panelsResponse.data) ? panelsResponse.data : []);
-      setClientsCount(clientsResponse?.data?.clients?.length || 0);
-      setUsers(Array.isArray(usersResponse?.data) ? usersResponse.data : Array.isArray(usersResponse?.data?.users) ? usersResponse.data.users : []);
-    }).catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل ملخص لوحة التحكم.")).finally(() => setDashboardLoading(false));
+    const canLoadTeam = [
+      "OwnerManager",
+      "MarketingManager",
+      "ProductionManager",
+    ].includes(user?.role);
+    const requests = [
+      getProjects(),
+      getAllPanels(),
+      canManageClients ? getAllClients() : Promise.resolve(null),
+      canLoadTeam ? getUsers() : Promise.resolve(null),
+    ];
+    return Promise.all(requests)
+      .then(
+        ([
+          projectsResponse,
+          panelsResponse,
+          clientsResponse,
+          usersResponse,
+        ]) => {
+          setProjects(
+            Array.isArray(projectsResponse.data) ? projectsResponse.data : [],
+          );
+          setPanels(
+            Array.isArray(panelsResponse.data) ? panelsResponse.data : [],
+          );
+          setClientsCount(clientsResponse?.data?.clients?.length || 0);
+          setUsers(
+            Array.isArray(usersResponse?.data)
+              ? usersResponse.data
+              : Array.isArray(usersResponse?.data?.users)
+                ? usersResponse.data.users
+                : [],
+          );
+        },
+      )
+      .catch((error) =>
+        showApiErrorToast(error, "تعذر تحميل ملخص لوحة التحكم."),
+      )
+      .finally(() => setDashboardLoading(false));
   }, [loading, user, canManageClients, accountStatus]);
 
   useEffect(() => {
@@ -52,18 +94,24 @@ function Dashboard() {
 
   const summary = useMemo(() => {
     const today = new Date();
-    const isToday = (value) => value && new Date(value).toDateString() === today.toDateString();
+    const isToday = (value) =>
+      value && new Date(value).toDateString() === today.toDateString();
     return {
-      pending: projects.filter((project) => project.status === "pending").length,
-      inProgress: projects.filter((project) => project.status === "inProgress").length,
+      pending: projects.filter((project) => project.status === "pending")
+        .length,
+      inProgress: projects.filter((project) => project.status === "inProgress")
+        .length,
       today: projects.filter((project) => isToday(project.createdAt)).length,
-      pendingProjects: projects.filter((project) => project.status === "pending").sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6)
+      pendingProjects: projects
+        .filter((project) => project.status === "pending")
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 6),
     };
   }, [projects]);
 
   if (loading) {
     return (
-    <DashboardLayout notAllowed pending>
+      <DashboardLayout notAllowed pending>
         <div className="pending-message">
           <h2>جاري التحقق من حسابك...</h2>
           <p>يرجى الانتظار أثناء التحقق من حالة الحساب.</p>
@@ -76,14 +124,16 @@ function Dashboard() {
     return (
       <DashboardLayout notAllowed pending={accountStatus === "pending"}>
         <div className="pending-message" dir="rtl">
-          <h2>{accountStatus === "pending" ? "حسابك بانتظار موافقة المدير" : "حالة الحساب تحتاج إلى مراجعة"}</h2>
+          <h2>
+            {accountStatus === "pending"
+              ? "حسابك بانتظار موافقة المدير"
+              : "حالة الحساب تحتاج إلى مراجعة"}
+          </h2>
           {accountStatus === "pending" && (
             <p>سيتم إشعارك بمجرد اعتماد الحساب.</p>
           )}
           {accountStatus === "deleted" && (
-            <p>
-              إذا كان هذا بالخطأ، تواصل مع الإدارة لاستعادة الحساب.
-            </p>
+            <p>إذا كان هذا بالخطأ، تواصل مع الإدارة لاستعادة الحساب.</p>
           )}
         </div>
       </DashboardLayout>
@@ -94,21 +144,31 @@ function Dashboard() {
     return (
       <DashboardLayout notAllowed pending>
         <div className="whatsapp-activation" dir="rtl">
-          <div className="whatsapp-activation-icon"><FaWhatsapp /></div>
+          <div className="whatsapp-activation-icon">
+            <FaWhatsapp />
+          </div>
           <h2>فعّل حسابك برسالة WhatsApp</h2>
           <p>
-            أرسل أي رسالة من نفس الرقم المسجل في حسابك، وبعد وصولها سيتأكد النظام من الرقم ويفعّل دخولك تلقائيًا.
+            أرسل أي رسالة من نفس الرقم المسجل في حسابك، وبعد وصولها سيتأكد
+            النظام من الرقم ويفعّل دخولك تلقائيًا.
           </p>
           <div className="whatsapp-activation-number">
             <span>الرقم المسجل</span>
             <strong dir="ltr">+{user?.phoneNumber}</strong>
           </div>
           {user?.whatsappActivationUrl ? (
-            <a className="whatsapp-activation-button" href={user.whatsappActivationUrl} target="_blank" rel="noreferrer">
+            <a
+              className="whatsapp-activation-button"
+              href={user.whatsappActivationUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
               <FaWhatsapp /> فتح WhatsApp وإرسال الرسالة
             </a>
           ) : (
-            <p className="whatsapp-activation-error">رقم WhatsApp الخاص بالشركة غير مضبوط حاليًا. تواصل مع الإدارة.</p>
+            <p className="whatsapp-activation-error">
+              رقم WhatsApp الخاص بالشركة غير مضبوط حاليًا. تواصل مع الإدارة.
+            </p>
           )}
           <button
             type="button"
@@ -116,7 +176,9 @@ function Dashboard() {
             onClick={() => reloadProfile({ background: true })}
             disabled={refreshing}
           >
-            <FiRefreshCw className={refreshing ? "dashboard-refresh-spinning" : ""} />
+            <FiRefreshCw
+              className={refreshing ? "dashboard-refresh-spinning" : ""}
+            />
             {refreshing ? "جاري التحقق..." : "أرسلت الرسالة، تحقّق الآن"}
           </button>
           <small>يتم التحقق تلقائيًا أيضًا خلال ثوانٍ قليلة.</small>
@@ -126,31 +188,114 @@ function Dashboard() {
   }
 
   if (user?.role === "OwnerManager") {
-    return <DashboardLayout notAllowed><OwnerManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} clientsCount={clientsCount} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <OwnerManagerDashboard
+          name={user?.name}
+          projects={projects}
+          panels={panels}
+          users={users}
+          clientsCount={clientsCount}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   if (user?.role === "Engineer") {
-    return <DashboardLayout notAllowed><EngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} title="Drawing Engineer" /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <EngineerDashboard
+          name={user?.name}
+          userId={user?._id}
+          projects={projects}
+          panels={panels}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+          title="Drawing Engineer"
+        />
+      </DashboardLayout>
+    );
   }
 
   if (user?.role === "FullEngineer") {
-    return <DashboardLayout notAllowed><FullEngineerDashboard name={user?.name} userId={user?._id} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <FullEngineerDashboard
+          name={user?.name}
+          userId={user?._id}
+          projects={projects}
+          panels={panels}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   if (user?.role === "MarketingManager") {
-    return <DashboardLayout notAllowed><MarketingManagerDashboard name={user?.name} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <MarketingManagerDashboard
+          name={user?.name}
+          projects={projects}
+          panels={panels}
+          users={users}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   if (["ProductionManager", "ProductionEngineer"].includes(user?.role)) {
-    return <DashboardLayout notAllowed><ProductionManagerDashboard name={user?.name} role={user?.role} title={user?.role === "ProductionEngineer" ? "Production Engineer" : "Production Manager"} projects={projects} panels={panels} users={users} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <ProductionManagerDashboard
+          name={user?.name}
+          role={user?.role}
+          title={
+            user?.role === "ProductionEngineer"
+              ? "Production Engineer"
+              : "Production Manager"
+          }
+          projects={projects}
+          panels={panels}
+          users={users}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   if (isProductionSupervisorRole(user?.role)) {
-    return <DashboardLayout notAllowed><ProductionSupervisorDashboard name={user?.name} role={user?.role} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <ProductionSupervisorDashboard
+          name={user?.name}
+          role={user?.role}
+          panels={panels}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   if (user?.role === "Marketer") {
-    return <DashboardLayout notAllowed><MarketerDashboard name={user?.name} projects={projects} panels={panels} loading={dashboardLoading} onRefresh={loadDashboard} /></DashboardLayout>;
+    return (
+      <DashboardLayout notAllowed>
+        <MarketerDashboard
+          name={user?.name}
+          projects={projects}
+          panels={panels}
+          loading={dashboardLoading}
+          onRefresh={loadDashboard}
+        />
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -158,14 +303,31 @@ function Dashboard() {
       <DashboardHeader name={user?.name} />
 
       <section className="stats-grid">
-        <StatCard title="مشاريع معلّقة" value={dashboardLoading ? "—" : summary.pending} />
-        <StatCard title="قيد العمل" value={dashboardLoading ? "—" : summary.inProgress} />
-        <StatCard title="طلبات اليوم" value={dashboardLoading ? "—" : summary.today} />
-        <StatCard title="العملاء" value={canManageClients ? (dashboardLoading ? "—" : clientsCount) : "—"} />
+        <StatCard
+          title="مشاريع معلّقة"
+          value={dashboardLoading ? "—" : summary.pending}
+        />
+        <StatCard
+          title="قيد العمل"
+          value={dashboardLoading ? "—" : summary.inProgress}
+        />
+        <StatCard
+          title="طلبات اليوم"
+          value={dashboardLoading ? "—" : summary.today}
+        />
+        <StatCard
+          title="العملاء"
+          value={
+            canManageClients ? (dashboardLoading ? "—" : clientsCount) : "—"
+          }
+        />
       </section>
 
       <section className="dashboard-grid">
-        <RecentProjects projects={summary.pendingProjects} loading={dashboardLoading} />
+        <RecentProjects
+          projects={summary.pendingProjects}
+          loading={dashboardLoading}
+        />
 
         <QuickActions canManageClients={canManageClients} />
       </section>

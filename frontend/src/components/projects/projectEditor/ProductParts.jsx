@@ -3,10 +3,26 @@ import { useState } from "react";
 import AddPartModal from "./AddPartModal";
 import { IoClose, IoRefresh } from "react-icons/io5";
 import toast from "react-hot-toast";
+import { showApiErrorToast } from "../../../utils/errorToast";
 const legacyAddOptions = ["المراية", "الجلسة", "الكرسي", "أوميجا", "باب"];
-const normalizeAdditionalPart = (part) => typeof part === "string"
-  ? { name: part, defaultWidth: part === "الكرسي" ? 40 : part === "أوميجا" ? 45.5 : "", defaultHeight: part === "الكرسي" ? 100 : "", defaultQuantity: part === "الكرسي" ? 2 : 1, quantityStep: part === "الكرسي" ? 2 : 1, showQuantityControls: ["الكرسي", "أوميجا"].includes(part) }
-  : { name: part?.name || "", defaultWidth: part?.defaultWidth ?? "", defaultHeight: part?.defaultHeight ?? "", defaultQuantity: Number(part?.defaultQuantity) || 1, quantityStep: Number(part?.quantityStep) || 1, showQuantityControls: Boolean(part?.showQuantityControls) };
+const normalizeAdditionalPart = (part) =>
+  typeof part === "string"
+    ? {
+        name: part,
+        defaultWidth: part === "الكرسي" ? 40 : part === "أوميجا" ? 45.5 : "",
+        defaultHeight: part === "الكرسي" ? 100 : "",
+        defaultQuantity: part === "الكرسي" ? 2 : 1,
+        quantityStep: part === "الكرسي" ? 2 : 1,
+        showQuantityControls: ["الكرسي", "أوميجا"].includes(part),
+      }
+    : {
+        name: part?.name || "",
+        defaultWidth: part?.defaultWidth ?? "",
+        defaultHeight: part?.defaultHeight ?? "",
+        defaultQuantity: Number(part?.defaultQuantity) || 1,
+        quantityStep: Number(part?.quantityStep) || 1,
+        showQuantityControls: Boolean(part?.showQuantityControls),
+      };
 function ProductParts() {
   const {
     project,
@@ -26,9 +42,18 @@ function ProductParts() {
   const panelType = (systemConfig?.panelTypes || []).find(
     (type) => String(type.key) === String(panel.panelTypeKey),
   );
-  const additionalParts = (panelType?.additionalParts || legacyAddOptions).map(normalizeAdditionalPart);
-  const addOptions = additionalParts.map((part) => ({ id: part.name, label: part.name, config: part }));
-  const getQuantityConfig = (partName) => additionalParts.find((part) => partName === part.name || partName.startsWith(`${part.name} `));
+  const additionalParts = (panelType?.additionalParts || legacyAddOptions).map(
+    normalizeAdditionalPart,
+  );
+  const addOptions = additionalParts.map((part) => ({
+    id: part.name,
+    label: part.name,
+    config: part,
+  }));
+  const getQuantityConfig = (partName) =>
+    additionalParts.find(
+      (part) => partName === part.name || partName.startsWith(`${part.name} `),
+    );
   const handlePartChange = (index, field, value) => {
     updatePartField(index, field, value);
   };
@@ -43,12 +68,28 @@ function ProductParts() {
     setRecalculating(true);
     const result = await recalculateActivePanelParts();
     setRecalculating(false);
-    if (!result.success) toast.error(result.message || "تعذر إعادة حساب الأجزاء.");
+    if (!result.success) {
+      if (result.error)
+        showApiErrorToast(result.error, "تعذر إعادة حساب الأجزاء.");
+      else toast.error(result.message || "تعذر إعادة حساب الأجزاء.");
+    }
   };
 
   return (
     <section className="project-editor-card">
-      <div className="section-title-row"><h2 className="section-title">بيانات المنتج</h2><button type="button" className="project-icon-refresh" title="إعادة حساب الأجزاء بأحدث المعادلات" aria-label="إعادة حساب الأجزاء بأحدث المعادلات" onClick={recalculateParts} disabled={recalculating}><IoRefresh className={recalculating ? "is-spinning" : ""} /></button></div>
+      <div className="section-title-row">
+        <h2 className="section-title">بيانات المنتج</h2>
+        <button
+          type="button"
+          className="project-icon-refresh"
+          title="إعادة حساب الأجزاء بأحدث المعادلات"
+          aria-label="إعادة حساب الأجزاء بأحدث المعادلات"
+          onClick={recalculateParts}
+          disabled={recalculating}
+        >
+          <IoRefresh className={recalculating ? "is-spinning" : ""} />
+        </button>
+      </div>
 
       <div className="parts-grid">
         {panel.parts.map((part, index) => (

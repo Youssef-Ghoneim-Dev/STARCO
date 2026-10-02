@@ -298,6 +298,7 @@ button.production-card-link {
 .dashboard-donut-segment {
     cursor: pointer;
     outline: none;
+    stroke-linecap: round;
     transition: stroke-width .18s ease, filter .18s ease, opacity .18s ease;
 }
 

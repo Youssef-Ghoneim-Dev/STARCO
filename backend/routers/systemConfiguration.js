@@ -33,20 +33,12 @@ router.put(
     controller.updateWhatsappTemplates
 );
 
-router.get(
-    "/google-drive/status",
-    authMw,
-    CheckuserToken,
-    controller.getGoogleDriveStatus
-);
 
 router.get(
-    "/google-drive/connect",
+    "/r2/status",
     authMw,
     CheckuserToken,
-    controller.startGoogleDriveConnection
+    controller.getR2Status
 );
-
-router.get("/google-drive/callback", controller.finishGoogleDriveConnection);
 
 module.exports = router;

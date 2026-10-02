@@ -1,6 +1,7 @@
 const panels = require("../models/panels");
 const projects = require("../models/projects");
-const { uploadFile, downloadStoredFile, deleteStoredFile } = require("../services/googleDrive");
+const { createObjectKey, createUploadUrl, getVerifiedStoredFile, downloadStoredFile, deleteStoredFile, MAX_SINGLE_PART_UPLOAD_BYTES } = require("../services/r2Storage");
+const jwt = require("jsonwebtoken");
 const { sendExecutionPdfRequested, sendExecutionPdfCompleted, sendExecutionConfirmed, sendPanelFilesReady, sendPanelCompleted, sendPanelDelayNotice } = require("../services/projectWhatsappNotifications");
 const users = require("../models/users");
 const createZipArchive = require("../utils/createZipArchive");
@@ -526,17 +527,47 @@ const saveExecutionPdfDesign = async (req, res, next) => { try {
     const project = await loadProject(panel.projectId);
     res.json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
 } catch (error) { next(error); } };
-const uploadTo = (bucket) => async (req, res, next) => { try {
-    const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel || !req.file) return res.status(400).json({ status: "error", message: "اختر ملفًا أولًا." });
-    if (panel.marketingEditSession?.active) return res.status(409).json({ status: "error", code: "PANEL_MARKETING_EDIT_ACTIVE", message: "لا يمكن رفع ملفات أثناء تعديل المندوب للوحة." });
-    if (!isOwner(req.user) && (!isEngineer(req.user) || !sameId(panel.engineerId, req.user._id))) return res.status(403).json({ status: "error", message: "رفع الملفات متاح للمهندس المسؤول." });
-    const purpose = bucket === "executionPdf" ? String(req.body?.purpose || "") : "";
-    if (bucket === "executionPdf" && !executionPdfPurposes.includes(purpose)) return res.status(400).json({ status: "error", message: "نوع ملف PDF التنفيذ غير صحيح." });
-    const stored = await uploadFile({ buffer: req.file.buffer, fileName: `${Date.now()}-${req.file.originalname}`, mimeType: req.file.mimetype || "application/octet-stream", folderName: `${panel.panelCode}-${bucket}` });
-    const entry = { storageFileId: stored.id, fileName: req.file.originalname, mimeType: req.file.mimetype || stored.mimeType || "application/octet-stream", fileSize: req.file.size, purpose, uploadedAt: new Date(), uploadedBy: req.user._id };
-    const isSingleSlot = bucket === "executionPdf" && purpose !== "gallery";
-    const replacedFiles = isSingleSlot ? (panel.executionPdf?.files || []).filter((file) => file.purpose === purpose) : [];
-    if (replacedFiles.length) await panels.update({ _id: panel._id }, { $pull: { "executionPdf.files": { purpose } } });
+const assertFileUploadPermission = (req, panel) => {
+    if (panel.marketingEditSession?.active) return { status: 409, code: "PANEL_MARKETING_EDIT_ACTIVE", message: "لا يمكن رفع ملفات أثناء تعديل المندوب للوحة." };
+    if (!isOwner(req.user) && (!isEngineer(req.user) || !sameId(panel.engineerId, req.user._id))) return { status: 403, message: "رفع الملفات متاح للمهندس المسؤول." };
+    return null;
+};
+const validateUploadDetails = (bucket, body = {}) => {
+    const purpose = bucket === "executionPdf" ? String(body?.purpose || "") : "";
+    if (bucket === "executionPdf" && !executionPdfPurposes.includes(purpose)) return { error: { status: 400, message: "نوع ملف PDF التنفيذ غير صحيح." } };
+    const fileName = String(body?.fileName || "").trim();
+    const mimeType = String(body?.mimeType || "application/octet-stream").trim();
+    const fileSize = Number(body?.fileSize);
+    if (!fileName || !Number.isFinite(fileSize) || fileSize <= 0) return { error: { status: 400, message: "بيانات الملف غير مكتملة." } };
+    if (fileSize > MAX_SINGLE_PART_UPLOAD_BYTES) return { error: { status: 413, message: "حجم الملف أكبر من 5GB، وسيحتاج رفعًا متعدد الأجزاء." } };
+    return { purpose, fileName, mimeType, fileSize };
+};
+const signUploadTo = (bucket) => async (req, res, next) => { try {
+    const panel = await loadPanel(req.params.projectId, req.params.panelId);
+    if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    const permissionError = assertFileUploadPermission(req, panel); if (permissionError) return res.status(permissionError.status).json({ status: "error", code: permissionError.code, message: permissionError.message });
+    const details = validateUploadDetails(bucket, req.body); if (details.error) return res.status(details.error.status).json({ status: "error", message: details.error.message });
+    if (!process.env.TOKEN_KEY) throw new Error("TOKEN_KEY is required to secure file uploads.");
+    const storageFileId = createObjectKey({ prefix: `projects/${panel.projectId}/panels/${panel._id}/${bucket}`, fileName: details.fileName });
+    const upload = await createUploadUrl({ key: storageFileId, mimeType: details.mimeType });
+    const uploadToken = jwt.sign({ purpose: "r2-panel-upload", bucket, filePurpose: details.purpose, projectId: String(panel.projectId), panelId: String(panel._id), storageFileId, fileName: details.fileName, mimeType: details.mimeType, fileSize: details.fileSize }, process.env.TOKEN_KEY, { expiresIn: "20m" });
+    res.status(201).json({ status: "ok", storageFileId, uploadUrl: upload.uploadUrl, uploadToken, expiresIn: upload.expiresIn });
+} catch (error) { next(error); } };
+const completeUploadTo = (bucket) => async (req, res, next) => { try {
+    const panel = await loadPanel(req.params.projectId, req.params.panelId);
+    if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." });
+    const permissionError = assertFileUploadPermission(req, panel); if (permissionError) return res.status(permissionError.status).json({ status: "error", code: permissionError.code, message: permissionError.message });
+    if (!process.env.TOKEN_KEY) throw new Error("TOKEN_KEY is required to secure file uploads.");
+    let upload;
+    try { upload = jwt.verify(String(req.body?.uploadToken || ""), process.env.TOKEN_KEY); }
+    catch { return res.status(401).json({ status: "error", message: "انتهت جلسة رفع الملف. اختر الملف مرة أخرى." }); }
+    if (upload.purpose !== "r2-panel-upload" || upload.bucket !== bucket || upload.projectId !== String(panel.projectId) || upload.panelId !== String(panel._id)) return res.status(403).json({ status: "error", message: "جلسة رفع الملف لا تخص هذه اللوحة." });
+    const stored = await getVerifiedStoredFile(upload.storageFileId);
+    if (stored.size !== Number(upload.fileSize)) return res.status(409).json({ status: "error", message: "حجم الملف المرفوع لا يطابق الملف المختار." });
+    const entry = { storageFileId: stored.id, fileName: upload.fileName, mimeType: upload.mimeType || stored.mimeType || "application/octet-stream", fileSize: stored.size, purpose: upload.filePurpose || "", uploadedAt: new Date(), uploadedBy: req.user._id };
+    const isSingleSlot = bucket === "executionPdf" && upload.filePurpose !== "gallery";
+    const replacedFiles = isSingleSlot ? (panel.executionPdf?.files || []).filter((file) => file.purpose === upload.filePurpose) : [];
+    if (replacedFiles.length) await panels.update({ _id: panel._id }, { $pull: { "executionPdf.files": { purpose: upload.filePurpose } } });
     const saved = await panels.update({ _id: panel._id }, { $push: { [`${bucket}.files`]: entry } });
     await Promise.allSettled(replacedFiles.map((file) => deleteStoredFile(file.storageFileId)));
     const project = await loadProject(panel.projectId); res.status(201).json({ status: "ok", panel: publicPanel(saved), project: await projectResponse(project) });
@@ -663,4 +694,4 @@ const updateStage = async (req, res, next) => { try {
 
 const downloadManufacturingArchive = async (req, res, next) => { try { const panel = await loadPanel(req.params.projectId, req.params.panelId); if (!panel) return res.status(404).json({ status: "error", message: "اللوحة غير موجودة." }); const allowed = isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || (req.user.role === "LaserSupervisor" && supervisorCanAccessStatus(req.user, panel.status)); if (!allowed) return res.status(403).json({ status: "error", message: "تنزيل ملفات التصنيع غير متاح لهذا الحساب." }); const files = panel.manufacturing?.files || []; if (!files.length) return res.status(404).json({ status: "error", message: "لا توجد ملفات تصنيع لتنزيلها." }); const entries = await Promise.all(files.map(async (file, index) => ({ name: `${index + 1}-${file.fileName}`, buffer: (await downloadStoredFile(file.storageFileId)).buffer, date: file.uploadedAt || new Date() }))); const archive = createZipArchive(entries); res.setHeader("Content-Type", "application/zip"); res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${panel.panelName || "panel"}-files.zip`)}`); res.send(archive); } catch (error) { next(error); } };
 
-module.exports = { listAllPanels, listPanels, getPanel, createPanel, updatePanel, claimPanel, completeQuote, openEditing, submitEdits, cancelEdits, deletePanel, requestExecutionPdf, saveExecutionPdfDesign, uploadExecutionPdf: uploadTo("executionPdf"), downloadExecutionPdf: downloadFile("executionPdf"), deleteExecutionPdf: deleteFile("executionPdf"), finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, requestDeliverySchedule, respondDeliverySchedule, uploadManufacturing: uploadTo("manufacturing"), downloadManufacturing: downloadFile("manufacturing"), downloadManufacturingArchive, deleteManufacturing: deleteFile("manufacturing"), finishManufacturing, updateStage };
+module.exports = { listAllPanels, listPanels, getPanel, createPanel, updatePanel, claimPanel, completeQuote, openEditing, submitEdits, cancelEdits, deletePanel, requestExecutionPdf, saveExecutionPdfDesign, signExecutionPdfUpload: signUploadTo("executionPdf"), completeExecutionPdfUpload: completeUploadTo("executionPdf"), downloadExecutionPdf: downloadFile("executionPdf"), deleteExecutionPdf: deleteFile("executionPdf"), finishExecutionPdf, skipExecutionPdf, requestExecutionPdfChanges, confirmExecution, requestDeliverySchedule, respondDeliverySchedule, signManufacturingUpload: signUploadTo("manufacturing"), completeManufacturingUpload: completeUploadTo("manufacturing"), downloadManufacturing: downloadFile("manufacturing"), downloadManufacturingArchive, deleteManufacturing: deleteFile("manufacturing"), finishManufacturing, updateStage };

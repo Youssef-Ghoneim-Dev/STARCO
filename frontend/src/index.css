@@ -616,15 +616,32 @@ option,
 }
 
 .starco-toast {
-    direction: rtl !important;
-    text-align: right !important;
+    direction: ltr !important;
+    text-align: start !important;
 }
 
-.starco-toast>div:last-child {
+.starco-toast-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     min-width: 0;
-    direction: rtl;
+    direction: ltr;
+    text-align: left;
+}
+
+.starco-toast-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+.starco-toast-message {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
     unicode-bidi: plaintext;
-    text-align: right;
+    text-align: start;
+    overflow-wrap: anywhere;
 }
 
 .starco-toast svg {

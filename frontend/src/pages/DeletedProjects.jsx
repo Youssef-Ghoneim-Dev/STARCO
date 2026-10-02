@@ -4,12 +4,23 @@ import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import DeletedUsersList from "../components/users/DeletedUsersList";
 import { useAuth } from "../context/AuthContext";
-import { getDeletedProjects, permanentlyDeleteProject, restoreProject } from "../services/projectsAPI";
+import {
+  getDeletedProjects,
+  permanentlyDeleteProject,
+  restoreProject,
+} from "../services/projectsAPI";
+import { useActivityAction } from "../components/common/activity/ActivityContext";
+import { showApiErrorToast } from "../utils/errorToast";
 import "../styles/management.css";
 
 function DeletedProjects() {
   const { user } = useAuth();
-  const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(user?.role);
+  const runActivity = useActivityAction();
+  const canManageUsers = [
+    "OwnerManager",
+    "MarketingManager",
+    "ProductionManager",
+  ].includes(user?.role);
   const [activeTab, setActiveTab] = useState("projects");
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,18 +31,31 @@ function DeletedProjects() {
   useEffect(() => {
     getDeletedProjects()
       .then(({ data }) => setProjects(data))
-      .catch((error) => toast.error(error?.response?.data?.message || "تعذر تحميل سلة المحذوفات."))
+      .catch((error) => showApiErrorToast(error, "تعذر تحميل سلة المحذوفات."))
       .finally(() => setLoading(false));
   }, []);
 
   const restore = async (project) => {
     setRestoringId(project._id);
     try {
-      await restoreProject(project._id);
-      setProjects((current) => current.filter((item) => item._id !== project._id));
-      toast.success("تمت استعادة المشروع.");
+      const operation = await runActivity(
+        "restore-project",
+        {
+          title: "استعادة المشروع",
+          message: "يتم استعادة المشروع...",
+          type: "save",
+          successMessage: "تمت استعادة المشروع.",
+          errorMessage: "تعذرت استعادة المشروع.",
+        },
+        () => restoreProject(project._id),
+      );
+      if (operation.skipped) return;
+      setProjects((current) =>
+        current.filter((item) => item._id !== project._id),
+      );
+      if (!operation.visible) toast.success("تمت استعادة المشروع.");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "تعذرت استعادة المشروع.");
+      showApiErrorToast(error, "تعذرت استعادة المشروع.");
     } finally {
       setRestoringId("");
     }
@@ -45,11 +69,24 @@ function DeletedProjects() {
     // own progress state, so the user is never trapped behind a blocking modal.
     setConfirmationProject(null);
     try {
-      await permanentlyDeleteProject(projectId);
-      setProjects((current) => current.filter((item) => item._id !== projectId));
-      toast.success("تم حذف المشروع نهائيًا.");
+      const operation = await runActivity(
+        "permanently-delete-project",
+        {
+          title: "حذف المشروع نهائيًا",
+          message: "يتم حذف المشروع ومرفقاته...",
+          type: "delete",
+          successMessage: "تم حذف المشروع نهائيًا.",
+          errorMessage: "تعذر حذف المشروع نهائيًا.",
+        },
+        () => permanentlyDeleteProject(projectId),
+      );
+      if (operation.skipped) return;
+      setProjects((current) =>
+        current.filter((item) => item._id !== projectId),
+      );
+      if (!operation.visible) toast.success("تم حذف المشروع نهائيًا.");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "تعذر حذف المشروع نهائيًا.");
+      showApiErrorToast(error, "تعذر حذف المشروع نهائيًا.");
     } finally {
       setDeletingId("");
     }
@@ -61,13 +98,38 @@ function DeletedProjects() {
         <div className="management-heading">
           <div>
             <h1>سلة المحذوفات</h1>
-            <p>{activeTab === "projects" ? "المشاريع المحذوفة مؤقتًا ويمكن استعادتها." : "المستخدمون المحذوفون ويمكن استعادتها أو حذفها نهائيًا."}</p>
+            <p>
+              {activeTab === "projects"
+                ? "المشاريع المحذوفة مؤقتًا ويمكن استعادتها."
+                : "المستخدمون المحذوفون ويمكن استعادتها أو حذفها نهائيًا."}
+            </p>
           </div>
         </div>
 
-        {canManageUsers && <div className="recycle-bin-tabs"><button type="button" className={activeTab === "projects" ? "active" : ""} onClick={() => setActiveTab("projects")}>المشاريع</button><button type="button" className={activeTab === "users" ? "active" : ""} onClick={() => setActiveTab("users")}>المستخدمون</button></div>}
+        {canManageUsers && (
+          <div className="recycle-bin-tabs">
+            <button
+              type="button"
+              className={activeTab === "projects" ? "active" : ""}
+              onClick={() => setActiveTab("projects")}
+            >
+              المشاريع
+            </button>
+            <button
+              type="button"
+              className={activeTab === "users" ? "active" : ""}
+              onClick={() => setActiveTab("users")}
+            >
+              المستخدمون
+            </button>
+          </div>
+        )}
 
-        {activeTab === "users" ? <DeletedUsersList /> : loading ? <p className="management-empty">جاري التحميل...</p> : projects.length === 0 ? (
+        {activeTab === "users" ? (
+          <DeletedUsersList />
+        ) : loading ? (
+          <p className="management-empty">جاري التحميل...</p>
+        ) : projects.length === 0 ? (
           <p className="management-empty">لا توجد مشاريع محذوفة.</p>
         ) : (
           <div className="management-list">
@@ -75,23 +137,78 @@ function DeletedProjects() {
               <article className="management-row" key={project._id}>
                 <div>
                   <h2>{project.client?.name || "عميل غير محدد"}</h2>
-                  <p>عدد اللوحات: {(project.panels || []).length} · الحالة السابقة: {project.status}</p>
+                  <p>
+                    عدد اللوحات: {(project.panels || []).length} · الحالة
+                    السابقة: {project.status}
+                  </p>
                 </div>
                 <div className="recycle-bin-actions">
-                  <button type="button" onClick={() => restore(project)} disabled={restoringId === project._id || deletingId === project._id}><HiOutlineRefresh />{restoringId === project._id ? "جاري الاستعادة..." : "استعادة"}</button>
-                  <button type="button" className="permanent-delete-btn" onClick={() => setConfirmationProject(project)} disabled={restoringId === project._id || deletingId === project._id}><HiOutlineTrash />{deletingId === project._id ? "جاري الحذف..." : "حذف نهائي"}</button>
+                  <button
+                    type="button"
+                    onClick={() => restore(project)}
+                    disabled={
+                      restoringId === project._id || deletingId === project._id
+                    }
+                  >
+                    <HiOutlineRefresh />
+                    {restoringId === project._id
+                      ? "جاري الاستعادة..."
+                      : "استعادة"}
+                  </button>
+                  <button
+                    type="button"
+                    className="permanent-delete-btn"
+                    onClick={() => setConfirmationProject(project)}
+                    disabled={
+                      restoringId === project._id || deletingId === project._id
+                    }
+                  >
+                    <HiOutlineTrash />
+                    {deletingId === project._id ? "جاري الحذف..." : "حذف نهائي"}
+                  </button>
                 </div>
               </article>
             ))}
           </div>
         )}
-        {confirmationProject && <div className="management-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="management-modal delete-project-confirmation">
-            <div className="management-modal-heading"><h2>حذف نهائي</h2></div>
-            <p>سيتم حذف مشروع <strong>{confirmationProject.client?.name || "هذا العميل"}</strong> وجميع مرفقاته نهائيًا، ولا يمكن استعادته بعد ذلك.</p>
-            <div className="management-confirmation-actions"><button type="button" className="management-cancel-btn" onClick={() => setConfirmationProject(null)} disabled={Boolean(deletingId)}>إلغاء</button><button type="button" className="permanent-delete-btn" onClick={deleteForever} disabled={Boolean(deletingId)}>حذف نهائيًا</button></div>
+        {confirmationProject && (
+          <div
+            className="management-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="management-modal delete-project-confirmation">
+              <div className="management-modal-heading">
+                <h2>حذف نهائي</h2>
+              </div>
+              <p>
+                سيتم حذف مشروع{" "}
+                <strong>
+                  {confirmationProject.client?.name || "هذا العميل"}
+                </strong>{" "}
+                وجميع مرفقاته نهائيًا، ولا يمكن استعادته بعد ذلك.
+              </p>
+              <div className="management-confirmation-actions">
+                <button
+                  type="button"
+                  className="management-cancel-btn"
+                  onClick={() => setConfirmationProject(null)}
+                  disabled={Boolean(deletingId)}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  className="permanent-delete-btn"
+                  onClick={deleteForever}
+                  disabled={Boolean(deletingId)}
+                >
+                  حذف نهائيًا
+                </button>
+              </div>
+            </div>
           </div>
-        </div>}
+        )}
       </section>
     </DashboardLayout>
   );

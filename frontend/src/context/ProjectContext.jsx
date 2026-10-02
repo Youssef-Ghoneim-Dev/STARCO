@@ -5,10 +5,23 @@ import {
   useEffect,
   useState,
 } from "react";
-import toast from "react-hot-toast";
 import { defaultProject } from "../utils/defaultProject";
-import { cancelPanelEdits, completePanelQuote, createPanel as createPanelRecord, deletePanelRecord, getProject, startProjectEditing, submitPanelEdits, updatePanelRecord } from "../services/projectsAPI";
+import {
+  cancelPanelEdits,
+  completePanelQuote,
+  createPanel as createPanelRecord,
+  deletePanelRecord,
+  getProject,
+  startProjectEditing,
+  submitPanelEdits,
+  updatePanelRecord,
+} from "../services/projectsAPI";
 import { getSystemConfiguration } from "../services/systemConfigurationAPI";
+import {
+  useActivityAction,
+  useGroupedActivityAction,
+} from "../components/common/activity/ActivityContext";
+import { showApiErrorToast } from "../utils/errorToast";
 
 const ProjectContext = createContext();
 
@@ -49,12 +62,17 @@ const createPanel = (index, systemConfig) => {
   const configuredPrices = systemConfig?.prices || {};
 
   panel.panelName = `لوحة ${index}`;
-  panel.panelId = globalThis.crypto?.randomUUID?.() || `panel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  panel.panelId =
+    globalThis.crypto?.randomUUID?.() ||
+    `panel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   panel.quoteStatus = "draft";
   panel.prices = { ...panel.prices };
   panel.copper = {
     ...(panel.copper || {}),
-    pricePerKg: systemConfig?.copperConfiguration?.pricePerKg ?? panel.copper?.pricePerKg ?? "",
+    pricePerKg:
+      systemConfig?.copperConfiguration?.pricePerKg ??
+      panel.copper?.pricePerKg ??
+      "",
   };
 
   configuredPriceFields.forEach((field) => {
@@ -71,28 +89,53 @@ const normalizePanelThickness = (panel) => ({
     : [],
 });
 
-const hasValue = (value) => value !== "" && value !== null && value !== undefined;
-const hasCompleteDimensions = (dimensions = {}) => [dimensions.length, dimensions.width, dimensions.depth]
-  .every((value) => Number.isFinite(Number(value)) && Number(value) > 0);
+const hasValue = (value) =>
+  value !== "" && value !== null && value !== undefined;
+const hasCompleteDimensions = (dimensions = {}) =>
+  [dimensions.length, dimensions.width, dimensions.depth].every(
+    (value) => Number.isFinite(Number(value)) && Number(value) > 0,
+  );
 
 const getAutomaticPanelName = (dimensions = {}) => {
-  const values = [dimensions.length, dimensions.width, dimensions.depth].map(Number);
+  const values = [dimensions.length, dimensions.width, dimensions.depth].map(
+    Number,
+  );
   if (values.some((value) => !Number.isFinite(value) || value <= 0)) return "";
   return values.map((value) => Number((value / 10).toFixed(2))).join(" × ");
 };
 
 const evaluateFormula = (formula, dimensions) => {
   if (!formula?.trim()) return undefined;
-  const values = { Length: Number(dimensions?.length), Width: Number(dimensions?.width), Depth: Number(dimensions?.depth) };
-  if (Object.values(values).some((value) => !Number.isFinite(value) || value <= 0)) return undefined;
+  const values = {
+    Length: Number(dimensions?.length),
+    Width: Number(dimensions?.width),
+    Depth: Number(dimensions?.depth),
+  };
+  if (
+    Object.values(values).some((value) => !Number.isFinite(value) || value <= 0)
+  )
+    return undefined;
   const words = formula.match(/[A-Za-z]+/g) || [];
-  if (words.some((word) => !Object.hasOwn(values, word[0].toUpperCase() + word.slice(1).toLowerCase()))) return undefined;
-  const numericFormula = formula.replace(/[A-Za-z]+/g, (word) => String(values[word[0].toUpperCase() + word.slice(1).toLowerCase()]));
+  if (
+    words.some(
+      (word) =>
+        !Object.hasOwn(
+          values,
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+        ),
+    )
+  )
+    return undefined;
+  const numericFormula = formula.replace(/[A-Za-z]+/g, (word) =>
+    String(values[word[0].toUpperCase() + word.slice(1).toLowerCase()]),
+  );
   if (!/^[0-9+\-*/().\s]+$/.test(numericFormula)) return undefined;
   try {
     const value = Function(`"use strict"; return (${numericFormula});`)();
     return Number.isFinite(value) ? Math.round(value * 100) / 100 : undefined;
-  } catch { return undefined; }
+  } catch {
+    return undefined;
+  }
 };
 
 const buildTypeParts = (type, dimensions) => {
@@ -100,25 +143,47 @@ const buildTypeParts = (type, dimensions) => {
   return (type?.parts || []).map((part) => ({
     name: part.name,
     quantity: Number(part.quantity) || 1,
-    ...(part.manualDimensions ? {} : {
-      width: ready ? (evaluateFormula(part.widthFormula, dimensions) ?? "") : "",
-      height: ready ? (evaluateFormula(part.lengthFormula, dimensions) ?? "") : "",
-    }),
+    ...(part.manualDimensions
+      ? {}
+      : {
+          width: ready
+            ? (evaluateFormula(part.widthFormula, dimensions) ?? "")
+            : "",
+          height: ready
+            ? (evaluateFormula(part.lengthFormula, dimensions) ?? "")
+            : "",
+        }),
   }));
 };
 
-const legacyDefaultPartNames = new Set(["العلبة", "الجنب", "المراية", "الجلسة", "الجريدة", "باب 1", "باب 2"]);
-const containsOnlyLegacyDefaultParts = (parts = []) => parts.length > 0 && parts.every((part) => legacyDefaultPartNames.has(String(part.name || "").trim()));
+const legacyDefaultPartNames = new Set([
+  "العلبة",
+  "الجنب",
+  "المراية",
+  "الجلسة",
+  "الجريدة",
+  "باب 1",
+  "باب 2",
+]);
+const containsOnlyLegacyDefaultParts = (parts = []) =>
+  parts.length > 0 &&
+  parts.every((part) =>
+    legacyDefaultPartNames.has(String(part.name || "").trim()),
+  );
 
 const mergeRecalculatedParts = (existingParts = [], type, dimensions) => {
   const calculatedParts = buildTypeParts(type, dimensions);
   const remainingCalculatedParts = [...calculatedParts];
   const preservedParts = existingParts.map((part) => {
-    const calculatedIndex = remainingCalculatedParts.findIndex((calculated) => calculated.name === part.name);
+    const calculatedIndex = remainingCalculatedParts.findIndex(
+      (calculated) => calculated.name === part.name,
+    );
     if (calculatedIndex < 0) return part;
 
     const [calculated] = remainingCalculatedParts.splice(calculatedIndex, 1);
-    const configuredPart = (type?.parts || []).find((item) => item.name === part.name);
+    const configuredPart = (type?.parts || []).find(
+      (item) => item.name === part.name,
+    );
     if (configuredPart?.manualDimensions) return part;
     return {
       ...part,
@@ -134,77 +199,130 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
   const basePanel = createPanel(index + 1, systemConfig);
   const incomingPanel = panel || {};
   const incomingPrices = incomingPanel.prices || {};
-  const draftThickness = incomingPanel.marketingEditSession?.active && Array.isArray(incomingPanel.marketerData?.thickness)
-    ? incomingPanel.marketerData.thickness
-    : null;
+  const draftThickness =
+    incomingPanel.marketingEditSession?.active &&
+    Array.isArray(incomingPanel.marketerData?.thickness)
+      ? incomingPanel.marketerData.thickness
+      : null;
   const effectiveThickness = draftThickness?.length
     ? draftThickness
-    : Array.isArray(incomingPanel.pricing?.thickness)
-    && incomingPanel.pricing.thickness.length
-    ? incomingPanel.pricing.thickness
-    : Array.isArray(incomingPanel.thickness) && incomingPanel.thickness.length
-      ? incomingPanel.thickness
-      : Array.isArray(incomingPanel.marketerData?.thickness)
-        ? incomingPanel.marketerData.thickness
-        : [];
-  const normalizedType = String(incomingPanel.panelType || "").toLowerCase().replace(/[.\-\s_]/g, "");
-  const inferredType = (systemConfig?.panelTypes || []).find((type) =>
-    type.key === incomingPanel.panelTypeKey
-    || String(type.name || "").toLowerCase().replace(/[.\-\s_]/g, "") === normalizedType
-    || (normalizedType === "ont" && type.key === "ont")
+    : Array.isArray(incomingPanel.pricing?.thickness) &&
+        incomingPanel.pricing.thickness.length
+      ? incomingPanel.pricing.thickness
+      : Array.isArray(incomingPanel.thickness) && incomingPanel.thickness.length
+        ? incomingPanel.thickness
+        : Array.isArray(incomingPanel.marketerData?.thickness)
+          ? incomingPanel.marketerData.thickness
+          : [];
+  const normalizedType = String(incomingPanel.panelType || "")
+    .toLowerCase()
+    .replace(/[.\-\s_]/g, "");
+  const inferredType = (systemConfig?.panelTypes || []).find(
+    (type) =>
+      type.key === incomingPanel.panelTypeKey ||
+      String(type.name || "")
+        .toLowerCase()
+        .replace(/[.\-\s_]/g, "") === normalizedType ||
+      (normalizedType === "ont" && type.key === "ont"),
   );
-  const rawMarketerCopper = incomingPanel.copperDetails || incomingPanel.marketerData?.copperDetails || {};
+  const rawMarketerCopper =
+    incomingPanel.copperDetails ||
+    incomingPanel.marketerData?.copperDetails ||
+    {};
   const marketerCopper = {
     ...rawMarketerCopper,
-    switches: rawMarketerCopper.switches === "My Nature" ? "Minture" : rawMarketerCopper.switches,
+    switches:
+      rawMarketerCopper.switches === "My Nature"
+        ? "Minture"
+        : rawMarketerCopper.switches,
   };
-  const marketerBranchGroups = Array.isArray(marketerCopper.branchGroups) ? marketerCopper.branchGroups : [];
-  const incomingCopper = incomingPanel.copper && Object.keys(incomingPanel.copper).length
-    ? incomingPanel.copper
-    : {
-        enabled: Boolean(incomingPanel.hasCopper ?? incomingPanel.marketerData?.hasCopper),
-        main: { optionKey: marketerCopper.mainKey || "" },
-        branches: marketerBranchGroups.map((group, groupIndex) => ({
-          branchId: group.id || `marketer-branch-${groupIndex}`,
-          branchGroupId: group.id || `marketer-branch-${groupIndex}`,
-          optionKey: group.optionKey || "",
-          direction: "one",
-          barCount: 1,
-          quantity: Math.max(1, Number(group.count || group.quantity) || 1),
-        })),
-      };
+  const marketerBranchGroups = Array.isArray(marketerCopper.branchGroups)
+    ? marketerCopper.branchGroups
+    : [];
+  const incomingCopper =
+    incomingPanel.copper && Object.keys(incomingPanel.copper).length
+      ? incomingPanel.copper
+      : {
+          enabled: Boolean(
+            incomingPanel.hasCopper ?? incomingPanel.marketerData?.hasCopper,
+          ),
+          main: { optionKey: marketerCopper.mainKey || "" },
+          branches: marketerBranchGroups.map((group, groupIndex) => ({
+            branchId: group.id || `marketer-branch-${groupIndex}`,
+            branchGroupId: group.id || `marketer-branch-${groupIndex}`,
+            optionKey: group.optionKey || "",
+            direction: "one",
+            barCount: 1,
+            quantity: Math.max(1, Number(group.count || group.quantity) || 1),
+          })),
+        };
   const hydratedBranches = Array.isArray(incomingCopper?.branches)
     ? incomingCopper.branches.reduce((groups, branch) => {
-      const groupId = branch.branchGroupId || branch.branchId;
-      const existing = groups.find((item) => groupId && item.branchGroupId === groupId);
-      if (existing) {
-        existing.quantity += Math.max(1, Number(branch.quantity) || 1);
+        const groupId = branch.branchGroupId || branch.branchId;
+        const existing = groups.find(
+          (item) => groupId && item.branchGroupId === groupId,
+        );
+        if (existing) {
+          existing.quantity += Math.max(1, Number(branch.quantity) || 1);
+          return groups;
+        }
+        groups.push({
+          ...branch,
+          quantity: Math.max(1, Number(branch.quantity) || 1),
+        });
         return groups;
-      }
-      groups.push({ ...branch, quantity: Math.max(1, Number(branch.quantity) || 1) });
-      return groups;
-    }, [])
-    : (basePanel.copper?.branches || []);
-  const incomingParts = Array.isArray(incomingPanel.parts) ? incomingPanel.parts : [];
-  const hydratedParts = inferredType && (incomingParts.length === 0 || containsOnlyLegacyDefaultParts(incomingParts))
-    ? buildTypeParts(inferredType, incomingPanel.dimensions)
-    : (incomingParts.length ? incomingParts : basePanel.parts);
+      }, [])
+    : basePanel.copper?.branches || [];
+  const incomingParts = Array.isArray(incomingPanel.parts)
+    ? incomingPanel.parts
+    : [];
+  const hydratedParts =
+    inferredType &&
+    (incomingParts.length === 0 ||
+      containsOnlyLegacyDefaultParts(incomingParts))
+      ? buildTypeParts(inferredType, incomingPanel.dimensions)
+      : incomingParts.length
+        ? incomingParts
+        : basePanel.parts;
 
-  const completedQuoteStatuses = new Set(["quoteCompleted", "executionPdfRequested", "executionPdfReady", "executionOrdered", "manufacturingFilesPending", "manufacturingFilesReady", "laserFilesDownloaded", "completed"]);
+  const completedQuoteStatuses = new Set([
+    "quoteCompleted",
+    "executionPdfRequested",
+    "executionPdfReady",
+    "executionOrdered",
+    "manufacturingFilesPending",
+    "manufacturingFilesReady",
+    "laserFilesDownloaded",
+    "completed",
+  ]);
   const inferredQuoteStatus = completedQuoteStatuses.has(projectStatus)
     ? "quoteCompleted"
-    : projectStatus === "pending" ? "pending"
-      : projectStatus === "inProgress" ? "inProgress"
-        : ["editing", "editingByEngineer", "editingByOwner", "editingByMarketing"].includes(projectStatus) ? "editing" : "draft";
+    : projectStatus === "pending"
+      ? "pending"
+      : projectStatus === "inProgress"
+        ? "inProgress"
+        : [
+              "editing",
+              "editingByEngineer",
+              "editingByOwner",
+              "editingByMarketing",
+            ].includes(projectStatus)
+          ? "editing"
+          : "draft";
 
   return normalizePanelThickness({
     ...basePanel,
     ...incomingPanel,
     panelTypeKey: incomingPanel.panelTypeKey || inferredType?.key || "",
     panelType: inferredType?.name || incomingPanel.panelType || "",
-    quoteStatus: incomingPanel.status === "pendingPricing" ? "pending"
-      : incomingPanel.status === "pricing" ? "inProgress"
-        : incomingPanel.status || incomingPanel.quoteStatus || inferredQuoteStatus,
+    quoteStatus:
+      incomingPanel.status === "pendingPricing"
+        ? "pending"
+        : incomingPanel.status === "pricing"
+          ? "inProgress"
+          : incomingPanel.status ||
+            incomingPanel.quoteStatus ||
+            inferredQuoteStatus,
     panelName: incomingPanel.panelName || basePanel.panelName,
     thickness: effectiveThickness,
     copperDetails: marketerCopper,
@@ -213,8 +331,13 @@ const hydratePanel = (panel, index, systemConfig, projectStatus = "") => {
       ...(incomingCopper || {}),
       pricePerKg: hasValue(incomingCopper?.pricePerKg)
         ? incomingCopper.pricePerKg
-        : (systemConfig?.copperConfiguration?.pricePerKg ?? basePanel.copper?.pricePerKg ?? ""),
-      main: { ...(basePanel.copper?.main || {}), ...(incomingCopper?.main || {}) },
+        : (systemConfig?.copperConfiguration?.pricePerKg ??
+          basePanel.copper?.pricePerKg ??
+          ""),
+      main: {
+        ...(basePanel.copper?.main || {}),
+        ...(incomingCopper?.main || {}),
+      },
       branches: hydratedBranches,
     },
     parts: hydratedParts,
@@ -246,6 +369,8 @@ const panelPayload = (panel) => ({
 });
 
 export function ProjectProvider({ children, projectId, readOnly = false }) {
+  const runActivity = useActivityAction();
+  const runGroupedActivity = useGroupedActivityAction();
   const [project, setProject] = useState(defaultProject());
   const [prices, setPrices] = useState({
     sheetPrice: "",
@@ -276,44 +401,52 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     let mounted = true;
 
     const loadSavedProject = async ({ quiet = false } = {}) => {
-        if (!quiet) setLoadingProject(true);
-        try {
-          setProjectLoadError("");
-          const { data } = await getProject(projectId);
-          if (!mounted) return;
+      if (!quiet) setLoadingProject(true);
+      try {
+        setProjectLoadError("");
+        const { data } = await getProject(projectId);
+        if (!mounted) return;
 
-          const configResponse = await getSystemConfiguration().catch(() => ({ data: null }));
-          const savedConfig = configResponse.data;
-          if (savedConfig) setSystemConfig(savedConfig);
+        const configResponse = await getSystemConfiguration().catch(() => ({
+          data: null,
+        }));
+        const savedConfig = configResponse.data;
+        if (savedConfig) setSystemConfig(savedConfig);
 
-          setPrices({
-            sheetPrice: data.prices?.sheetPrice ?? savedConfig?.sheetPrice ?? "",
-            paintPrice: data.prices?.paintPrice ?? savedConfig?.paintPrice ?? "",
-          });
-          setProject({
-            ...defaultProject(),
-            ...data,
-            panels: (data.panels || []).map((panel, index) =>
-              hydratePanel(panel, index, savedConfig, data.status),
-            ),
-          });
-          // Editable projects keep autosave enabled. Workflow stages that are
-          // intentionally read-only are the only stages that block it.
-          setPreventAutoSave(AUTO_SAVE_LOCKED_STATUSES.has(data.status) || Boolean(data.readOnlyForCurrentUser));
-        } catch (error) {
-          console.error("Failed to load project:", error);
-          if (mounted) {
-            setProjectLoadError(getSaveErrorMessage(error));
-          }
-        } finally {
-          if (mounted && !quiet) setLoadingProject(false);
+        setPrices({
+          sheetPrice: data.prices?.sheetPrice ?? savedConfig?.sheetPrice ?? "",
+          paintPrice: data.prices?.paintPrice ?? savedConfig?.paintPrice ?? "",
+        });
+        setProject({
+          ...defaultProject(),
+          ...data,
+          panels: (data.panels || []).map((panel, index) =>
+            hydratePanel(panel, index, savedConfig, data.status),
+          ),
+        });
+        // Editable projects keep autosave enabled. Workflow stages that are
+        // intentionally read-only are the only stages that block it.
+        setPreventAutoSave(
+          AUTO_SAVE_LOCKED_STATUSES.has(data.status) ||
+            Boolean(data.readOnlyForCurrentUser),
+        );
+      } catch (error) {
+        console.error("Failed to load project:", error);
+        if (mounted) {
+          setProjectLoadError(getSaveErrorMessage(error));
         }
+      } finally {
+        if (mounted && !quiet) setLoadingProject(false);
+      }
     };
 
     loadSavedProject();
     const refreshFromWorkflow = (event) => {
       const requestedProjectId = event?.detail?.projectId;
-      if (!requestedProjectId || String(requestedProjectId) === String(projectId)) {
+      if (
+        !requestedProjectId ||
+        String(requestedProjectId) === String(projectId)
+      ) {
         loadSavedProject({ quiet: true });
       }
     };
@@ -334,14 +467,16 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       ...current,
       panels: (current.panels || []).map((panel) => {
         const normalizedName = String(panel.panelType || "").trim();
-        const selectedType = (systemConfig.panelTypes || []).find((type) =>
-          type.key === panel.panelTypeKey
-          || String(type.name || "").trim() === normalizedName,
+        const selectedType = (systemConfig.panelTypes || []).find(
+          (type) =>
+            type.key === panel.panelTypeKey ||
+            String(type.name || "").trim() === normalizedName,
         );
         if (!selectedType) return panel;
-        const needsConfiguredParts = !Array.isArray(panel.parts)
-          || panel.parts.length === 0
-          || containsOnlyLegacyDefaultParts(panel.parts);
+        const needsConfiguredParts =
+          !Array.isArray(panel.parts) ||
+          panel.parts.length === 0 ||
+          containsOnlyLegacyDefaultParts(panel.parts);
         if (!needsConfiguredParts) return panel;
         return {
           ...panel,
@@ -356,13 +491,31 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   useEffect(() => {
     if (loadingProject || preventAutoSave || readOnly) return;
     const editablePanel = project.panels?.[activePanel];
-    if (!editablePanel || !["draft", "pricing", "editing"].includes(editablePanel.status || editablePanel.quoteStatus)) return;
+    if (
+      !editablePanel ||
+      !["draft", "pricing", "editing"].includes(
+        editablePanel.status || editablePanel.quoteStatus,
+      )
+    )
+      return;
 
     const timeout = setTimeout(async () => {
       try {
         const active = project.panels?.[activePanel];
         if (active?._id) {
-          await updatePanelRecord(projectId, active._id, panelPayload(active));
+          await runGroupedActivity(
+            `autosave-panel-${projectId}-${active._id}`,
+            {
+              title: "حفظ تعديلات اللوحة تلقائيًا",
+              message: "يتم حفظ التعديلات...",
+              type: "save",
+              successMessage: "تم حفظ تعديلات اللوحة.",
+              errorMessage: "تعذر حفظ تعديلات اللوحة.",
+            },
+            () =>
+              updatePanelRecord(projectId, active._id, panelPayload(active)),
+            900,
+          );
         }
         setSaveProjectError(null);
       } catch (error) {
@@ -372,13 +525,21 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
         // on every field change and leave the clear error visible to the user.
         if (error?.response?.status === 409) {
           setPreventAutoSave(true);
-          toast.error(message);
         }
       }
     }, AUTO_SAVE_DELAY_MS);
 
     return () => clearTimeout(timeout);
-  }, [project, prices, activePanel, loadingProject, preventAutoSave, projectId, readOnly]);
+  }, [
+    project,
+    prices,
+    activePanel,
+    loadingProject,
+    preventAutoSave,
+    projectId,
+    readOnly,
+    runGroupedActivity,
+  ]);
 
   const updateClient = useCallback((clientData) => {
     setPreventAutoSave(false);
@@ -420,11 +581,36 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
   const addPanel = useCallback(async () => {
     setPreventAutoSave(false);
     try {
-      const { data } = await createPanelRecord(projectId, {});
-      setProject((prev) => ({ ...prev, panels: [...prev.panels, hydratePanel(data.panel, prev.panels.length, systemConfig, prev.status)] }));
+      const operation = await runActivity(
+        "project-add-panel",
+        {
+          title: "إضافة لوحة للمشروع",
+          message: "يتم إنشاء اللوحة...",
+          type: "save",
+          successMessage: "تمت إضافة اللوحة بنجاح.",
+          errorMessage: "تعذر إضافة اللوحة.",
+        },
+        () => createPanelRecord(projectId, {}),
+      );
+      if (operation.skipped) return;
+      const { data } = operation.value;
+      setProject((prev) => ({
+        ...prev,
+        panels: [
+          ...prev.panels,
+          hydratePanel(
+            data.panel,
+            prev.panels.length,
+            systemConfig,
+            prev.status,
+          ),
+        ],
+      }));
       setActivePanel(project.panels.length);
-    } catch (error) { toast.error(getSaveErrorMessage(error)); }
-  }, [project.panels.length, projectId, systemConfig]);
+    } catch (error) {
+      showApiErrorToast(error, getSaveErrorMessage(error));
+    }
+  }, [project.panels.length, projectId, runActivity, systemConfig]);
   const deletePart = useCallback(
     (partIndex) => {
       updatePanel(activePanel, (panel) => ({
@@ -437,7 +623,8 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     [activePanel, updatePanel],
   );
   const createPart = (type, parts) => {
-    const configuredPart = typeof type === "object" && type !== null ? type : null;
+    const configuredPart =
+      typeof type === "object" && type !== null ? type : null;
     const typeName = configuredPart?.name || type;
     const quantities = {
       العلبة: 1,
@@ -448,11 +635,18 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     };
 
     if (configuredPart) {
-      const duplicateCount = parts.filter((part) => part.name === typeName || part.name.startsWith(`${typeName} `)).length;
+      const duplicateCount = parts.filter(
+        (part) =>
+          part.name === typeName || part.name.startsWith(`${typeName} `),
+      ).length;
       return {
         name: duplicateCount ? `${typeName} ${duplicateCount + 1}` : typeName,
-        width: hasValue(configuredPart.defaultWidth) ? Number(configuredPart.defaultWidth) : "",
-        height: hasValue(configuredPart.defaultHeight) ? Number(configuredPart.defaultHeight) : "",
+        width: hasValue(configuredPart.defaultWidth)
+          ? Number(configuredPart.defaultWidth)
+          : "",
+        height: hasValue(configuredPart.defaultHeight)
+          ? Number(configuredPart.defaultHeight)
+          : "",
         quantity: Number(configuredPart.defaultQuantity) || 1,
       };
     }
@@ -509,7 +703,9 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       };
     }
 
-    const duplicateCount = parts.filter((part) => part.name === typeName || part.name.startsWith(`${typeName} `)).length;
+    const duplicateCount = parts.filter(
+      (part) => part.name === typeName || part.name.startsWith(`${typeName} `),
+    ).length;
 
     return {
       name: duplicateCount ? `${typeName} ${duplicateCount + 1}` : typeName,
@@ -521,27 +717,45 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       quantity: quantities[typeName] || 1,
     };
   };
-  const deletePanel = useCallback(async (panelIndex) => {
-    const target = project.panels?.[panelIndex];
-    if (!target?._id) return;
-    try { await deletePanelRecord(projectId, target._id); } catch (error) { return toast.error(getSaveErrorMessage(error)); }
-    setProject((prev) => {
-      const panels = prev.panels.filter((_, index) => index !== panelIndex);
-      return { ...prev, panels };
-    });
-
-    setActivePanel((current) => {
-      if (current === panelIndex) {
-        return Math.max(0, current - 1);
+  const deletePanel = useCallback(
+    async (panelIndex) => {
+      const target = project.panels?.[panelIndex];
+      if (!target?._id) return;
+      try {
+        const operation = await runActivity(
+          "project-delete-panel",
+          {
+            title: "حذف اللوحة",
+            message: "يتم حذف اللوحة من المشروع...",
+            type: "delete",
+            successMessage: "تم حذف اللوحة.",
+            errorMessage: "تعذر حذف اللوحة.",
+          },
+          () => deletePanelRecord(projectId, target._id),
+        );
+        if (operation.skipped) return;
+      } catch (error) {
+        return showApiErrorToast(error, getSaveErrorMessage(error));
       }
+      setProject((prev) => {
+        const panels = prev.panels.filter((_, index) => index !== panelIndex);
+        return { ...prev, panels };
+      });
 
-      if (current > panelIndex) {
-        return current - 1;
-      }
+      setActivePanel((current) => {
+        if (current === panelIndex) {
+          return Math.max(0, current - 1);
+        }
 
-      return current;
-    });
-  }, [project.panels, projectId]);
+        if (current > panelIndex) {
+          return current - 1;
+        }
+
+        return current;
+      });
+    },
+    [project.panels, projectId, runActivity],
+  );
   const addPart = useCallback(
     (type) => {
       updatePanel(activePanel, (panel) => {
@@ -600,10 +814,21 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       if (!part) return;
 
       const panelType = (systemConfig?.panelTypes || []).find(
-        (type) => String(type.key) === String(project.panels[activePanel]?.panelTypeKey),
+        (type) =>
+          String(type.key) ===
+          String(project.panels[activePanel]?.panelTypeKey),
       );
-      const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
-      const step = Number(configuredPart?.quantityStep) || (part.name === "الكرسي" ? (systemConfig?.parts?.chair?.quantityStep ?? 2) : (systemConfig?.parts?.omega?.quantityStep ?? 1));
+      const configuredPart = (panelType?.additionalParts || [])
+        .map((item) => (typeof item === "string" ? { name: item } : item))
+        .find(
+          (item) =>
+            part.name === item.name || part.name.startsWith(`${item.name} `),
+        );
+      const step =
+        Number(configuredPart?.quantityStep) ||
+        (part.name === "الكرسي"
+          ? (systemConfig?.parts?.chair?.quantityStep ?? 2)
+          : (systemConfig?.parts?.omega?.quantityStep ?? 1));
 
       updatePartField(partIndex, "quantity", (part.quantity ?? 1) + step);
     },
@@ -617,10 +842,21 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       if (!part) return;
 
       const panelType = (systemConfig?.panelTypes || []).find(
-        (type) => String(type.key) === String(project.panels[activePanel]?.panelTypeKey),
+        (type) =>
+          String(type.key) ===
+          String(project.panels[activePanel]?.panelTypeKey),
       );
-      const configuredPart = (panelType?.additionalParts || []).map((item) => typeof item === "string" ? { name: item } : item).find((item) => part.name === item.name || part.name.startsWith(`${item.name} `));
-      const config = configuredPart || (part.name === "الكرسي" ? systemConfig?.parts?.chair : systemConfig?.parts?.omega);
+      const configuredPart = (panelType?.additionalParts || [])
+        .map((item) => (typeof item === "string" ? { name: item } : item))
+        .find(
+          (item) =>
+            part.name === item.name || part.name.startsWith(`${item.name} `),
+        );
+      const config =
+        configuredPart ||
+        (part.name === "الكرسي"
+          ? systemConfig?.parts?.chair
+          : systemConfig?.parts?.omega);
 
       const step = config?.quantityStep ?? 1;
       const minQuantity = config?.minQuantity ?? 1;
@@ -655,73 +891,107 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     },
     [activePanel, updatePanel],
   );
-  const updateCopper = useCallback((updater) => {
-    updatePanel(activePanel, (panel) => {
-      const configuredPrice = systemConfig?.copperConfiguration?.pricePerKg ?? "";
-      const currentCopper = panel.copper || {};
-      const copper = updater({
-        enabled: false,
-        pricePerKg: currentCopper.pricePerKg === "" || currentCopper.pricePerKg == null ? configuredPrice : currentCopper.pricePerKg,
-        earthPrice: "",
-        groundPrice: "",
-        main: { optionKey: "", length: "", barCount: 1 },
-        branches: [],
-        ...currentCopper,
+  const updateCopper = useCallback(
+    (updater) => {
+      updatePanel(activePanel, (panel) => {
+        const configuredPrice =
+          systemConfig?.copperConfiguration?.pricePerKg ?? "";
+        const currentCopper = panel.copper || {};
+        const copper = updater({
+          enabled: false,
+          pricePerKg:
+            currentCopper.pricePerKg === "" || currentCopper.pricePerKg == null
+              ? configuredPrice
+              : currentCopper.pricePerKg,
+          earthPrice: "",
+          groundPrice: "",
+          main: { optionKey: "", length: "", barCount: 1 },
+          branches: [],
+          ...currentCopper,
+        });
+        if (copper.pricePerKg === "" || copper.pricePerKg == null)
+          copper.pricePerKg = configuredPrice;
+        return {
+          ...panel,
+          hasCopper: Boolean(copper.enabled),
+          copper,
+        };
       });
-      if (copper.pricePerKg === "" || copper.pricePerKg == null) copper.pricePerKg = configuredPrice;
-      return {
-        ...panel,
-        hasCopper: Boolean(copper.enabled),
-        copper,
-      };
-    });
-  }, [activePanel, systemConfig?.copperConfiguration?.pricePerKg, updatePanel]);
-  const applyPanelType = useCallback(async (typeKey) => {
-    let latestConfig = systemConfig;
-    try {
-      const { data } = await getSystemConfiguration();
-      if (data) {
-        latestConfig = data;
-        setSystemConfig(data);
+    },
+    [activePanel, systemConfig?.copperConfiguration?.pricePerKg, updatePanel],
+  );
+  const applyPanelType = useCallback(
+    async (typeKey) => {
+      let latestConfig = systemConfig;
+      try {
+        const { data } = await getSystemConfiguration();
+        if (data) {
+          latestConfig = data;
+          setSystemConfig(data);
+        }
+      } catch {
+        // Keep the already loaded configuration as an offline fallback.
       }
-    } catch {
-      // Keep the already loaded configuration as an offline fallback.
-    }
-    const selectedType = (latestConfig?.panelTypes || []).find(
-      (type) => String(type.key) === String(typeKey),
-    );
-    if (!selectedType) return { success: false };
-    updatePanel(activePanel, (panel) => ({
-      ...panel,
-      panelTypeKey: selectedType.key,
-      panelType: selectedType.name,
-      parts: buildTypeParts(selectedType, panel.dimensions),
-      prices: { ...panel.prices, ...selectedType.prices },
-    }));
-    return { success: true };
-  }, [activePanel, systemConfig, updatePanel]);
-
-  const updatePanelDimensions = useCallback((field, value) => {
-    updatePanel(activePanel, (panel) => {
-      const previousAutomaticName = getAutomaticPanelName(panel.dimensions);
-      const dimensions = { ...(panel.dimensions || {}), [field]: value };
-      const automaticName = getAutomaticPanelName(dimensions);
-      const currentName = String(panel.panelName || "").trim();
-      const isDefaultName = !currentName || /^لوحة\s*\d+$/u.test(currentName);
-      let panelName = panel.panelName;
-
-      if (automaticName && (isDefaultName || currentName === previousAutomaticName)) {
-        panelName = automaticName;
-      } else if (automaticName && previousAutomaticName && currentName.startsWith(`${previousAutomaticName} `)) {
-        panelName = `${automaticName}${currentName.slice(previousAutomaticName.length)}`;
-      }
-
-      const selectedType = (systemConfig?.panelTypes || []).find(
-        (type) => String(type.key) === String(panel.panelTypeKey),
+      const selectedType = (latestConfig?.panelTypes || []).find(
+        (type) => String(type.key) === String(typeKey),
       );
-      return { ...panel, dimensions, panelName, ...(selectedType ? { parts: mergeRecalculatedParts(panel.parts, selectedType, dimensions) } : {}) };
-    });
-  }, [activePanel, systemConfig, updatePanel]);
+      if (!selectedType) return { success: false };
+      updatePanel(activePanel, (panel) => ({
+        ...panel,
+        panelTypeKey: selectedType.key,
+        panelType: selectedType.name,
+        parts: buildTypeParts(selectedType, panel.dimensions),
+        prices: { ...panel.prices, ...selectedType.prices },
+      }));
+      return { success: true };
+    },
+    [activePanel, systemConfig, updatePanel],
+  );
+
+  const updatePanelDimensions = useCallback(
+    (field, value) => {
+      updatePanel(activePanel, (panel) => {
+        const previousAutomaticName = getAutomaticPanelName(panel.dimensions);
+        const dimensions = { ...(panel.dimensions || {}), [field]: value };
+        const automaticName = getAutomaticPanelName(dimensions);
+        const currentName = String(panel.panelName || "").trim();
+        const isDefaultName = !currentName || /^لوحة\s*\d+$/u.test(currentName);
+        let panelName = panel.panelName;
+
+        if (
+          automaticName &&
+          (isDefaultName || currentName === previousAutomaticName)
+        ) {
+          panelName = automaticName;
+        } else if (
+          automaticName &&
+          previousAutomaticName &&
+          currentName.startsWith(`${previousAutomaticName} `)
+        ) {
+          panelName = `${automaticName}${currentName.slice(previousAutomaticName.length)}`;
+        }
+
+        const selectedType = (systemConfig?.panelTypes || []).find(
+          (type) => String(type.key) === String(panel.panelTypeKey),
+        );
+        return {
+          ...panel,
+          dimensions,
+          panelName,
+          ...(selectedType
+            ? {
+                parts: mergeRecalculatedParts(
+                  panel.parts,
+                  selectedType,
+                  dimensions,
+                ),
+              }
+            : {}),
+        };
+      });
+    },
+    [activePanel, systemConfig, updatePanel],
+  );
   const recalculateActivePanelParts = useCallback(async () => {
     try {
       const { data: savedConfig } = await getSystemConfiguration();
@@ -729,50 +999,85 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       const selectedType = (savedConfig?.panelTypes || []).find(
         (type) => String(type.key) === String(currentPanel?.panelTypeKey),
       );
-      if (!selectedType) return { success: false, message: "اختر نوع اللوحة أولًا لإعادة حساب الأجزاء." };
+      if (!selectedType)
+        return {
+          success: false,
+          message: "اختر نوع اللوحة أولًا لإعادة حساب الأجزاء.",
+        };
       setSystemConfig(savedConfig);
-      updatePanel(activePanel, (panel) => ({ ...panel, parts: mergeRecalculatedParts(panel.parts, selectedType, panel.dimensions) }));
+      updatePanel(activePanel, (panel) => ({
+        ...panel,
+        parts: mergeRecalculatedParts(
+          panel.parts,
+          selectedType,
+          panel.dimensions,
+        ),
+      }));
       return { success: true };
     } catch (error) {
-      return { success: false, message: getSaveErrorMessage(error) || "تعذر إعادة حساب الأجزاء." };
+      return {
+        success: false,
+        error,
+        message: getSaveErrorMessage(error) || "تعذر إعادة حساب الأجزاء.",
+      };
     }
   }, [activePanel, project.panels, updatePanel]);
-  const saveProject = useCallback(async ({ complete = false } = {}) => {
-    if (readOnly) {
-      const error = new Error("هذا المشروع للعرض فقط.");
-      setSaveProjectError(error.message);
-      return { success: false, error };
-    }
-    if (!project.client.name?.trim()) {
-      const validationError = new Error("يرجى تحديد عميل قبل حفظ المشروع.");
-      setSaveProjectError(validationError.message);
-      return { success: false, error: validationError };
-    }
-
-    setSavingProject(true);
-    setSaveProjectError(null);
-
-    try {
-      const active = project.panels?.[activePanel];
-      if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
-      let completionData = null;
-      if (complete) {
-        const { data } = await completePanelQuote(projectId, active._id);
-        completionData = data;
-        // Keep the quote editor mounted until the completion dialog displays
-        // the generated preview link. The backend has already persisted the
-        // new status, and leaving this page will load it normally next time.
-        setPreventAutoSave(true);
+  const saveProject = useCallback(
+    async ({ complete = false } = {}) => {
+      if (readOnly) {
+        const error = new Error("هذا المشروع للعرض فقط.");
+        setSaveProjectError(error.message);
+        return { success: false, error };
       }
-      return { success: true, data: completionData };
-    } catch (error) {
-      const message = getSaveErrorMessage(error);
-      setSaveProjectError(message);
-      return { success: false, error, message };
-    } finally {
-      setSavingProject(false);
-    }
-  }, [activePanel, project, projectId, readOnly]);
+      if (!project.client.name?.trim()) {
+        const validationError = new Error("يرجى تحديد عميل قبل حفظ المشروع.");
+        setSaveProjectError(validationError.message);
+        return { success: false, error: validationError };
+      }
+
+      const operation = await runActivity(
+        complete ? "complete-panel-quote" : "save-project",
+        {
+          title: complete ? "إتمام تسعير اللوحة" : "حفظ المشروع",
+          message: "يتم حفظ التعديلات...",
+          type: "save",
+          successMessage: complete
+            ? "تم إتمام تسعير اللوحة."
+            : "تم حفظ المشروع بنجاح.",
+          errorMessage: "تعذر حفظ المشروع.",
+        },
+        async () => {
+          setSavingProject(true);
+          setSaveProjectError(null);
+          try {
+            const active = project.panels?.[activePanel];
+            if (active?._id)
+              await updatePanelRecord(projectId, active._id, {
+                ...panelPayload(active),
+                marketerSaved: true,
+              });
+            let completionData = null;
+            if (complete) {
+              const { data } = await completePanelQuote(projectId, active._id);
+              completionData = data;
+              setPreventAutoSave(true);
+            }
+            return { success: true, data: completionData };
+          } catch (error) {
+            const message = getSaveErrorMessage(error);
+            setSaveProjectError(message);
+            return { success: false, error, message };
+          } finally {
+            setSavingProject(false);
+          }
+        },
+      );
+      return operation.skipped
+        ? { success: false, skipped: true }
+        : { ...operation.value, activityVisible: operation.visible };
+    },
+    [activePanel, project, projectId, readOnly, runActivity],
+  );
   const saveDraftNow = useCallback(async () => {
     if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
     try {
@@ -783,9 +1088,16 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       if (panelResponse?.data?.panel) {
         setProject((current) => ({
           ...current,
-          panels: current.panels.map((item, index) => index === activePanel
-            ? hydratePanel(panelResponse.data.panel, index, systemConfig, current.status)
-            : item),
+          panels: current.panels.map((item, index) =>
+            index === activePanel
+              ? hydratePanel(
+                  panelResponse.data.panel,
+                  index,
+                  systemConfig,
+                  current.status,
+                )
+              : item,
+          ),
         }));
       }
       return { success: true, project };
@@ -793,72 +1105,161 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
       return { success: false, message: getSaveErrorMessage(error) };
     }
   }, [activePanel, project, projectId, readOnly, systemConfig]);
-  const beginEditing = useCallback(async (panelId, options = {}) => {
-    try {
-      const { data } = await startProjectEditing(projectId, panelId, options);
-      setProject((current) => ({
-        ...current,
-        ...(data.project || {}),
-        status: data.project?.status || current.status,
-        panels: current.panels.map((panel) => (panel._id === panelId || panel.panelId === panelId)
-          ? hydratePanel({ ...panel, ...data.panel }, current.panels.indexOf(panel), systemConfig, data.project?.status || current.status)
-          : panel),
-      }));
-      setPreventAutoSave(false);
-      return { success: true, notification: data.notification };
-    } catch (error) {
-      return { success: false, code: error?.response?.data?.code || "", message: getSaveErrorMessage(error) };
-    }
-  }, [projectId, systemConfig]);
+  const beginEditing = useCallback(
+    async (panelId, options = {}) => {
+      const operation = await runActivity(
+        `project-begin-edit-${panelId}`,
+        {
+          title: "فتح اللوحة للتعديل",
+          message: "يتم تجهيز جلسة التعديل...",
+          type: "save",
+          successMessage: "أصبحت اللوحة جاهزة للتعديل.",
+          errorMessage: "تعذر فتح اللوحة للتعديل.",
+        },
+        async () => {
+          try {
+            const { data } = await startProjectEditing(
+              projectId,
+              panelId,
+              options,
+            );
+            setProject((current) => ({
+              ...current,
+              ...(data.project || {}),
+              status: data.project?.status || current.status,
+              panels: current.panels.map((panel) =>
+                panel._id === panelId || panel.panelId === panelId
+                  ? hydratePanel(
+                      { ...panel, ...data.panel },
+                      current.panels.indexOf(panel),
+                      systemConfig,
+                      data.project?.status || current.status,
+                    )
+                  : panel,
+              ),
+            }));
+            setPreventAutoSave(false);
+            return { success: true, notification: data.notification };
+          } catch (error) {
+            return {
+              success: false,
+              code: error?.response?.data?.code || "",
+              error,
+              message: getSaveErrorMessage(error),
+            };
+          }
+        },
+      );
+      return operation.skipped
+        ? { success: false, skipped: true }
+        : { ...operation.value, activityVisible: operation.visible };
+    },
+    [projectId, runActivity, systemConfig],
+  );
   const submitMarketingProject = useCallback(async () => {
     if (readOnly) return { success: false, message: "هذا المشروع للعرض فقط." };
-    if (!project.client.name?.trim()) return { success: false, message: "يرجى تحديد اسم العميل قبل إرسال المشروع." };
-    setSavingProject(true);
-    setSaveProjectError(null);
-    try {
-      const active = project.panels?.[activePanel];
-      if (active?._id) await updatePanelRecord(projectId, active._id, { ...panelPayload(active), marketerSaved: true });
-      const editingThisPanel = active?.marketingEditSession?.active;
-      if (editingThisPanel) {
-        const { data } = await submitPanelEdits(projectId, active._id);
-        return { success: true, message: data.message || "تم حفظ اللوحة وإنهاء التعديلات." };
-      }
-      return { success: true, message: "تم حفظ بيانات اللوحة." };
-    } catch (error) {
-      const message = getSaveErrorMessage(error);
-      setSaveProjectError(message);
-      return { success: false, message, fields: error.response?.data?.fields || null };
-    } finally {
-      setSavingProject(false);
-    }
-  }, [activePanel, project, projectId, readOnly]);
+    if (!project.client.name?.trim())
+      return {
+        success: false,
+        message: "يرجى تحديد اسم العميل قبل إرسال المشروع.",
+      };
+    const operation = await runActivity(
+      "submit-marketing-project",
+      {
+        title: "حفظ بيانات اللوحة",
+        message: "يتم حفظ بيانات المشروع...",
+        type: "save",
+        successMessage: "تم حفظ بيانات اللوحة.",
+        errorMessage: "تعذر حفظ بيانات المشروع.",
+      },
+      async () => {
+        setSavingProject(true);
+        setSaveProjectError(null);
+        try {
+          const active = project.panels?.[activePanel];
+          if (active?._id)
+            await updatePanelRecord(projectId, active._id, {
+              ...panelPayload(active),
+              marketerSaved: true,
+            });
+          const editingThisPanel = active?.marketingEditSession?.active;
+          if (editingThisPanel) {
+            const { data } = await submitPanelEdits(projectId, active._id);
+            return {
+              success: true,
+              message: data.message || "تم حفظ اللوحة وإنهاء التعديلات.",
+            };
+          }
+          return { success: true, message: "تم حفظ بيانات اللوحة." };
+        } catch (error) {
+          const message = getSaveErrorMessage(error);
+          setSaveProjectError(message);
+          return {
+            success: false,
+            error,
+            message,
+            fields: error.response?.data?.fields || null,
+          };
+        } finally {
+          setSavingProject(false);
+        }
+      },
+    );
+    return operation.skipped
+      ? { success: false, skipped: true }
+      : { ...operation.value, activityVisible: operation.visible };
+  }, [activePanel, project, projectId, readOnly, runActivity]);
   const cancelMarketingEdits = useCallback(async () => {
     const active = project.panels?.[activePanel];
-    if (!active?._id || !active.marketingEditSession?.active) return { success: false, message: "لا توجد جلسة تعديل مفتوحة لهذه اللوحة." };
-    setPreventAutoSave(true);
-    setSavingProject(true);
-    setSaveProjectError(null);
-    try {
-      const { data } = await cancelPanelEdits(projectId, active._id);
-      setPreventAutoSave(true);
-      return { success: true, message: data.message || "تم إنهاء التعديل دون حفظ." };
-    } catch (error) {
-      setPreventAutoSave(false);
-      const message = getSaveErrorMessage(error);
-      setSaveProjectError(message);
-      return { success: false, message };
-    } finally {
-      setSavingProject(false);
-    }
-  }, [activePanel, project.panels, projectId]);
+    if (!active?._id || !active.marketingEditSession?.active)
+      return {
+        success: false,
+        message: "لا توجد جلسة تعديل مفتوحة لهذه اللوحة.",
+      };
+    const operation = await runActivity(
+      "cancel-marketing-edits",
+      {
+        title: "إنهاء التعديل دون حفظ",
+        message: "يتم استرجاع بيانات اللوحة...",
+        type: "save",
+        successMessage: "تم إنهاء التعديل دون حفظ.",
+        errorMessage: "تعذر إنهاء التعديل دون حفظ.",
+      },
+      async () => {
+        setPreventAutoSave(true);
+        setSavingProject(true);
+        setSaveProjectError(null);
+        try {
+          const { data } = await cancelPanelEdits(projectId, active._id);
+          setPreventAutoSave(true);
+          return {
+            success: true,
+            message: data.message || "تم إنهاء التعديل دون حفظ.",
+          };
+        } catch (error) {
+          setPreventAutoSave(false);
+          const message = getSaveErrorMessage(error);
+          setSaveProjectError(message);
+          return { success: false, error, message };
+        } finally {
+          setSavingProject(false);
+        }
+      },
+    );
+    return operation.skipped
+      ? { success: false, skipped: true }
+      : { ...operation.value, activityVisible: operation.visible };
+  }, [activePanel, project.panels, projectId, runActivity]);
   const canDeletePart = (part, parts) => {
     const currentPanel = project.panels?.[activePanel] || project.panels?.[0];
     const panelType = (systemConfig?.panelTypes || []).find(
       (type) => String(type.key) === String(currentPanel?.panelTypeKey),
     );
-    const isOriginalPart = (panelType?.parts || []).some((item) => item?.name === part.name);
+    const isOriginalPart = (panelType?.parts || []).some(
+      (item) => item?.name === part.name,
+    );
     const isConfiguredAdditionalPart = (panelType?.additionalParts || [])
-      .map((item) => typeof item === "string" ? item : item?.name)
+      .map((item) => (typeof item === "string" ? item : item?.name))
       .filter(Boolean)
       .some((name) => part.name === name || part.name.startsWith(`${name} `));
 
@@ -904,10 +1305,12 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
     );
   }
   if (projectLoadError) {
-    return <div className="route-loading project-load-error" dir="rtl">
-      <h2>تعذر فتح المشروع</h2>
-      <p>{projectLoadError}</p>
-    </div>;
+    return (
+      <div className="route-loading project-load-error" dir="rtl">
+        <h2>تعذر فتح المشروع</h2>
+        <p>{projectLoadError}</p>
+      </div>
+    );
   }
   return (
     <ProjectContext.Provider

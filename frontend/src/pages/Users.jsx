@@ -4,8 +4,8 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 
 import UsersHeader from "../components/users/UsersHeader";
 import UsersTable from "../components/users/UsersTable";
-import toast from "react-hot-toast";
 import { getUsers } from "../services/usersAPI";
+import { showApiErrorToast } from "../utils/errorToast";
 
 import "../styles/users.css";
 
@@ -17,9 +17,13 @@ function Users() {
   const loadUsers = async () => {
     try {
       const { data } = await getUsers();
-      setUsers(Array.isArray(data) ? data.filter((user) => user.approved && !user.isDeleted) : []);
+      setUsers(
+        Array.isArray(data)
+          ? data.filter((user) => user.approved && !user.isDeleted)
+          : [],
+      );
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load users.");
+      showApiErrorToast(error, "Failed to load users.");
     } finally {
       setLoading(false);
     }
@@ -35,7 +39,12 @@ function Users() {
     <DashboardLayout notAllowed={true}>
       <UsersHeader mode="users" />
 
-      <UsersTable users={users} loading={loading} reload={loadUsers} mode="users" />
+      <UsersTable
+        users={users}
+        loading={loading}
+        reload={loadUsers}
+        mode="users"
+      />
     </DashboardLayout>
   );
 }

@@ -5,12 +5,15 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import { updateProfile } from "../services/profileAPI";
 import { roleLabel } from "../utils/roles";
+import { useActivityAction } from "../components/common/activity/ActivityContext";
+import { showApiErrorToast } from "../utils/errorToast";
 import "../styles/profile.css";
 
 const emptyProfile = { name: "", email: "", phoneNumber: "" };
 
 function Profile() {
   const { user, reloadProfile } = useAuth();
+  const runActivity = useActivityAction();
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyProfile);
   const [saving, setSaving] = useState(false);
@@ -37,17 +40,28 @@ function Profile() {
     setSaving(true);
 
     try {
-      const { data } = await updateProfile(form);
+      const operation = await runActivity(
+        "update-profile",
+        {
+          title: "حفظ بيانات الملف الشخصي",
+          message: "يتم حفظ بياناتك...",
+          type: "save",
+          successMessage: "تم حفظ بيانات الملف الشخصي.",
+          errorMessage: "تعذر حفظ البيانات.",
+        },
+        () => updateProfile(form),
+      );
+      if (operation.skipped) return;
+      const { data } = operation.value;
       await reloadProfile({ background: true });
       if (data?.requiresWhatsappVerification) {
         toast.success("تم حفظ الرقم. أكمل التحقق برسالة WhatsApp.");
         navigate("/dashboard", { replace: true });
-      } else {
+      } else if (!operation.visible) {
         toast.success("تم حفظ بيانات الملف الشخصي.");
       }
     } catch (error) {
-      const message = error?.response?.data?.message;
-      toast.error(typeof message === "string" ? message : "تعذر حفظ البيانات.");
+      showApiErrorToast(error, "تعذر حفظ البيانات.");
     } finally {
       setSaving(false);
     }
@@ -62,13 +76,17 @@ function Profile() {
         </div>
 
         <form className="profile-card" onSubmit={submit}>
-          <div className="profile-avatar">{(user?.name || "U").trim().charAt(0)}</div>
+          <div className="profile-avatar">
+            {(user?.name || "U").trim().charAt(0)}
+          </div>
 
           <label htmlFor="profile-name">الاسم</label>
           <input
             id="profile-name"
             value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, name: event.target.value }))
+            }
             required
           />
 
@@ -78,7 +96,9 @@ function Profile() {
             type="email"
             dir="ltr"
             value={form.email}
-            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, email: event.target.value }))
+            }
             required
           />
 
@@ -90,9 +110,16 @@ function Profile() {
             dir="ltr"
             placeholder="201001234567"
             value={form.phoneNumber}
-            onChange={(event) => setForm((current) => ({ ...current, phoneNumber: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                phoneNumber: event.target.value,
+              }))
+            }
           />
-          <p className="profile-help">اكتب الرقم بصيغة دولية، مثال: 201001234567.</p>
+          <p className="profile-help">
+            اكتب الرقم بصيغة دولية، مثال: 201001234567.
+          </p>
 
           <label htmlFor="profile-role">الدور</label>
           <input id="profile-role" value={roleLabel(user?.role)} readOnly />

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProjectsHeader from "../components/projects/ProjectsHeader";
 import PanelIndexCard from "../components/projects/PanelIndexCard";
@@ -8,7 +7,11 @@ import { getAllPanels } from "../services/projectsAPI";
 import { matchesSearchText } from "../utils/textSearch";
 import { currentAction, isDelayed } from "../utils/dashboardData";
 import { useAuth } from "../context/AuthContext";
-import { isProductionSupervisorRole, SUPERVISOR_STAGE_BY_ROLE } from "../utils/roles";
+import {
+  isProductionSupervisorRole,
+  SUPERVISOR_STAGE_BY_ROLE,
+} from "../utils/roles";
+import { showApiErrorToast } from "../utils/errorToast";
 import "../styles/projects.css";
 
 const panelStatuses = [
@@ -41,18 +44,48 @@ const supervisorStageLabels = {
 export default function Panels() {
   const { user } = useAuth();
   const supervisorOnly = isProductionSupervisorRole(user?.role);
-  const supervisorStatuses = useMemo(() => SUPERVISOR_STAGE_BY_ROLE[user?.role] || [], [user?.role]);
-  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [panels, setPanels] = useState([]); const [loading, setLoading] = useState(true); const [query, setQuery] = useState(""); const [status, setStatus] = useState(() => (searchParams.get("statuses") || "").split(",").filter(Boolean));
-  const load = async () => { setLoading(true); try { const { data } = await getAllPanels(); setPanels(data || []); } catch (error) { toast.error(error.response?.data?.message || "تعذر تحميل اللوحات."); } finally { setLoading(false); } };
-  useEffect(() => { load(); }, []);
+  const supervisorStatuses = useMemo(
+    () => SUPERVISOR_STAGE_BY_ROLE[user?.role] || [],
+    [user?.role],
+  );
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [panels, setPanels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState(() =>
+    (searchParams.get("statuses") || "").split(",").filter(Boolean),
+  );
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await getAllPanels();
+      setPanels(data || []);
+    } catch (error) {
+      showApiErrorToast(error, "تعذر تحميل اللوحات.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
   const view = searchParams.get("view") || "";
-  const requestedStatuses = useMemo(() => new Set((searchParams.get("statuses") || "").split(",").filter(Boolean)), [searchParams]);
+  const requestedStatuses = useMemo(
+    () =>
+      new Set((searchParams.get("statuses") || "").split(",").filter(Boolean)),
+    [searchParams],
+  );
   useEffect(() => {
     if (supervisorOnly) {
       setStatus(supervisorStatuses);
       return;
     }
-    setStatus([...requestedStatuses].filter((value) => panelStatuses.some((option) => option.value === value)));
+    setStatus(
+      [...requestedStatuses].filter((value) =>
+        panelStatuses.some((option) => option.value === value),
+      ),
+    );
   }, [supervisorOnly, requestedStatuses, supervisorStatuses]);
   const requestedDate = searchParams.get("date");
   const requestedDateEnd = useMemo(() => {
@@ -71,27 +104,96 @@ export default function Panels() {
     if (searchParams.get("delayed") === "true") {
       if (!isDelayed(panel, requestedDateEnd || new Date())) return false;
     }
-    if (searchParams.get("production") === "true" && !["executionConfirmed", "manufacturingFilesPending", "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing", "painting", "assembly"].includes(panel.status)) return false;
-    if (view === "engineerTasks" && !currentAction(panel, "Engineer")) return false;
-    if (view === "productionTasks" && !currentAction(panel, "ProductionManager")) return false;
+    if (
+      searchParams.get("production") === "true" &&
+      ![
+        "executionConfirmed",
+        "manufacturingFilesPending",
+        "manufacturingFilesReady",
+        "pendingLaserDownload",
+        "laser",
+        "manufacturing",
+        "painting",
+        "assembly",
+      ].includes(panel.status)
+    )
+      return false;
+    if (view === "engineerTasks" && !currentAction(panel, "Engineer"))
+      return false;
+    if (
+      view === "productionTasks" &&
+      !currentAction(panel, "ProductionManager")
+    )
+      return false;
     if (requestedDate) {
-      const eventValue = view === "executionOrders"
-        ? panel.executionPdf?.confirmedAt
-        : view === "delayed" ? null
-        : panel.updatedAt || panel.createdAt;
+      const eventValue =
+        view === "executionOrders"
+          ? panel.executionPdf?.confirmedAt
+          : view === "delayed"
+            ? null
+            : panel.updatedAt || panel.createdAt;
       if (view !== "delayed" && !sameDate(eventValue)) return false;
     }
     return true;
   };
-  const visible = useMemo(() => panels.filter((panel) => {
-    const matchesStatus = supervisorOnly ? supervisorStatuses.includes(panel.status) : (!status.length || status.includes(panel.status));
-    const searchable = `${panel.panelName || ""} ${panel.panelCode || ""} ${panel.project?.projectCode || ""} ${panel.project?.client?.name || ""}`;
-    return matchesDashboardView(panel) && matchesStatus && (!query.trim() || matchesSearchText(searchable, query));
-  // searchParams represents the dashboard filter URL and intentionally refreshes this list.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [panels, query, status, searchParams, supervisorOnly, supervisorStatuses]);
-  return <DashboardLayout notAllowed>
-    <ProjectsHeader query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} onRefresh={load} refreshing={loading} title="اللوحات" subtitle={supervisorOnly ? `لوحات ${supervisorStageLabels[user?.role]} المتاحة لك فقط` : "Manage all your panels in one place."} searchPlaceholder="ابحث باسم اللوحة..." statusOptions={panelStatuses} showCreate={false} lockedStatusLabel={supervisorOnly ? supervisorStageLabels[user?.role] : ""} />
-    {loading ? <div className="empty-projects">Loading...</div> : visible.length ? <section className="projects-grid panels-index-grid">{visible.map((panel) => <PanelIndexCard key={panel._id} panel={panel} onOpen={() => navigate(`/projects/${panel.project?._id || panel.projectId}/panels/${panel._id}`)} />)}</section> : <div className="empty-projects">No panels found</div>}
-  </DashboardLayout>;
+  const visible = useMemo(
+    () =>
+      panels.filter((panel) => {
+        const matchesStatus = supervisorOnly
+          ? supervisorStatuses.includes(panel.status)
+          : !status.length || status.includes(panel.status);
+        const searchable = `${panel.panelName || ""} ${panel.panelCode || ""} ${panel.project?.projectCode || ""} ${panel.project?.client?.name || ""}`;
+        return (
+          matchesDashboardView(panel) &&
+          matchesStatus &&
+          (!query.trim() || matchesSearchText(searchable, query))
+        );
+        // searchParams represents the dashboard filter URL and intentionally refreshes this list.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }),
+    [panels, query, status, searchParams, supervisorOnly, supervisorStatuses],
+  );
+  return (
+    <DashboardLayout notAllowed>
+      <ProjectsHeader
+        query={query}
+        onQueryChange={setQuery}
+        status={status}
+        onStatusChange={setStatus}
+        onRefresh={load}
+        refreshing={loading}
+        title="اللوحات"
+        subtitle={
+          supervisorOnly
+            ? `لوحات ${supervisorStageLabels[user?.role]} المتاحة لك فقط`
+            : "Manage all your panels in one place."
+        }
+        searchPlaceholder="ابحث باسم اللوحة..."
+        statusOptions={panelStatuses}
+        showCreate={false}
+        lockedStatusLabel={
+          supervisorOnly ? supervisorStageLabels[user?.role] : ""
+        }
+      />
+      {loading ? (
+        <div className="empty-projects">Loading...</div>
+      ) : visible.length ? (
+        <section className="projects-grid panels-index-grid">
+          {visible.map((panel) => (
+            <PanelIndexCard
+              key={panel._id}
+              panel={panel}
+              onOpen={() =>
+                navigate(
+                  `/projects/${panel.project?._id || panel.projectId}/panels/${panel._id}`,
+                )
+              }
+            />
+          ))}
+        </section>
+      ) : (
+        <div className="empty-projects">No panels found</div>
+      )}
+    </DashboardLayout>
+  );
 }

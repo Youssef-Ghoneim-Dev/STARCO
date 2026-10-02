@@ -1,0 +1,243 @@
+.starco-api-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    direction: ltr;
+    text-align: left;
+}
+
+.starco-api-error-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--text);
+    unicode-bidi: plaintext;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+.starco-api-error-details-trigger {
+    flex: 0 0 auto;
+    padding: 2px 0;
+    border: 0;
+    color: var(--primary);
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.error-details-backdrop {
+    position: fixed;
+    z-index: 10020;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: var(--overlay);
+}
+
+.error-details-dialog {
+    display: grid;
+    width: min(620px, 100%);
+    max-height: min(80vh, 720px);
+    overflow: hidden;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: min(var(--radius), 14px);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: error-details-enter 180ms ease-out both;
+}
+
+.error-details-heading,
+.error-details-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.error-details-heading span {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.error-details-heading h2 {
+    margin-top: 2px;
+    color: var(--text);
+    font-size: 19px;
+}
+
+.error-details-heading>button {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    background: var(--surface-muted);
+    cursor: pointer;
+}
+
+.error-details-body {
+    display: grid;
+    gap: 14px;
+    padding: 16px 18px;
+    overflow-y: auto;
+}
+
+.error-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin: 0;
+}
+
+.error-detail-field {
+    min-width: 0;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.error-detail-field.backendMessage,
+.error-detail-field.userMessage,
+.error-detail-field.endpoint {
+    grid-column: 1 / -1;
+}
+
+.error-detail-field dt {
+    margin-bottom: 4px;
+    color: var(--text-light);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.error-detail-field dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    unicode-bidi: plaintext;
+}
+
+.error-detail-field.endpoint dd,
+.error-detail-field.method dd,
+.error-detail-field.status dd,
+.error-detail-field.requestId dd {
+    direction: ltr;
+    text-align: left;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+}
+
+.error-detail-section {
+    display: grid;
+    gap: 8px;
+}
+
+.error-detail-section h3 {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.error-detail-section ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.error-detail-section li {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.45fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.error-detail-section li>span {
+    color: var(--text-light);
+    unicode-bidi: plaintext;
+}
+
+.error-details-actions {
+    justify-content: flex-start;
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+    background: var(--surface-muted);
+}
+
+.error-details-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.error-details-actions .copy-error-details {
+    color: var(--primary-contrast);
+    border-color: var(--primary);
+    background: var(--primary);
+}
+
+@keyframes error-details-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 520px) {
+    .error-details-backdrop {
+        padding: 12px;
+    }
+
+    .error-details-dialog {
+        max-height: 88vh;
+    }
+
+    .error-details-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .error-detail-field.backendMessage,
+    .error-detail-field.userMessage,
+    .error-detail-field.endpoint {
+        grid-column: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .error-details-dialog {
+        animation-duration: 0.01ms;
+    }
+}

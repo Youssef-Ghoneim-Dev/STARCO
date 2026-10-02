@@ -3,11 +3,23 @@ import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import { IoPause, IoPlay, IoRefresh, IoTrashOutline } from "react-icons/io5";
-import toast from "react-hot-toast";
 import { useProject } from "../../../context/ProjectContext";
-import { deleteProjectMedia, getProjectMedia, getProjectMediaFile, getProjectMediaWhatsappLink, uploadProjectMedia } from "../../../services/projectsAPI";
+import { useActivityAction } from "../../common/activity/ActivityContext";
+import { showApiErrorToast } from "../../../utils/errorToast";
+import {
+  deleteProjectMedia,
+  getProjectMedia,
+  getProjectMediaFile,
+  getProjectMediaWhatsappLink,
+  uploadProjectMedia,
+} from "../../../services/projectsAPI";
 
-const ReadOnlyField = ({ label, value }) => <label className="whatsapp-readonly-field"><span>{label}</span><input value={value || "—"} disabled /></label>;
+const ReadOnlyField = ({ label, value }) => (
+  <label className="whatsapp-readonly-field">
+    <span>{label}</span>
+    <input value={value || "—"} disabled />
+  </label>
+);
 
 function AudioPlayer({ url, shouldPlay, onStart, onEnded }) {
   const audioRef = useRef(null);
@@ -19,8 +31,7 @@ function AudioPlayer({ url, shouldPlay, onStart, onEnded }) {
     if (audioRef.current.paused) {
       onStart();
       await audioRef.current.play();
-    }
-    else audioRef.current.pause();
+    } else audioRef.current.pause();
   };
   useEffect(() => {
     const audio = audioRef.current;
@@ -28,23 +39,86 @@ function AudioPlayer({ url, shouldPlay, onStart, onEnded }) {
     if (shouldPlay && audio.paused) audio.play().catch(() => undefined);
     if (!shouldPlay && !audio.paused) audio.pause();
   }, [shouldPlay]);
-  const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
-  return <div className="starco-audio-player">
-    <audio ref={audioRef} src={url} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)} onPlay={() => { setPlaying(true); onStart(); }} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setProgress(0); onEnded(); }} onTimeUpdate={(event) => setProgress(event.currentTarget.duration ? (event.currentTarget.currentTime / event.currentTarget.duration) * 100 : 0)} />
-    <button type="button" onClick={toggle} aria-label={playing ? "إيقاف التسجيل" : "تشغيل التسجيل"}>{playing ? <IoPause /> : <IoPlay />}</button>
-    <div className="starco-audio-progress"><i style={{ width: `${progress}%` }} /></div><span>تسجيل صوتي</span><time>{duration ? formatTime(duration) : "..."}</time>
-  </div>;
+  const formatTime = (seconds) =>
+    `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
+  return (
+    <div className="starco-audio-player">
+      <audio
+        ref={audioRef}
+        src={url}
+        onLoadedMetadata={(event) =>
+          setDuration(event.currentTarget.duration || 0)
+        }
+        onPlay={() => {
+          setPlaying(true);
+          onStart();
+        }}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+          onEnded();
+        }}
+        onTimeUpdate={(event) =>
+          setProgress(
+            event.currentTarget.duration
+              ? (event.currentTarget.currentTime /
+                  event.currentTarget.duration) *
+                  100
+              : 0,
+          )
+        }
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? "إيقاف التسجيل" : "تشغيل التسجيل"}
+      >
+        {playing ? <IoPause /> : <IoPlay />}
+      </button>
+      <div className="starco-audio-progress">
+        <i style={{ width: `${progress}%` }} />
+      </div>
+      <span>تسجيل صوتي</span>
+      <time>{duration ? formatTime(duration) : "..."}</time>
+    </div>
+  );
 }
 
 function MediaItem({ item, url, onOpen, audioProps, onDelete }) {
-  if (!url) return <p className="whatsapp-media-loading">جاري تحميل المرفق...</p>;
-  const removeButton = onDelete && <button type="button" className="project-media-delete" onClick={onDelete} aria-label="حذف المرفق"><IoTrashOutline /></button>;
-  if (item.type === "image") return <div className="project-media-item"><button type="button" className="whatsapp-image-thumb" onClick={onOpen}><img src={url} alt="مرفق من المندوب" /></button>{removeButton}</div>;
-  if (item.type === "audio") return <div className="project-media-item project-audio-item"><AudioPlayer url={url} {...audioProps} />{removeButton}</div>;
+  if (!url)
+    return <p className="whatsapp-media-loading">جاري تحميل المرفق...</p>;
+  const removeButton = onDelete && (
+    <button
+      type="button"
+      className="project-media-delete"
+      onClick={onDelete}
+      aria-label="حذف المرفق"
+    >
+      <IoTrashOutline />
+    </button>
+  );
+  if (item.type === "image")
+    return (
+      <div className="project-media-item">
+        <button type="button" className="whatsapp-image-thumb" onClick={onOpen}>
+          <img src={url} alt="مرفق من المندوب" />
+        </button>
+        {removeButton}
+      </div>
+    );
+  if (item.type === "audio")
+    return (
+      <div className="project-media-item project-audio-item">
+        <AudioPlayer url={url} {...audioProps} />
+        {removeButton}
+      </div>
+    );
   return <p className="whatsapp-media-loading">نوع المرفق غير مدعوم للعرض.</p>;
 }
 
 function WhatsappProjectData({ editable = false }) {
+  const runActivity = useActivityAction();
   const { project, activePanel, systemConfig, saveDraftNow } = useProject();
   const [media, setMedia] = useState([]);
   const [urls, setUrls] = useState({});
@@ -70,33 +144,61 @@ function WhatsappProjectData({ editable = false }) {
       })
       .catch(() => alive && setMediaError("تعذر تحميل مرفقات المشروع الآن."))
       .finally(() => alive && setRefreshingMedia(false));
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [project?._id, uploadRefresh]);
   useEffect(() => {
     let alive = true;
     const createdUrls = [];
     const loadFiles = async () => {
-      const entries = await Promise.all(media.map(async (item) => {
-        try { const { data } = await getProjectMediaFile(project._id, item.id); const url = URL.createObjectURL(data); createdUrls.push(url); return [item.id, url]; }
-        catch { return [item.id, ""]; }
-      }));
+      const entries = await Promise.all(
+        media.map(async (item) => {
+          try {
+            const { data } = await getProjectMediaFile(project._id, item.id);
+            const url = URL.createObjectURL(data);
+            createdUrls.push(url);
+            return [item.id, url];
+          } catch {
+            return [item.id, ""];
+          }
+        }),
+      );
       if (alive) setUrls(Object.fromEntries(entries));
     };
-    if (project?._id && media.length) loadFiles(); else setUrls({});
-    return () => { alive = false; createdUrls.forEach((url) => URL.revokeObjectURL(url)); };
+    if (project?._id && media.length) loadFiles();
+    else setUrls({});
+    return () => {
+      alive = false;
+      createdUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [media, project?._id]);
 
   const panel = project?.panels?.[activePanel] || project?.panels?.[0] || {};
-  const panelMedia = useMemo(() => media.filter((item) => String(item.panelId || "") === String(panel.panelId || "")), [media, panel.panelId]);
+  const panelMedia = useMemo(
+    () =>
+      media.filter(
+        (item) => String(item.panelId || "") === String(panel.panelId || ""),
+      ),
+    [media, panel.panelId],
+  );
   const images = panelMedia.filter((item) => item.type === "image");
   const audio = panelMedia.filter((item) => item.type === "audio");
   const copper = panel.copperDetails || {};
   const copperCatalog = systemConfig?.copperConfiguration?.catalog || [];
-  const copperName = (key) => copperCatalog.find((item) => item.key === key)?.name || key || "—";
-  const branchGroups = Array.isArray(copper.branchGroups) && copper.branchGroups.length
-    ? copper.branchGroups
-    : (panel.copper?.branches || []).map((branch, index) => ({ id: branch.branchGroupId || branch.branchId || index, optionKey: branch.optionKey, count: branch.quantity || 1 }));
-  const gallerySlides = images.map((item) => ({ src: urls[item.id], alt: "مرفق من المندوب" })).filter((slide) => slide.src);
+  const copperName = (key) =>
+    copperCatalog.find((item) => item.key === key)?.name || key || "—";
+  const branchGroups =
+    Array.isArray(copper.branchGroups) && copper.branchGroups.length
+      ? copper.branchGroups
+      : (panel.copper?.branches || []).map((branch, index) => ({
+          id: branch.branchGroupId || branch.branchId || index,
+          optionKey: branch.optionKey,
+          count: branch.quantity || 1,
+        }));
+  const gallerySlides = images
+    .map((item) => ({ src: urls[item.id], alt: "مرفق من المندوب" }))
+    .filter((slide) => slide.src);
   const startNextAudio = (itemId) => {
     const currentIndex = audio.findIndex((item) => item.id === itemId);
     const next = audio[currentIndex + 1];
@@ -108,26 +210,67 @@ function WhatsappProjectData({ editable = false }) {
     if (!files.length) return;
     setUploading(true);
     try {
-      const saved = await saveDraftNow();
-      if (!saved.success) throw new Error(saved.message || "تعذر حفظ اللوحة قبل رفع المرفقات.");
-      const savedPanelId = saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
-      if (!savedPanelId) throw new Error("تعذر تحديد اللوحة المختارة.");
-      await Promise.all(files.map((file) => uploadProjectMedia(project._id, savedPanelId, file)));
+      const operation = await runActivity(
+        "upload-project-media",
+        {
+          title: "رفع مرفقات المشروع",
+          message:
+            files.length > 1
+              ? `رفع ${files.length} مرفقات...`
+              : "يتم رفع المرفق...",
+          type: "upload",
+          successMessage: "تم رفع مرفقات المشروع.",
+          errorMessage: "تعذر رفع أحد المرفقات.",
+        },
+        async () => {
+          const saved = await saveDraftNow();
+          if (!saved.success)
+            throw new Error(
+              saved.message || "تعذر حفظ اللوحة قبل رفع المرفقات.",
+            );
+          const savedPanelId =
+            saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
+          if (!savedPanelId) throw new Error("تعذر تحديد اللوحة المختارة.");
+          await Promise.all(
+            files.map((file) =>
+              uploadProjectMedia(project._id, savedPanelId, file),
+            ),
+          );
+        },
+      );
+      if (operation.skipped) return;
       setUploadRefresh((value) => value + 1);
     } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || "تعذر رفع أحد المرفقات.");
-    } finally { setUploading(false); }
+      showApiErrorToast(error, "تعذر رفع أحد المرفقات.");
+    } finally {
+      setUploading(false);
+    }
   };
   const removeMedia = async () => {
     if (!mediaToDelete) return;
     setDeletingMedia(true);
     try {
-      await deleteProjectMedia(project._id, mediaToDelete.id);
-      setMedia((current) => current.filter((entry) => entry.id !== mediaToDelete.id));
+      const operation = await runActivity(
+        `delete-project-media-${mediaToDelete.id}`,
+        {
+          title: "حذف مرفق المشروع",
+          message: "يتم حذف المرفق...",
+          type: "delete",
+          successMessage: "تم حذف المرفق.",
+          errorMessage: "تعذر حذف المرفق.",
+        },
+        () => deleteProjectMedia(project._id, mediaToDelete.id),
+      );
+      if (operation.skipped) return;
+      setMedia((current) =>
+        current.filter((entry) => entry.id !== mediaToDelete.id),
+      );
       setMediaToDelete(null);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "تعذر حذف المرفق.");
-    } finally { setDeletingMedia(false); }
+      showApiErrorToast(error, "تعذر حذف المرفق.");
+    } finally {
+      setDeletingMedia(false);
+    }
   };
   const chooseLocalUpload = () => {
     setShowUploadChoice(false);
@@ -137,15 +280,22 @@ function WhatsappProjectData({ editable = false }) {
     setOpeningWhatsapp(true);
     try {
       const saved = await saveDraftNow();
-      if (!saved.success) throw new Error(saved.message || "تعذر حفظ اللوحة قبل فتح WhatsApp.");
-      const savedPanelId = saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
+      if (!saved.success)
+        throw new Error(saved.message || "تعذر حفظ اللوحة قبل فتح WhatsApp.");
+      const savedPanelId =
+        saved.project?.panels?.[activePanel]?.panelId || panel.panelId;
       if (!savedPanelId) throw new Error("تعذر تحديد اللوحة المختارة.");
-      const { data } = await getProjectMediaWhatsappLink(project._id, savedPanelId);
+      const { data } = await getProjectMediaWhatsappLink(
+        project._id,
+        savedPanelId,
+      );
       setShowUploadChoice(false);
       window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || "تعذر فتح WhatsApp لإرسال المرفقات.");
-    } finally { setOpeningWhatsapp(false); }
+      showApiErrorToast(error, "تعذر فتح WhatsApp لإرسال المرفقات.");
+    } finally {
+      setOpeningWhatsapp(false);
+    }
   };
   const refreshMedia = () => {
     if (!project?._id || refreshingMedia) return;
@@ -153,18 +303,240 @@ function WhatsappProjectData({ editable = false }) {
     setMediaError("");
     setUploadRefresh((value) => value + 1);
   };
-  return <section className="whatsapp-project-data" dir="rtl">
-    {!editable && <><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع اللوحة" value={panel.panelType} /><ReadOnlyField label="هل يوجد نحاس" value={panel.hasCopper === true ? "نعم" : panel.hasCopper === false ? "لا" : ""} />{panel.panelType === "كنترول" && <ReadOnlyField label="تركيب لوحة الكنترول" value={panel.controlInstallation} />}<ReadOnlyField label="تفاصيل إضافية" value={panel.additionalDetails} /></div>
-    {panel.hasCopper === true && <div className="whatsapp-copper-data"><h3>بيانات النحاس</h3><div className="whatsapp-readonly-grid"><ReadOnlyField label="نوع المفاتيح" value={copper.switches} /><ReadOnlyField label="الرئيسي" value={copper.main || copperName(copper.mainKey || panel.copper?.main?.optionKey)} /><ReadOnlyField label="تفاصيل إضافية للنحاس" value={copper.notes} /></div><div className="whatsapp-copper-branch-list">{branchGroups.length ? branchGroups.map((group, index) => <article key={group.id || index}><strong>فرعي {index + 1}</strong><span>{copperName(group.optionKey)}</span><small>العدد: {Math.max(1, Number(group.count || group.quantity) || 1)}</small></article>) : <p>لا توجد مفاتيح فرعية مسجلة.</p>}</div></div>}</>}
-    <div className="whatsapp-media-accordions">
-      <details open><summary><span className="project-media-summary-title">صور المشروع</span><span className="project-media-summary-actions"><button type="button" className="project-media-refresh" onClick={(event) => { event.preventDefault(); event.stopPropagation(); refreshMedia(); }} disabled={refreshingMedia} aria-label="تحديث صور وتسجيلات المشروع" title="تحديث المرفقات"><IoRefresh className={refreshingMedia ? "is-spinning" : ""} /></button><b>{images.length}</b></span></summary><div className="whatsapp-images-grid">{images.length ? images.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} onOpen={() => setViewerIndex(gallerySlides.findIndex((slide) => slide.src === urls[item.id]))} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد صور لهذه اللوحة.</p>}</div></details>
-      <details><summary>التسجيلات الصوتية <b>{audio.length}</b></summary><div className="whatsapp-audio-list">{audio.length ? audio.map((item) => <MediaItem key={item.id} item={item} url={urls[item.id]} audioProps={{ shouldPlay: activeAudioId === item.id, onStart: () => setActiveAudioId(item.id), onEnded: () => startNextAudio(item.id) }} onDelete={editable ? () => setMediaToDelete(item) : null} />) : <p>لا توجد تسجيلات لهذه اللوحة.</p>}</div></details>
-      {mediaError && <p className="whatsapp-media-error">{mediaError}</p>}
-    </div>
-    {editable && <><input ref={uploadInputRef} className="marketing-upload-input" type="file" accept="image/*,audio/*" multiple disabled={uploading} onChange={uploadFiles} /><button type="button" className="marketing-upload-control" onClick={() => setShowUploadChoice(true)} disabled={uploading}>{uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}</button>{showUploadChoice && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog"><h3>إضافة مرفقات المشروع</h3><p>اختر طريقة الإضافة المناسبة لك.</p><div className="media-choice-actions"><button type="button" onClick={chooseLocalUpload}>من مساحة التخزين</button><button type="button" className="media-choice-whatsapp" onClick={chooseWhatsappUpload} disabled={openingWhatsapp}>{openingWhatsapp ? "جاري فتح WhatsApp..." : "عن طريق WhatsApp"}</button></div><div className="media-choice-note"><strong>مهم:</strong> عند اختيار WhatsApp سيفتح لك نص جاهز. لا تحذف ولا تغيّر أي حرف منه؛ أرسله كما هو، ثم أرسل الصور أو التسجيلات، وبعد الانتهاء أرسل: <b>تم</b> أو <b>تمام</b> أو <b>خلصت</b>.</div><button type="button" className="media-choice-cancel" onClick={() => setShowUploadChoice(false)} disabled={openingWhatsapp}>إلغاء</button></div></div>}</>}
-    {mediaToDelete && <div className="media-choice-backdrop" role="dialog" aria-modal="true"><div className="media-choice-dialog media-delete-dialog"><h3>حذف المرفق</h3><p>هل تريد حذف هذا المرفق من المشروع؟</p><div className="media-delete-actions"><button type="button" onClick={() => setMediaToDelete(null)} disabled={deletingMedia}>إلغاء</button><button type="button" className="media-delete-confirm" onClick={removeMedia} disabled={deletingMedia}>{deletingMedia ? "جاري الحذف..." : "حذف"}</button></div></div></div>}
-    <Lightbox open={viewerIndex !== null} close={() => setViewerIndex(null)} index={viewerIndex || 0} slides={gallerySlides} plugins={[Zoom]} zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }} />
-  </section>;
+  return (
+    <section className="whatsapp-project-data" dir="rtl">
+      {!editable && (
+        <>
+          <div className="whatsapp-readonly-grid">
+            <ReadOnlyField label="نوع اللوحة" value={panel.panelType} />
+            <ReadOnlyField
+              label="هل يوجد نحاس"
+              value={
+                panel.hasCopper === true
+                  ? "نعم"
+                  : panel.hasCopper === false
+                    ? "لا"
+                    : ""
+              }
+            />
+            {panel.panelType === "كنترول" && (
+              <ReadOnlyField
+                label="تركيب لوحة الكنترول"
+                value={panel.controlInstallation}
+              />
+            )}
+            <ReadOnlyField
+              label="تفاصيل إضافية"
+              value={panel.additionalDetails}
+            />
+          </div>
+          {panel.hasCopper === true && (
+            <div className="whatsapp-copper-data">
+              <h3>بيانات النحاس</h3>
+              <div className="whatsapp-readonly-grid">
+                <ReadOnlyField label="نوع المفاتيح" value={copper.switches} />
+                <ReadOnlyField
+                  label="الرئيسي"
+                  value={
+                    copper.main ||
+                    copperName(copper.mainKey || panel.copper?.main?.optionKey)
+                  }
+                />
+                <ReadOnlyField
+                  label="تفاصيل إضافية للنحاس"
+                  value={copper.notes}
+                />
+              </div>
+              <div className="whatsapp-copper-branch-list">
+                {branchGroups.length ? (
+                  branchGroups.map((group, index) => (
+                    <article key={group.id || index}>
+                      <strong>فرعي {index + 1}</strong>
+                      <span>{copperName(group.optionKey)}</span>
+                      <small>
+                        العدد:{" "}
+                        {Math.max(
+                          1,
+                          Number(group.count || group.quantity) || 1,
+                        )}
+                      </small>
+                    </article>
+                  ))
+                ) : (
+                  <p>لا توجد مفاتيح فرعية مسجلة.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      <div className="whatsapp-media-accordions">
+        <details open>
+          <summary>
+            <span className="project-media-summary-title">صور المشروع</span>
+            <span className="project-media-summary-actions">
+              <button
+                type="button"
+                className="project-media-refresh"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  refreshMedia();
+                }}
+                disabled={refreshingMedia}
+                aria-label="تحديث صور وتسجيلات المشروع"
+                title="تحديث المرفقات"
+              >
+                <IoRefresh className={refreshingMedia ? "is-spinning" : ""} />
+              </button>
+              <b>{images.length}</b>
+            </span>
+          </summary>
+          <div className="whatsapp-images-grid">
+            {images.length ? (
+              images.map((item) => (
+                <MediaItem
+                  key={item.id}
+                  item={item}
+                  url={urls[item.id]}
+                  onOpen={() =>
+                    setViewerIndex(
+                      gallerySlides.findIndex(
+                        (slide) => slide.src === urls[item.id],
+                      ),
+                    )
+                  }
+                  onDelete={editable ? () => setMediaToDelete(item) : null}
+                />
+              ))
+            ) : (
+              <p>لا توجد صور لهذه اللوحة.</p>
+            )}
+          </div>
+        </details>
+        <details>
+          <summary>
+            التسجيلات الصوتية <b>{audio.length}</b>
+          </summary>
+          <div className="whatsapp-audio-list">
+            {audio.length ? (
+              audio.map((item) => (
+                <MediaItem
+                  key={item.id}
+                  item={item}
+                  url={urls[item.id]}
+                  audioProps={{
+                    shouldPlay: activeAudioId === item.id,
+                    onStart: () => setActiveAudioId(item.id),
+                    onEnded: () => startNextAudio(item.id),
+                  }}
+                  onDelete={editable ? () => setMediaToDelete(item) : null}
+                />
+              ))
+            ) : (
+              <p>لا توجد تسجيلات لهذه اللوحة.</p>
+            )}
+          </div>
+        </details>
+        {mediaError && <p className="whatsapp-media-error">{mediaError}</p>}
+      </div>
+      {editable && (
+        <>
+          <input
+            ref={uploadInputRef}
+            className="marketing-upload-input"
+            type="file"
+            accept="image/*,audio/*"
+            multiple
+            disabled={uploading}
+            onChange={uploadFiles}
+          />
+          <button
+            type="button"
+            className="marketing-upload-control"
+            onClick={() => setShowUploadChoice(true)}
+            disabled={uploading}
+          >
+            {uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}
+          </button>
+          {showUploadChoice && (
+            <div
+              className="media-choice-backdrop"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="media-choice-dialog">
+                <h3>إضافة مرفقات المشروع</h3>
+                <p>اختر طريقة الإضافة المناسبة لك.</p>
+                <div className="media-choice-actions">
+                  <button type="button" onClick={chooseLocalUpload}>
+                    من مساحة التخزين
+                  </button>
+                  <button
+                    type="button"
+                    className="media-choice-whatsapp"
+                    onClick={chooseWhatsappUpload}
+                    disabled={openingWhatsapp}
+                  >
+                    {openingWhatsapp
+                      ? "جاري فتح WhatsApp..."
+                      : "عن طريق WhatsApp"}
+                  </button>
+                </div>
+                <div className="media-choice-note">
+                  <strong>مهم:</strong> عند اختيار WhatsApp سيفتح لك نص جاهز. لا
+                  تحذف ولا تغيّر أي حرف منه؛ أرسله كما هو، ثم أرسل الصور أو
+                  التسجيلات، وبعد الانتهاء أرسل: <b>تم</b> أو <b>تمام</b> أو{" "}
+                  <b>خلصت</b>.
+                </div>
+                <button
+                  type="button"
+                  className="media-choice-cancel"
+                  onClick={() => setShowUploadChoice(false)}
+                  disabled={openingWhatsapp}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {mediaToDelete && (
+        <div className="media-choice-backdrop" role="dialog" aria-modal="true">
+          <div className="media-choice-dialog media-delete-dialog">
+            <h3>حذف المرفق</h3>
+            <p>هل تريد حذف هذا المرفق من المشروع؟</p>
+            <div className="media-delete-actions">
+              <button
+                type="button"
+                onClick={() => setMediaToDelete(null)}
+                disabled={deletingMedia}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="media-delete-confirm"
+                onClick={removeMedia}
+                disabled={deletingMedia}
+              >
+                {deletingMedia ? "جاري الحذف..." : "حذف"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Lightbox
+        open={viewerIndex !== null}
+        close={() => setViewerIndex(null)}
+        index={viewerIndex || 0}
+        slides={gallerySlides}
+        plugins={[Zoom]}
+        zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }}
+      />
+    </section>
+  );
 }
 
 export default WhatsappProjectData;

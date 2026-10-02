@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const users = require("../models/users");
 const projects = require("../models/projects");
+const clients = require("../models/clients");
 const panelsModel = require("../models/panels");
 const counters = require("../models/counters");
 const sessions = require("../models/whatsappSessions");
@@ -16,8 +17,9 @@ const {
     sendTemplateMessage,
     downloadMedia
 } = require("../services/whatsappMeta");
-const { uploadFile, deleteStoredFile } = require("../services/googleDrive");
+const { uploadFile, deleteStoredFile } = require("../services/r2Storage");
 const { normalizePhoneNumber } = require("../utils/phoneNumber");
+const { compareClientNames } = require("../utils/clientNameSimilarity");
 const { createInternalNotifications } = require("../services/internalNotifications");
 const {
     DRAWING_ENGINEER_ROLES,
@@ -44,6 +46,39 @@ const loadProjectWithPanels = async (condition) => {
     if (!project) return null;
     project.panels = await panelsModel.find({ projectId: project._id, isDeleted: false });
     return project;
+};
+
+const buildClientNameReview = async (client) => {
+    const enteredName = String(client?.name || "").trim();
+    if (!enteredName || client?.id) {
+        return {
+            enteredName,
+            resolved: Boolean(client?.id),
+            resolution: client?.id ? "existing" : "",
+            candidates: []
+        };
+    }
+
+    const existingClients = await clients.select_for_name_review();
+    const candidates = existingClients
+        .map((item) => ({ item, ...compareClientNames(enteredName, item.name) }))
+        .filter((entry) => entry.isCandidate)
+        .sort((left, right) => right.similarity - left.similarity)
+        .slice(0, 5)
+        .map(({ item, similarity }) => ({
+            clientId: item._id,
+            name: item.name,
+            type: item.type,
+            profitPercentage: item.profitPercentage,
+            similarity
+        }));
+
+    return {
+        enteredName,
+        resolved: candidates.length === 0,
+        resolution: candidates.length ? "" : "new",
+        candidates
+    };
 };
 
 const loadWhatsappTemplates = async () => {
@@ -320,20 +355,24 @@ const mediaExtension = (mimeType) => ({
     "application/pdf": "pdf"
 }[mimeType] || "bin");
 
-const savePanelMediaToGoogleDrive = async (message, media) => {
+const savePanelMediaToR2 = async (message, media) => {
     const downloaded = await downloadMedia(media.providerMediaId);
+
     const uniqueStamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-${Date.now()}`;
+
     const fileName = `whatsapp-${uniqueStamp}-${message.id}.${mediaExtension(downloaded.mimeType)}`;
+
     const uploaded = await uploadFile({
         fileName,
         mimeType: downloaded.mimeType,
-        buffer: downloaded.buffer
+        buffer: downloaded.buffer,
+        prefix: "whatsapp"
     });
 
     return {
         fileName: uploaded.name || fileName,
         fileSize: Number(uploaded.size) || downloaded.fileSize || downloaded.buffer.length,
-        storageProvider: "google-drive",
+        storageProvider: "r2",
         storageFileId: uploaded.id,
         uploadedAt: new Date()
     };
@@ -377,6 +416,7 @@ const createProjectFromSession = async (session) => {
             sheetPrice: systemConfig.sheetPrice ?? baseProject.prices.sheetPrice,
             paintPrice: systemConfig.paintPrice ?? baseProject.prices.paintPrice
         },
+        clientNameReview: await buildClientNameReview(session.client),
         source: "whatsapp",
         panelIds: []
     });
@@ -1033,14 +1073,14 @@ const handleIncomingMessage = async (message, value) => {
 
         if (media?.providerMediaId) {
             try {
-                const storedMedia = await savePanelMediaToGoogleDrive(message, media);
+                const storedMedia = await savePanelMediaToR2(message, media);
                 await messages.updateByProviderMessageId(message.id, {
                     media: { ...media, ...storedMedia },
                     status: "stored"
                 });
                 await completeRequestedFinishIfReady(activeSession._id);
             } catch (error) {
-                console.error("Google Drive media upload failed:", error.message);
+                console.error("R2 media upload failed:", error.message);
                 await messages.updateByProviderMessageId(message.id, {
                     "media.uploadError": error.message,
                     status: "media_upload_failed"

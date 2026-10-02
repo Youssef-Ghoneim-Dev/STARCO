@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
-import { HiOutlineArrowLeft, HiOutlineLockClosed, HiOutlineUser } from "react-icons/hi";
+import {
+  HiOutlineArrowLeft,
+  HiOutlineLockClosed,
+  HiOutlineUser,
+} from "react-icons/hi";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import PanelsTabs from "../components/projects/projectEditor/PanelsTabs";
 import PanelEditor from "../components/projects/projectEditor/PanelEditor";
@@ -17,6 +21,7 @@ import { useNotifications } from "../context/NotificationContext";
 import PanelEditAction from "../components/projects/PanelEditAction";
 import PanelEditSummary from "../components/projects/PanelEditSummary";
 import { panelMarketingEditableStatuses } from "../utils/panelEditing";
+import { showApiErrorToast } from "../utils/errorToast";
 import {
   isDrawingEngineerRole,
   isProductionSupervisorRole,
@@ -46,7 +51,8 @@ function QuoteEditor({
     readOnly ||
     !["draft", "inProgress", "editing"].includes(panel?.quoteStatus);
   const canStartPanelEditing =
-    panelMarketingEditableStatuses.has(panel?.status) && (allowPanelEditing || !readOnly);
+    panelMarketingEditableStatuses.has(panel?.status) &&
+    (allowPanelEditing || !readOnly);
   return (
     <>
       {readOnlyMessage && (
@@ -64,13 +70,13 @@ function QuoteEditor({
       {openedPanel !== null && (
         <div className="project-read-only-fieldset panel-detail-shell">
           <div className="panel-detail-heading">
-            <h2><bdi dir={getPanelNameDirection(panel?.panelName)}>
-              {panel?.panelName || `لوحة ${activePanel + 1}`}
-            </bdi></h2>
+            <h2>
+              <bdi dir={getPanelNameDirection(panel?.panelName)}>
+                {panel?.panelName || `لوحة ${activePanel + 1}`}
+              </bdi>
+            </h2>
             <div className="panel-detail-heading-actions">
-              {canStartPanelEditing && (
-                <StartEditingButton />
-              )}
+              {canStartPanelEditing && <StartEditingButton />}
               <PanelBackButton onClose={() => setOpenedPanel(null)} />
             </div>
           </div>
@@ -95,7 +101,13 @@ function QuoteEditor({
 function StartEditingButton() {
   const { beginEditing, project, activePanel } = useProject();
   const panel = project?.panels?.[activePanel];
-  return <PanelEditAction panel={panel} onStart={(options) => beginEditing(panel?._id || panel?.panelId, options)} className="panel-inline-edit-btn" />;
+  return (
+    <PanelEditAction
+      panel={panel}
+      onStart={(options) => beginEditing(panel?._id || panel?.panelId, options)}
+      className="panel-inline-edit-btn"
+    />
+  );
 }
 
 function PanelBackButton({ onClose }) {
@@ -176,7 +188,11 @@ function ProjectPreviewLink() {
   return (
     <section className="project-preview-link-card" dir="rtl">
       <div>
-        <span>{includesExecutionPdf ? "رابط معاينة عرض السعر وPDF التنفيذ" : "رابط معاينة عرض السعر"}</span>
+        <span>
+          {includesExecutionPdf
+            ? "رابط معاينة عرض السعر وPDF التنفيذ"
+            : "رابط معاينة عرض السعر"}
+        </span>
         <a href={link} target="_blank" rel="noreferrer">
           {link}
         </a>
@@ -192,7 +208,9 @@ function CompletedMarketingProject({ message, showExecution }) {
   const { project, activePanel } = useProject();
   const [openedPanel, setOpenedPanel] = useState(activePanel);
   const panel = project?.panels?.[activePanel];
-  useEffect(() => { setOpenedPanel(activePanel); }, [activePanel]);
+  useEffect(() => {
+    setOpenedPanel(activePanel);
+  }, [activePanel]);
   return (
     <>
       {message && (
@@ -213,9 +231,11 @@ function CompletedMarketingProject({ message, showExecution }) {
       {openedPanel !== null && (
         <div className="panel-detail-shell">
           <div className="panel-detail-heading">
-            <h2><bdi dir={getPanelNameDirection(panel?.panelName)}>
-              {panel?.panelName || `لوحة ${activePanel + 1}`}
-            </bdi></h2>
+            <h2>
+              <bdi dir={getPanelNameDirection(panel?.panelName)}>
+                {panel?.panelName || `لوحة ${activePanel + 1}`}
+              </bdi>
+            </h2>
             <div className="panel-detail-heading-actions">
               {panelMarketingEditableStatuses.has(panel?.status) && (
                 <StartEditingButton />
@@ -292,31 +312,37 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
     String(assignedEngineerId) !== String(currentUserId || "");
   const editorReadOnly =
     readOnly || claimedByAnotherEngineer || !technicalCanEdit;
-  const readOnlyMessage =
-    claimedByAnotherEngineer
-      ? `المهندس المسؤول عن رسم وتسعير هذه اللوحة هو ${assignedEngineerName}، لذلك تظهر لك بياناتها الهندسية للمعاينة فقط.`
-      : !readOnly && isCompleted
+  const readOnlyMessage = claimedByAnotherEngineer
+    ? `المهندس المسؤول عن رسم وتسعير هذه اللوحة هو ${assignedEngineerName}، لذلك تظهر لك بياناتها الهندسية للمعاينة فقط.`
+    : !readOnly && isCompleted
       ? "هذا المشروع مكتمل نهائيًا وهو متاح للعرض فقط."
       : readOnly && user?.role !== "MarketingManager"
         ? "هذا المشروع للعرض فقط. التعديل والتسعير متاحان للمهندس وOwner Manager فقط."
         : "";
   const isProductionSupervisor = isProductionSupervisorRole(user?.role);
-  const isDedicatedProductionRole = ["ProductionManager", "ProductionEngineer"].includes(user?.role);
-  const canViewProductionReferences = PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
-  const canViewQuoteReference = isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager";
+  const isDedicatedProductionRole = [
+    "ProductionManager",
+    "ProductionEngineer",
+  ].includes(user?.role);
+  const canViewProductionReferences =
+    PRODUCTION_EXECUTION_REFERENCE_ROLES.includes(user?.role);
+  const canViewQuoteReference =
+    isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager";
 
   if (marketingPanelEditing) return <MarketingProjectEditor />;
   if (isMarketer) {
     if (marketerCanEdit) return <MarketingProjectEditor />;
     const message = isQuoteCompleted
       ? ""
-      : (activePanel?.status === "quoteCompleted" || activePanel?.quotePublicationPending) && !quoteHasBeenPublished
+      : (activePanel?.status === "quoteCompleted" ||
+            activePanel?.quotePublicationPending) &&
+          !quoteHasBeenPublished
         ? "اكتمل تسعير هذه اللوحة داخليًا، وسيظهر عرض السعر بعد اعتماد المشروع وإرساله من المهندس."
-      : isExecutionPhase
-        ? ""
-        : isCompleted
-          ? "هذا المشروع مكتمل نهائيًا."
-          : "هذا المشروع أُرسل للمهندس أو يعمل عليه حاليًا، لذلك بياناته للعرض فقط.";
+        : isExecutionPhase
+          ? ""
+          : isCompleted
+            ? "هذا المشروع مكتمل نهائيًا."
+            : "هذا المشروع أُرسل للمهندس أو يعمل عليه حاليًا، لذلك بياناته للعرض فقط.";
     return (
       <CompletedMarketingProject
         message={message}
@@ -360,9 +386,8 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         <ProjectPreviewLink />
         <PanelEditSummary panel={activePanel} />
         {(user?.role === "OwnerManager" ||
-          (isDrawingEngineerRole(user?.role) && project?.source === "manual")) && (
-          <ExecutionPdfWorkspace />
-        )}
+          (isDrawingEngineerRole(user?.role) &&
+            project?.source === "manual")) && <ExecutionPdfWorkspace />}
         <div className="whatsapp-project-tabs" dir="rtl">
           <button
             className={tab === "project-data" ? "active" : ""}
@@ -402,33 +427,74 @@ function ProjectWorkspace({ readOnly, isMarketer }) {
         {!canViewProductionReferences && <ProjectPreviewLink />}
         <ExecutionPdfWorkspace />
         <PanelEditSummary panel={activePanel} />
-        {canViewProductionReferences ? <details className="quote-reference-details production-project-reference" open>
-          <summary>بيانات المشروع والمندوب</summary>
-          <section className="project-audit-summary" dir="rtl">
-            <div><span>المندوب المسؤول</span><strong>{project?.marketingRepresentative?.name || "غير محدد"}</strong></div>
-          </section>
-          <PanelsTabs readOnly />
-          <WhatsappProjectData />
-        </details> : !isProductionSupervisor && <details className="quote-reference-details">
-          <summary>
-            {isWhatsappProject
-              ? canViewQuoteReference
-                ? "عرض بيانات المشروع وعرض السعر"
-                : "عرض بيانات المشروع والمندوب"
-              : "عرض بيانات التسعير المحفوظة"}
-          </summary>
-          {isWhatsappProject ? (
-            canViewQuoteReference ? <>
-              <div className="whatsapp-project-tabs quote-reference-tabs" dir="rtl">
-                <button className={tab === "project-data" ? "active" : ""} onClick={() => setTab("project-data")}>بيانات المشروع</button>
-                <button className={tab === "quote" ? "active" : ""} onClick={() => setTab("quote")}>عرض السعر</button>
+        {canViewProductionReferences ? (
+          <details
+            className="quote-reference-details production-project-reference"
+            open
+          >
+            <summary>بيانات المشروع والمندوب</summary>
+            <section className="project-audit-summary" dir="rtl">
+              <div>
+                <span>المندوب المسؤول</span>
+                <strong>
+                  {project?.marketingRepresentative?.name || "غير محدد"}
+                </strong>
               </div>
-              {tab === "project-data" ? <><PanelsTabs readOnly /><WhatsappProjectData /></> : <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />}
-            </> : <><PanelsTabs readOnly /><WhatsappProjectData /></>
-          ) : (
-            <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
-          )}
-        </details>}
+            </section>
+            <PanelsTabs readOnly />
+            <WhatsappProjectData />
+          </details>
+        ) : (
+          !isProductionSupervisor && (
+            <details className="quote-reference-details">
+              <summary>
+                {isWhatsappProject
+                  ? canViewQuoteReference
+                    ? "عرض بيانات المشروع وعرض السعر"
+                    : "عرض بيانات المشروع والمندوب"
+                  : "عرض بيانات التسعير المحفوظة"}
+              </summary>
+              {isWhatsappProject ? (
+                canViewQuoteReference ? (
+                  <>
+                    <div
+                      className="whatsapp-project-tabs quote-reference-tabs"
+                      dir="rtl"
+                    >
+                      <button
+                        className={tab === "project-data" ? "active" : ""}
+                        onClick={() => setTab("project-data")}
+                      >
+                        بيانات المشروع
+                      </button>
+                      <button
+                        className={tab === "quote" ? "active" : ""}
+                        onClick={() => setTab("quote")}
+                      >
+                        عرض السعر
+                      </button>
+                    </div>
+                    {tab === "project-data" ? (
+                      <>
+                        <PanelsTabs readOnly />
+                        <WhatsappProjectData />
+                      </>
+                    ) : (
+                      <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <PanelsTabs readOnly />
+                    <WhatsappProjectData />
+                  </>
+                )
+              ) : (
+                <QuoteEditor readOnly readOnlyMessage={readOnlyMessage} />
+              )}
+            </details>
+          )
+        )}
       </>
     );
   if (!isWhatsappProject)
@@ -490,23 +556,35 @@ function EditProject() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { notifications, readProject } = useNotifications();
-  const hasUnreadProjectNotification = notifications.some((item) =>
-    !item.readAt && String(item.projectId) === String(id)
+  const hasUnreadProjectNotification = notifications.some(
+    (item) => !item.readAt && String(item.projectId) === String(id),
   );
   useEffect(() => {
     if (id) readProject(id);
   }, [hasUnreadProjectNotification, id, readProject]);
-  const latestWorkflowNotification = notifications.find((item) => String(item.projectId) === String(id));
+  const latestWorkflowNotification = notifications.find(
+    (item) => String(item.projectId) === String(id),
+  );
   const latestWorkflowNotificationId = latestWorkflowNotification?._id;
   useEffect(() => {
     if (!latestWorkflowNotificationId) return;
-    window.dispatchEvent(new CustomEvent("project:refresh", { detail: { projectId: id } }));
+    window.dispatchEvent(
+      new CustomEvent("project:refresh", { detail: { projectId: id } }),
+    );
   }, [id, latestWorkflowNotificationId]);
   useEffect(() => {
     if (!isDrawingEngineerRole(user?.role)) return;
-    const stopNotification = notifications.find((item) => !item.readAt && item.type === "panelMarketingEditStarted" && String(item.projectId) === String(id));
+    const stopNotification = notifications.find(
+      (item) =>
+        !item.readAt &&
+        item.type === "panelMarketingEditStarted" &&
+        String(item.projectId) === String(id),
+    );
     if (!stopNotification) return;
-    toast.error(stopNotification.title || "توقف عن العمل؛ المندوب يعدّل اللوحة الآن.", { duration: 7000 });
+    toast.error(
+      stopNotification.title || "توقف عن العمل؛ المندوب يعدّل اللوحة الآن.",
+      { duration: 7000 },
+    );
     navigate("/projects", { replace: true });
   }, [id, navigate, notifications, user?.role]);
   const isMarketer = user?.role === "Marketer";
@@ -531,8 +609,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   const { panelId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { project, setProject, activePanel, setActivePanel } =
-    useProject();
+  const { project, setProject, activePanel, setActivePanel } = useProject();
   const [locking, setLocking] = useState(false);
 
   useEffect(() => {
@@ -543,7 +620,11 @@ function PanelRouteGate({ readOnly, isMarketer }) {
   }, [activePanel, panelId, project?.panels, setActivePanel]);
 
   useEffect(() => {
-    if (project?.status === "created" && (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")) navigate(`/projects/${project._id}`, { replace: true });
+    if (
+      project?.status === "created" &&
+      (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")
+    )
+      navigate(`/projects/${project._id}`, { replace: true });
   }, [navigate, project?._id, project?.status, user?.role]);
 
   const panel = project?.panels?.[activePanel];
@@ -569,11 +650,16 @@ function PanelRouteGate({ readOnly, isMarketer }) {
       try {
         const { data } = await getProject(project._id);
         if (!active) return;
-        const remotePanel = (data?.panels || []).find((item) =>
-          String(item._id || item.panelId) === String(panel._id || panel.panelId),
+        const remotePanel = (data?.panels || []).find(
+          (item) =>
+            String(item._id || item.panelId) ===
+            String(panel._id || panel.panelId),
         );
         if (remotePanel?.marketingEditSession?.active) {
-          toast.error("المندوب طلب تعديل هذه اللوحة. تم إيقاف العمل وإعادتك إلى المشاريع.", { duration: 7000 });
+          toast.error(
+            "المندوب طلب تعديل هذه اللوحة. تم إيقاف العمل وإعادتك إلى المشاريع.",
+            { duration: 7000 },
+          );
           navigate("/projects", { replace: true });
         }
       } catch {
@@ -588,8 +674,14 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     };
   }, [navigate, panel?._id, panel?.panelId, project?._id, user?.role]);
   useEffect(() => {
-    if (isDrawingEngineerRole(user?.role) && panel?.marketingEditSession?.active) {
-      toast.error("المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.", { duration: 7000 });
+    if (
+      isDrawingEngineerRole(user?.role) &&
+      panel?.marketingEditSession?.active
+    ) {
+      toast.error(
+        "المندوب يعدّل هذه اللوحة حاليًا. تم إيقاف العمل عليها مؤقتًا.",
+        { duration: 7000 },
+      );
       navigate("/projects", { replace: true });
     }
   }, [navigate, panel?.marketingEditSession?.active, user?.role]);
@@ -615,9 +707,7 @@ function PanelRouteGate({ readOnly, isMarketer }) {
           ),
         })),
       )
-      .catch((error) =>
-        toast.error(error.response?.data?.message || "تعذر حجز اللوحة."),
-      )
+      .catch((error) => showApiErrorToast(error, "تعذر حجز اللوحة."))
       .finally(() => setLocking(false));
   }, [
     locking,
@@ -630,7 +720,11 @@ function PanelRouteGate({ readOnly, isMarketer }) {
     user?.role,
   ]);
 
-  if (project?.status === "created" && (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")) return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
+  if (
+    project?.status === "created" &&
+    (isDrawingEngineerRole(user?.role) || user?.role === "OwnerManager")
+  )
+    return <div className="route-loading">جاري فتح بيانات المشروع...</div>;
   if (!panel)
     return (
       <div className="route-loading" dir="rtl">

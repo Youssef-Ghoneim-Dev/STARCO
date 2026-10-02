@@ -62,13 +62,32 @@ export const cancelPanelEdits = (projectId, panelId) => api.post(`/projects/${pr
 export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
 export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 
-export const uploadExecutionPdfFile = (projectId, panelId, file, purpose = "") => {
-    const formData = new FormData();
-    formData.append("panelId", panelId);
-    formData.append("file", file);
-    if (purpose) formData.append("purpose", purpose);
-    return api.post(`/projects/${projectId}/panels/${panelId}/execution-pdf/files`, formData);
+const uploadToR2 = async (signPath, completePath, file, purpose = "") => {
+    const { data: signed } = await api.post(signPath, {
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileSize: file.size,
+        ...(purpose ? { purpose } : {})
+    });
+    const uploadResponse = await fetch(signed.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file
+    });
+    if (!uploadResponse.ok) {
+        const error = new Error("تعذر رفع الملف إلى التخزين. تحقق من إعدادات Cloudflare وحاول مرة أخرى.");
+        error.status = uploadResponse.status;
+        throw error;
+    }
+    return api.post(completePath, { uploadToken: signed.uploadToken });
 };
+
+export const uploadExecutionPdfFile = (projectId, panelId, file, purpose = "") => uploadToR2(
+    `/projects/${projectId}/panels/${panelId}/execution-pdf/files/sign`,
+    `/projects/${projectId}/panels/${panelId}/execution-pdf/files/complete`,
+    file,
+    purpose,
+);
 
 export const saveExecutionPdfDesign = (projectId, panelId, data) => api.put(
     `/projects/${projectId}/panels/${panelId}/execution-pdf/design`,
@@ -102,11 +121,11 @@ export const deleteExecutionPdfFile = (projectId, panelId, fileId) => api.delete
     `/projects/${projectId}/panels/${panelId}/execution-pdf/files/${fileId}`,
 );
 
-export const uploadManufacturingFile = async (projectId, panelId, file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return api.post(`/projects/${projectId}/panels/${panelId}/manufacturing/files`, formData);
-};
+export const uploadManufacturingFile = (projectId, panelId, file) => uploadToR2(
+    `/projects/${projectId}/panels/${panelId}/manufacturing/files/sign`,
+    `/projects/${projectId}/panels/${panelId}/manufacturing/files/complete`,
+    file,
+);
 
 export const finishManufacturingFiles = (projectId, panelId, notes) => api.post(
     `/projects/${projectId}/panels/${panelId}/manufacturing/finish`,

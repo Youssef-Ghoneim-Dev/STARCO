@@ -1,0 +1,233 @@
+.activity-center {
+    position: fixed;
+    z-index: 1200;
+    right: 24px;
+    bottom: 24px;
+    width: min(420px, calc(100vw - 48px));
+    overflow: hidden;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: activity-center-enter 220ms ease-out both;
+    pointer-events: auto;
+}
+
+.activity-center-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+
+.activity-center-heading>span {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    color: var(--primary-contrast);
+    border-radius: 999px;
+    background: var(--primary);
+    font-size: 12px;
+}
+
+.activity-center-list {
+    display: grid;
+    max-height: min(360px, 55vh);
+    overflow-y: auto;
+}
+
+.activity-center-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+}
+
+.activity-center-list .activity-center-row+.activity-center-row {
+    border-top: 1px solid var(--border);
+}
+
+.activity-center-icon {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    color: var(--primary);
+    border-radius: 50%;
+    background: var(--surface-soft);
+    font-size: 16px;
+}
+
+.activity-center-row.status-success .activity-center-icon {
+    color: var(--success);
+}
+
+.activity-center-row.status-error .activity-center-icon {
+    color: var(--danger);
+}
+
+.activity-center-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.activity-center-copy strong {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.activity-center-copy [dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plaintext;
+}
+
+.activity-center-copy [dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+}
+
+.activity-center-copy>span {
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.activity-center-spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: activity-center-spin 750ms linear infinite;
+}
+
+.activity-center-progress {
+    grid-column: 2 / -1;
+    position: relative;
+    height: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-soft);
+}
+
+.activity-center-progress>span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary);
+    transition: width var(--transition) ease;
+}
+
+.activity-center-progress.is-indeterminate>span {
+    position: absolute;
+    width: 38%;
+    animation: activity-center-progress 1.25s ease-in-out infinite;
+}
+
+.activity-center-row.status-error .activity-center-progress>span {
+    background: var(--danger);
+}
+
+.activity-center-row.is-exiting {
+    animation: activity-center-exit 180ms ease-in forwards;
+}
+
+.activity-center-dismiss {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--text-light);
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.activity-center-dismiss:hover {
+    color: var(--danger);
+    background: var(--surface-muted);
+}
+
+.activity-center-row:has(.activity-center-dismiss) {
+    grid-template-columns: 24px minmax(0, 1fr) 28px;
+}
+
+.activity-center-row:has(.activity-center-dismiss) .activity-center-progress {
+    grid-column: 2 / -1;
+}
+
+@keyframes activity-center-enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes activity-center-exit {
+    to {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@keyframes activity-center-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes activity-center-progress {
+    from {
+        transform: translateX(-130%);
+    }
+
+    to {
+        transform: translateX(280%);
+    }
+}
+
+@media (max-width: 600px) {
+    .activity-center {
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        width: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .activity-center,
+    .activity-center-spinner,
+    .activity-center-progress.is-indeterminate>span {
+        animation-duration: 0.01ms;
+        animation-iteration-count: 1;
+    }
+
+    .activity-center-row.is-exiting {
+        animation-duration: 0.01ms;
+    }
+}
