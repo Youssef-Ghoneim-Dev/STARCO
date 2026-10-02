@@ -179,8 +179,25 @@ function MarketingProjectEditor() {
               ? "تم حفظ اللوحة وإنهاء التعديلات."
               : "تم حفظ بيانات اللوحة."),
         );
-      if (result.notification?.includes("تعذر"))
-        toast.error(result.notification, { duration: 7000 });
+      if (result.notification?.includes("تعذر")) {
+        if (result.notificationErrors?.length) {
+          showApiErrorToast(
+            {
+              response: {
+                data: {
+                  status: "error",
+                  message: result.notification,
+                  details: result.notificationErrors,
+                },
+              },
+            },
+            result.notification,
+          );
+        } else {
+          toast.error(result.notification, { duration: 7000 });
+        }
+      }
+
       navigate(`/projects/${project._id}`);
     } else if (result.fields) {
       setValidationErrors(result.fields);

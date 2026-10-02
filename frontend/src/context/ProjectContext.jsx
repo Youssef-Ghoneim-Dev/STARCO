@@ -1185,9 +1185,12 @@ export function ProjectProvider({ children, projectId, readOnly = false }) {
           const editingThisPanel = active?.marketingEditSession?.active;
           if (editingThisPanel) {
             const { data } = await submitPanelEdits(projectId, active._id);
+
             return {
               success: true,
               message: data.message || "تم حفظ اللوحة وإنهاء التعديلات.",
+              notification: data.notificationMessage,
+              notificationErrors: data.notificationErrors || [],
             };
           }
           return { success: true, message: "تم حفظ بيانات اللوحة." };

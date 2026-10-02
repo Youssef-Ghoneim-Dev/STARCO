@@ -85,6 +85,7 @@ const safeValidation = (payload, status) => {
 
 export function getSafeErrorInfo(error, fallback = "تعذر إتمام العملية.") {
     const payload = error?.response?.data;
+    const serverErrorDetails = payload?.errorDetails || {};
     const messageValue = Array.isArray(payload?.message)
         ? payload.message[0]?.message || payload.message[0]?.msg || ""
         : payload?.message;
@@ -99,29 +100,78 @@ export function getSafeErrorInfo(error, fallback = "تعذر إتمام العم
         payload?.requestId || payload?.correlationId || getHeader(headers, ["x-request-id", "request-id", "x-correlation-id", "correlation-id"]),
         180,
     );
-    const safeDetailsPayload = payload?.safeDetails ||
-        (Array.isArray(payload?.details) ? null : payload?.details);
-    const safeDetails = safeObjectEntries(safeDetailsPayload).map(([key, value]) => {
-        const safe = safeValue(value);
-        return {
-            key: cleanText(key, 100),
-            value: typeof safe === "string" ? safe : JSON.stringify(safe),
-        };
-    }).filter((item) => item.value);
-    const endpoint = safeEndpoint(error);
-    const method = cleanText(error?.config?.method || "", 12).toUpperCase();
+    const safeDetailsPayload = payload?.safeDetails || payload?.details;
+    const safeDetails = Array.isArray(safeDetailsPayload)
+        ? safeDetailsPayload
+            .slice(0, 20)
+            .map((item, index) => ({
+                key: cleanText(
+                    item?.type || `detail_${index + 1}`,
+                    100,
+                ),
+                value: cleanText(
+                    [
+                        item?.message,
+                        item?.code ? `Code: ${item.code}` : "",
+                        item?.subcode ? `Subcode: ${item.subcode}` : "",
+                        item?.details ? `Details: ${item.details}` : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" | "),
+                    500,
+                ),
+            }))
+            .filter((item) => item.value)
+        : safeObjectEntries(safeDetailsPayload)
+            .map(([key, value]) => {
+                const safe = safeValue(value);
+                return {
+                    key: cleanText(key, 100),
+                    value: typeof safe === "string" ? safe : JSON.stringify(safe),
+                };
+            })
+            .filter((item) => item.value);
+    // const endpoint = safeEndpoint(error);
+    // const method = cleanText(error?.config?.method || "", 12).toUpperCase();
     const validationErrors = safeValidation(payload, error?.response?.status);
     const details = {
-        errorType: cleanText(error?.name || "RequestError", 100),
-        status: Number(error?.response?.status) || null,
-        code: cleanText(payload?.errorCode || payload?.code || error?.code || "", 120),
-        backendMessage,
+        errorType: cleanText(
+            serverErrorDetails.errorType || error?.name || "RequestError",
+            100,
+        ),
+        status:
+            Number(
+                serverErrorDetails.statusCode || error?.response?.status
+            ) || null,
+        code: cleanText(
+            serverErrorDetails.errorCode ||
+            payload?.errorCode ||
+            payload?.code ||
+            error?.code ||
+            "",
+            120,
+        ),
+        backendMessage: cleanText(
+            serverErrorDetails.backendMessage || messageValue,
+        ),
         userMessage: explicitUserMessage,
-        method,
-        endpoint,
+        method: cleanText(
+            serverErrorDetails.method || error?.config?.method || "",
+            12,
+        ).toUpperCase(),
+        endpoint: cleanText(
+            serverErrorDetails.endpoint || safeEndpoint(error),
+            500,
+        ),
         requestId,
-        timestamp: cleanText(payload?.timestamp || getHeader(headers, ["date"]), 120),
-        resourceId: cleanText(payload?.resourceId || payload?.entityId || "", 160),
+        timestamp: cleanText(
+            payload?.timestamp || getHeader(headers, ["date"]),
+            120,
+        ),
+        resourceId: cleanText(
+            payload?.resourceId || payload?.entityId || "",
+            160,
+        ),
         validationErrors,
         safeDetails,
     };
@@ -130,6 +180,7 @@ export function getSafeErrorInfo(error, fallback = "تعذر إتمام العم
         details.requestId || details.timestamp || details.resourceId ||
         details.validationErrors.length || details.safeDetails.length,
     );
+
     return { userMessage, details, hasDetails };
 }
 
