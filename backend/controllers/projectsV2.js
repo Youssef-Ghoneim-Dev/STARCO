@@ -831,70 +831,65 @@ const submitProject = async (req, res, next) => {
             (item) => item.status === "rejected"
         );
 
-        const firstRejectedReason = rejectedNotifications[0]?.reason;
+        const failedDeliveryRows = deliveryRows.filter(
+            (row) => row?.status === "failed"
+        );
 
-        const metaDeliveryError = failedDeliveryRows[0]
-            ? {
-                code: failedDeliveryRows[0]?.rawPayload?.errors?.[0]?.code || null,
-                message: whatsappFailureReason(failedDeliveryRows[0])
-            }
-            : null;
+        const notificationFailed = failedDeliveryRows.length;
 
-        const metaSendError = firstRejectedReason
-            ? {
-                code: firstRejectedReason?.metaCode || null,
-                subcode: firstRejectedReason?.metaSubcode || null,
-                message:
-                    firstRejectedReason?.metaDetails ||
-                    firstRejectedReason?.message ||
-                    "تعذر إرسال قالب WhatsApp."
-            }
-            : null;
+        const notified =
+            notifications.filter((item) => item.status === "fulfilled").length -
+            notificationFailed;
 
-        const whatsappTemplateError = metaDeliveryError || metaSendError;
+        const notificationErrors = [
+            ...failedDeliveryRows.map((row) => ({
+                type: "MetaDeliveryError",
+                message: whatsappFailureReason(row),
+                code: row?.rawPayload?.errors?.[0]?.code || null,
+                details: row?.rawPayload?.errors?.[0]?.error_data?.details || null
+            })),
+            ...rejectedNotifications.map((item) => ({
+                type: "WhatsAppTemplateError",
+                message: item.reason?.metaDetails || item.reason?.message || "تعذر إرسال قالب WhatsApp.",
+                code: item.reason?.metaCode || null,
+                subcode: item.reason?.metaSubcode || null
+            }))
+        ];
 
-        if (whatsappTemplateError) {
-            console.error("WhatsApp project template failed:", {
-                code: whatsappTemplateError.code,
-                subcode: whatsappTemplateError.subcode,
-                message: whatsappTemplateError.message,
-                projectId: String(saved._id)
-            });
-
-            return res.status(502).json({
-                status: "error",
-
-                // دي اللي المستخدم العادي يشوفها
-                message: "تم حفظ المشروع، لكن تعذر إرسال إشعار WhatsApp.",
-
-                // ودي اللي Error Details يعرضها للمطور
-                errorDetails: {
-                    statusCode: 502,
-                    method: req.method,
-                    endpoint: req.originalUrl,
-                    errorType: "WhatsAppTemplateError",
-                    errorCode:
-                        whatsappTemplateError.code
-                            ? `META_${whatsappTemplateError.code}`
-                            : "WHATSAPP_TEMPLATE_SEND_FAILED",
-
-                    backendMessage: whatsappTemplateError.message,
-
-                    metaCode: whatsappTemplateError.code,
-                    metaSubcode: whatsappTemplateError.subcode || null,
-
-                    projectId: String(saved._id)
-                },
-
-                project: await hydrate(saved, false, req.user)
-            });
-        }
+        const hasWhatsappError = notificationErrors.length > 0;
 
         const notificationMessage = !recipients.length
             ? "لا يوجد مهندس أو Owner Manager معتمد لديه رقم WhatsApp مسجل."
-            : notified < recipients.length
-                ? `تم إرسال القالب إلى ${notified} من أصل ${recipients.length} مستلم.`
-                : `تم إرسال قالب المشروع إلى ${notified} مستلم.`;
+            : hasWhatsappError
+                ? "تم حفظ المشروع، لكن تعذر إرسال إشعار WhatsApp."
+                : notified < recipients.length
+                    ? `وصل القالب إلى ${notified} من أصل ${recipients.length} مستلم.`
+                    : `تم إرسال قالب المشروع إلى ${notified} مستلم.`;
+
+        notifications.forEach((item) => {
+            if (item.status === "rejected") {
+                console.error("New project WhatsApp template failed:", {
+                    reason: item.reason,
+                    message: item.reason?.message,
+                    metaCode: item.reason?.metaCode,
+                    metaSubcode: item.reason?.metaSubcode,
+                    metaDetails: item.reason?.metaDetails
+                });
+            }
+        });
+
+        return res.status(200).json({
+            status: "ok",
+            message: "تم إرسال المشروع للمهندسين.",
+            notified,
+            notificationFailed,
+            notificationMessage,
+
+            // التفاصيل الحقيقية للمطور
+            notificationErrors,
+
+            project: await hydrate(saved, false, req.user)
+        });
         notifications.forEach((item) => {
             if (item.status === "rejected")
                 console.error(
