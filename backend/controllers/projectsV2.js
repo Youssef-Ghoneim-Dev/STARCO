@@ -823,37 +823,35 @@ const submitProject = async (req, res, next) => {
         const failedDeliveryRows = deliveryRows.filter(
             (row) => row?.status === "failed",
         );
+
         const notificationFailed = failedDeliveryRows.length;
+
         const notified =
             notifications.filter((item) => item.status === "fulfilled").length -
             notificationFailed;
+
         const rejectedNotifications = notifications.filter(
             (item) => item.status === "rejected"
         );
-
-        const failedDeliveryRows = deliveryRows.filter(
-            (row) => row?.status === "failed"
-        );
-
-        const notificationFailed = failedDeliveryRows.length;
-
-        const notified =
-            notifications.filter((item) => item.status === "fulfilled").length -
-            notificationFailed;
 
         const notificationErrors = [
             ...failedDeliveryRows.map((row) => ({
                 type: "MetaDeliveryError",
                 message: whatsappFailureReason(row),
                 code: row?.rawPayload?.errors?.[0]?.code || null,
-                details: row?.rawPayload?.errors?.[0]?.error_data?.details || null
+                details:
+                    row?.rawPayload?.errors?.[0]?.error_data?.details || null,
             })),
+
             ...rejectedNotifications.map((item) => ({
                 type: "WhatsAppTemplateError",
-                message: item.reason?.metaDetails || item.reason?.message || "تعذر إرسال قالب WhatsApp.",
+                message:
+                    item.reason?.metaDetails ||
+                    item.reason?.message ||
+                    "تعذر إرسال قالب WhatsApp.",
                 code: item.reason?.metaCode || null,
-                subcode: item.reason?.metaSubcode || null
-            }))
+                subcode: item.reason?.metaSubcode || null,
+            })),
         ];
 
         const hasWhatsappError = notificationErrors.length > 0;
@@ -873,9 +871,19 @@ const submitProject = async (req, res, next) => {
                     message: item.reason?.message,
                     metaCode: item.reason?.metaCode,
                     metaSubcode: item.reason?.metaSubcode,
-                    metaDetails: item.reason?.metaDetails
+                    metaDetails: item.reason?.metaDetails,
                 });
             }
+        });
+
+        return res.status(200).json({
+            status: "ok",
+            message: "تم إرسال المشروع للمهندسين.",
+            notified,
+            notificationFailed,
+            notificationMessage,
+            notificationErrors,
+            project: await hydrate(saved, false, req.user),
         });
 
         return res.status(200).json({
@@ -903,7 +911,7 @@ const submitProject = async (req, res, next) => {
             notified,
             notificationFailed,
             notificationMessage,
-            notificationErrors: failedDeliveryRows.map(whatsappFailureReason),
+            notificationErrors,
             project: await hydrate(saved, false, req.user),
         });
     } catch (error) {
