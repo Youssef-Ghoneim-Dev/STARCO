@@ -1085,7 +1085,7 @@ const handleIncomingMessage = async (message, value) => {
                     status: "stored"
                 });
                 await completeRequestedFinishIfReady(activeSession._id);
-            } } catch (error) {
+            } catch (error) {
                 console.error("R2 media upload failed:", error);
 
                 await messages.updateByProviderMessageId(message.id, {
