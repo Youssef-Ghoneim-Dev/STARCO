@@ -43,7 +43,6 @@
 }
 
 .auth-header,
-.google-auth,
 .auth-footer,
 .auth-account-notice {
     flex: 0 0 auto;
@@ -111,21 +110,57 @@
 }
 
 @media (max-height: 720px) {
-    .auth-card { gap: 7px; }
-    .auth-header { gap: 6px; }
-    .auth-logo { width: 44px; height: 44px; }
-    .auth-card h1 { margin-block: 2px; font-size: 22px; }
-    .auth-card p { margin-block: 2px; font-size: 12px; }
-    .auth-tabs { padding: 4px; }
-    .auth-tabs a { padding: 7px; font-size: 12px; }
-    .auth-body { gap: 7px; }
-    .input-group label { margin-bottom: 3px; font-size: 12px; }
+    .auth-card {
+        gap: 7px;
+    }
+
+    .auth-header {
+        gap: 6px;
+    }
+
+    .auth-logo {
+        width: 44px;
+        height: 44px;
+    }
+
+    .auth-card h1 {
+        margin-block: 2px;
+        font-size: 22px;
+    }
+
+    .auth-card p {
+        margin-block: 2px;
+        font-size: 12px;
+    }
+
+    .auth-tabs {
+        padding: 4px;
+    }
+
+    .auth-tabs a {
+        padding: 7px;
+        font-size: 12px;
+    }
+
+    .auth-body {
+        gap: 7px;
+    }
+
+    .input-group label {
+        margin-bottom: 3px;
+        font-size: 12px;
+    }
+
     .input-group input,
-    .auth-body .select-wrapper .app-select-trigger { min-height: 42px; height: 42px; }
-    .auth-body .auth-btn { min-height: 44px; padding-block: 10px; }
-    .google-login-shell,
-    .google-login-shell > div,
-    .google-login-shell iframe { height: 42px !important; min-height: 42px; }
+    .auth-body .select-wrapper .app-select-trigger {
+        min-height: 42px;
+        height: 42px;
+    }
+
+    .auth-body .auth-btn {
+        min-height: 44px;
+        padding-block: 10px;
+    }
 }
 
 /* Tablets in portrait mode must not inherit the desktop artwork composition.
@@ -157,4 +192,3 @@
         justify-content: center;
     }
 }
-

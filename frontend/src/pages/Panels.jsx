@@ -162,7 +162,7 @@ export default function Panels() {
         onStatusChange={setStatus}
         onRefresh={load}
         refreshing={loading}
-        title="اللوحات"
+        title="Panels"
         subtitle={
           supervisorOnly
             ? `لوحات ${supervisorStageLabels[user?.role]} المتاحة لك فقط`

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import toast from "react-hot-toast";
 import AuthTabs from "./AuthTabs";
 import AuthInput from "./AuthInput";
@@ -134,21 +133,15 @@ function LoginForm() {
       {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <div className="google-auth">
           <span>أو</span>
-          <div className="google-login-shell">
-            <span className="google-login-visual">
-              <FcGoogle />
-              Login with Google
-            </span>
-            <GoogleLogin
-              onSuccess={signInWithGoogle}
-              onError={() => toast.error("تعذر الاتصال بـ Google.")}
-              text="signin_with"
-              theme="outline"
-              shape="pill"
-              size="large"
-              width="300"
-            />
-          </div>
+          <GoogleLogin
+            onSuccess={signInWithGoogle}
+            onError={() => toast.error("تعذر الاتصال بـ Google.")}
+            text="signin_with"
+            theme="outline"
+            shape="pill"
+            size="large"
+            width="300"
+          />
         </div>
       )}
       <div className="auth-switch auth-footer">
