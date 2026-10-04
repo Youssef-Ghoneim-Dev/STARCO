@@ -13,9 +13,11 @@ import StyledSelect from "../common/StyledSelect";
 import { PUBLIC_REGISTRATION_ROLES, rolesToOptions } from "../../utils/roles";
 import { showApiErrorToast } from "../../utils/errorToast";
 import { useActivityAction } from "../common/activity/ActivityContext";
-
+import { useTheme } from "../../context/ThemeContext";
+import { FcGoogle } from "react-icons/fc";
 function RegisterForm() {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const { reloadProfile, setPending } = useAuth();
   const runActivity = useActivityAction();
   const [loading, setLoading] = useState(false);
@@ -184,15 +186,24 @@ function RegisterForm() {
       {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <div className="google-auth">
           <span>أو</span>
-            <GoogleLogin
-              onSuccess={signUpWithGoogle}
-              onError={() => toast.error("تعذر الاتصال بـ Google.")}
-              text="signup_with"
-              theme="outline"
-              shape="pill"
-              size="large"
-              width="300"
-            />
+          <div className="google-login-shell">
+            <div className="google-login-visual">
+              <FcGoogle />
+              Sign up with Google
+            </div>
+
+            <div className="google-login-provider">
+              <GoogleLogin
+                onSuccess={signUpWithGoogle}
+                onError={() => toast.error("تعذر الاتصال بـ Google.")}
+                text="signin_with"
+                theme={isDark ? "filled_black" : "outline"}
+                shape="pill"
+                size="medium"
+                width="300"
+              />
+            </div>
+          </div>
         </div>
       )}
       <div className="auth-switch auth-footer">

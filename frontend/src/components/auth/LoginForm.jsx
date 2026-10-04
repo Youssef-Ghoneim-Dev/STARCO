@@ -10,10 +10,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useActivityAction } from "../common/activity/ActivityContext";
 import logo from "../../assets/images/logo.jpg";
 import { showApiErrorToast } from "../../utils/errorToast";
-
+import { useTheme } from "../../context/ThemeContext";
+import { FcGoogle } from "react-icons/fc";
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isDark } = useTheme();
   const { reloadProfile, setPending } = useAuth();
   const runActivity = useActivityAction();
   const [showPassword, setShowPassword] = useState(false);
@@ -133,15 +135,24 @@ function LoginForm() {
       {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <div className="google-auth">
           <span>أو</span>
-          <GoogleLogin
-            onSuccess={signInWithGoogle}
-            onError={() => toast.error("تعذر الاتصال بـ Google.")}
-            text="signin_with"
-            theme="outline"
-            shape="pill"
-            size="large"
-            width="300"
-          />
+          <div className="google-login-shell">
+            <div className="google-login-visual">
+              <FcGoogle />
+              Sign in with Google
+            </div>
+
+            <div className="google-login-provider">
+              <GoogleLogin
+                onSuccess={signInWithGoogle}
+                onError={() => toast.error("تعذر الاتصال بـ Google.")}
+                text="signin_with"
+                theme={isDark ? "filled_black" : "outline"}
+                shape="pill"
+                size="medium"
+                width="300"
+              />
+            </div>
+          </div>
         </div>
       )}
       <div className="auth-switch auth-footer">
