@@ -45,7 +45,7 @@ export function NotificationProvider({ children }) {
 
   const refresh = useCallback(
     async ({ quiet = false } = {}) => {
-      if (!userId || pending) return;
+      if (!userId || !localStorage.getItem("token") || pending) return;
       const requestedUserId = userId;
       const requestId = ++refreshSequenceRef.current;
       const requestedRevision = notificationRevisionRef.current;
@@ -116,6 +116,7 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (
       !user ||
+      !localStorage.getItem("token") ||
       pending ||
       typeof Notification === "undefined" ||
       Notification.permission !== "granted"

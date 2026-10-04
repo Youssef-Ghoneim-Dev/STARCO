@@ -4,15 +4,38 @@ import ProductionManagerDashboard from "./ProductionManagerDashboard";
 
 function FullEngineerDashboard(props) {
   const [workspace, setWorkspace] = useState("drawing");
-  return <div className="full-engineer-dashboard" dir="rtl">
-    <nav className="full-engineer-workspace-tabs" aria-label="اختيار مساحة عمل المهندس الشامل">
-      <button type="button" className={workspace === "drawing" ? "active" : ""} onClick={() => setWorkspace("drawing")}>مهام الرسم والتسعير</button>
-      <button type="button" className={workspace === "production" ? "active" : ""} onClick={() => setWorkspace("production")}>متابعة الإنتاج</button>
-    </nav>
-    {workspace === "drawing"
-      ? <EngineerDashboard {...props} title="المهندس الشامل — الرسم والتسعير" />
-      : <ProductionManagerDashboard {...props} role="FullEngineer" title="المهندس الشامل — متابعة الإنتاج" />}
-  </div>;
+  return (
+    <div className="full-engineer-dashboard" dir="rtl">
+      <nav
+        className="full-engineer-workspace-tabs"
+        aria-label="اختيار مساحة عمل المهندس الشامل"
+      >
+        <button
+          type="button"
+          className={workspace === "drawing" ? "active" : ""}
+          onClick={() => setWorkspace("drawing")}
+        >
+          مهام الرسم والتسعير
+        </button>
+        <button
+          type="button"
+          className={workspace === "production" ? "active" : ""}
+          onClick={() => setWorkspace("production")}
+        >
+          متابعة الإنتاج
+        </button>
+      </nav>
+      {workspace === "drawing" ? (
+        <EngineerDashboard {...props} title="المهندس الشامل — الرسم والتسعير" />
+      ) : (
+        <ProductionManagerDashboard
+          {...props}
+          role="FullEngineer"
+          title="المهندس الشامل — متابعة الإنتاج"
+        />
+      )}
+    </div>
+  );
 }
 
 export default FullEngineerDashboard;

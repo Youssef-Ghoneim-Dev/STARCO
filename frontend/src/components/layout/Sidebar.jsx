@@ -21,19 +21,40 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const role = user?.role;
-  const canUseRecycleBin = ["OwnerManager", "Engineer", "FullEngineer", "Marketer", "MarketingManager", "ProductionManager", "ProductionEngineer"].includes(role);
-  const canManageUsers = ["OwnerManager", "MarketingManager", "ProductionManager"].includes(role);
-  const canManageClients = ["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"].includes(role);
-  const canManageConfiguration = ["OwnerManager", "Engineer", "FullEngineer", "MarketingManager"].includes(role);
+  const canUseRecycleBin = [
+    "OwnerManager",
+    "Engineer",
+    "FullEngineer",
+    "Marketer",
+    "MarketingManager",
+    "ProductionManager",
+    "ProductionEngineer",
+  ].includes(role);
+  const canManageUsers = [
+    "OwnerManager",
+    "MarketingManager",
+    "ProductionManager",
+  ].includes(role);
+  const canManageClients = [
+    "OwnerManager",
+    "Engineer",
+    "FullEngineer",
+    "MarketingManager",
+  ].includes(role);
+  const canManageConfiguration = [
+    "OwnerManager",
+    "Engineer",
+    "FullEngineer",
+    "MarketingManager",
+  ].includes(role);
   const canViewProjects = true;
 
-  const logout = () => {
+  const handleLogout = () => {
     setLoggingOut(true);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    logout();
     window.setTimeout(() => navigate("/login", { replace: true }), 350);
   };
 
@@ -57,91 +78,183 @@ function Sidebar({ isOpen, onClose, isPending = false }) {
           </div>
 
           <nav>
-            {isPending ? <span className="sidebar-link is-disabled"><HiOutlineHome />Dashboard</span> : <NavLink to="/dashboard" className="sidebar-link" onClick={onClose}>
-              <HiOutlineHome />
-              Dashboard
-            </NavLink>}
-
-          {canViewProjects && (
-            <>
-              <NavLink to="/projects" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                <HiOutlineFolder />
-                Projects
+            {isPending ? (
+              <span className="sidebar-link is-disabled">
+                <HiOutlineHome />
+                Dashboard
+              </span>
+            ) : (
+              <NavLink
+                to="/dashboard"
+                className="sidebar-link"
+                onClick={onClose}
+              >
+                <HiOutlineHome />
+                Dashboard
               </NavLink>
-              <NavLink to="/panels" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                <HiOutlineViewGrid />
-                Panels
-              </NavLink>
+            )}
 
-              {canManageClients && (
-                <NavLink to="/clients" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                  <HiOutlineIdentification />
-                  Clients
+            {canViewProjects && (
+              <>
+                <NavLink
+                  to="/projects"
+                  className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                  onClick={onClose}
+                >
+                  <HiOutlineFolder />
+                  Projects
                 </NavLink>
-              )}
-              {canManageUsers && (
-                <>
-                  <NavLink to="/users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUserGroup />Users</NavLink>
-                  <NavLink to="/pending-users" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}><HiOutlineUserAdd />Pending Users</NavLink>
-                </>
-              )}
-              {canUseRecycleBin && (
-                <NavLink to="/deleted-projects" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                  <HiOutlineTrash />
-                  Recycle Bin
+                <NavLink
+                  to="/panels"
+                  className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                  onClick={onClose}
+                >
+                  <HiOutlineViewGrid />
+                  Panels
                 </NavLink>
-              )}
-              {canManageConfiguration && (
-                <NavLink to="/configuration" className={`sidebar-link${isPending ? " is-disabled" : ""}`} onClick={onClose}>
-                  <HiOutlineCog />
-                  Configuration
-                </NavLink>
-              )}
-            </>
-          )}
+
+                {canManageClients && (
+                  <NavLink
+                    to="/clients"
+                    className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                    onClick={onClose}
+                  >
+                    <HiOutlineIdentification />
+                    Clients
+                  </NavLink>
+                )}
+                {canManageUsers && (
+                  <>
+                    <NavLink
+                      to="/users"
+                      className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                      onClick={onClose}
+                    >
+                      <HiOutlineUserGroup />
+                      Users
+                    </NavLink>
+                    <NavLink
+                      to="/pending-users"
+                      className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                      onClick={onClose}
+                    >
+                      <HiOutlineUserAdd />
+                      Pending Users
+                    </NavLink>
+                  </>
+                )}
+                {canUseRecycleBin && (
+                  <NavLink
+                    to="/deleted-projects"
+                    className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                    onClick={onClose}
+                  >
+                    <HiOutlineTrash />
+                    Recycle Bin
+                  </NavLink>
+                )}
+                {canManageConfiguration && (
+                  <NavLink
+                    to="/configuration"
+                    className={`sidebar-link${isPending ? " is-disabled" : ""}`}
+                    onClick={onClose}
+                  >
+                    <HiOutlineCog />
+                    Configuration
+                  </NavLink>
+                )}
+              </>
+            )}
           </nav>
         </div>
 
-        <button className="logout-btn" onClick={() => setLogoutConfirmOpen(true)}>
+        <button
+          className="logout-btn"
+          onClick={() => setLogoutConfirmOpen(true)}
+        >
           <HiOutlineLogout />
           Logout
         </button>
       </aside>
 
-      {logoutConfirmOpen && <div className="logout-confirm-backdrop" role="dialog" aria-modal="true">
-        <div className="logout-confirm-card" dir="rtl">
-          <div className="logout-confirm-icon"><HiOutlineLogout /></div>
-          <h2>تسجيل الخروج؟</h2>
-          <p>سيتم إنهاء جلستك الحالية، ويمكنك تسجيل الدخول مرة أخرى في أي وقت.</p>
-          <div><button type="button" className="logout-cancel-btn" onClick={() => setLogoutConfirmOpen(false)} disabled={loggingOut}>إلغاء</button><button type="button" className="logout-confirm-btn" onClick={logout} disabled={loggingOut}>{loggingOut ? "جاري تسجيل الخروج..." : "تسجيل الخروج"}</button></div>
+      {logoutConfirmOpen && (
+        <div
+          className="logout-confirm-backdrop"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="logout-confirm-card" dir="rtl">
+            <div className="logout-confirm-icon">
+              <HiOutlineLogout />
+            </div>
+            <h2>تسجيل الخروج؟</h2>
+            <p>
+              سيتم إنهاء جلستك الحالية، ويمكنك تسجيل الدخول مرة أخرى في أي وقت.
+            </p>
+            <div>
+              <button
+                type="button"
+                className="logout-cancel-btn"
+                onClick={() => setLogoutConfirmOpen(false)}
+                disabled={loggingOut}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="logout-confirm-btn"
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                {loggingOut ? "جاري تسجيل الخروج..." : "تسجيل الخروج"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>}
+      )}
 
-      {!isPending && <nav className="mobile-bottom-nav" aria-label="التنقل السريع">
-        <NavLink to="/dashboard" onClick={onClose}>
-          <HiOutlineHome />
-          <span>Dashboard</span>
-        </NavLink>
-        {canViewProjects && (
-          <NavLink to="/projects" onClick={onClose}>
-            <HiOutlineFolder />
-            <span>Projects</span>
+      {!isPending && (
+        <nav className="mobile-bottom-nav" aria-label="التنقل السريع">
+          <NavLink to="/dashboard" onClick={onClose}>
+            <HiOutlineHome />
+            <span>Dashboard</span>
           </NavLink>
-        )}
-        {canViewProjects && <NavLink to="/panels" onClick={onClose}><HiOutlineViewGrid /><span>Panels</span></NavLink>}
-        {canManageClients && (
-          <NavLink className="mobile-client-link" to="/clients" onClick={onClose}><HiOutlineIdentification /><span>Clients</span></NavLink>
-        )}
-        {canManageUsers && (
-          <NavLink to="/pending-users" onClick={onClose}><HiOutlineUserAdd /><span>Pending</span></NavLink>
-        )}
-        {canManageConfiguration && (
-          <NavLink to="/configuration" onClick={onClose}>
-            <HiOutlineCog />
-            <span>Settings</span>
-          </NavLink>
-        )}
-      </nav>}
+          {canViewProjects && (
+            <NavLink to="/projects" onClick={onClose}>
+              <HiOutlineFolder />
+              <span>Projects</span>
+            </NavLink>
+          )}
+          {canViewProjects && (
+            <NavLink to="/panels" onClick={onClose}>
+              <HiOutlineViewGrid />
+              <span>Panels</span>
+            </NavLink>
+          )}
+          {canManageClients && (
+            <NavLink
+              className="mobile-client-link"
+              to="/clients"
+              onClick={onClose}
+            >
+              <HiOutlineIdentification />
+              <span>Clients</span>
+            </NavLink>
+          )}
+          {canManageUsers && (
+            <NavLink to="/pending-users" onClick={onClose}>
+              <HiOutlineUserAdd />
+              <span>Pending</span>
+            </NavLink>
+          )}
+          {canManageConfiguration && (
+            <NavLink to="/configuration" onClick={onClose}>
+              <HiOutlineCog />
+              <span>Settings</span>
+            </NavLink>
+          )}
+        </nav>
+      )}
     </>
   );
 }

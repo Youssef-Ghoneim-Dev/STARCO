@@ -1,6 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { getProfile } from "../services/profileAPI";
-import { registerAuthStatusUpdater, unregisterAuthStatusUpdater } from "../services/api";
+import {
+  registerAuthStatusUpdater,
+  unregisterAuthStatusUpdater,
+} from "../services/api";
 
 const AuthContext = createContext();
 
@@ -40,14 +49,17 @@ export function AuthProvider({ children }) {
 
     const isWhatsappPending =
       profile?.status === "whatsappPending" ||
-      (profile?.whatsappOptInRequired === true && !profile?.whatsappOptInVerifiedAt);
+      (profile?.whatsappOptInRequired === true &&
+        !profile?.whatsappOptInVerifiedAt);
 
     if (isWhatsappPending) {
       setWhatsappPending(true);
       setPending(false);
       setDeleted(false);
       setAccountStatus("whatsappPending");
-      setStatusMessage("Send a WhatsApp message from your registered number to activate your account.");
+      setStatusMessage(
+        "Send a WhatsApp message from your registered number to activate your account.",
+      );
       return;
     }
 
@@ -72,64 +84,78 @@ export function AuthProvider({ children }) {
     setStatusMessage("");
   }, []);
 
-  const loadProfile = useCallback(async ({ background = false } = {}) => {
-    const token = localStorage.getItem("token");
+  const logout = useCallback(() => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 
-    if (!token) {
-      if (background) {
-        return;
-      }
-      setLoading(false);
-      setUser(null);
-      setPending(false);
-      setWhatsappPending(false);
-      setDeleted(false);
-      setAccountStatus("idle");
-      setStatusMessage("");
-      return;
-    }
+  setUser(null);
+  setPending(false);
+  setWhatsappPending(false);
+  setDeleted(false);
+  setAccountStatus("idle");
+  setStatusMessage("");
+}, []);
+  const loadProfile = useCallback(
+    async ({ background = false } = {}) => {
+      const token = localStorage.getItem("token");
 
-    if (background) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    // const start = Date.now();
-
-    try {
-      const { data } = await getProfile();
-
-      setUser(data);
-      checkPendingStatus(data);
-    } catch (error) {
-      if (error?.response?.status === 404) {
-        setUser(null);
-        setPending(false);
-        setWhatsappPending(false);
-        setDeleted(true);
-        setAccountStatus("deleted");
-        setStatusMessage("Your account is no longer available.");
-      } else if ([401, 403].includes(error?.response?.status)) {
-        // Only an actual authentication refusal ends the local session.
-        // A backend redeploy can briefly produce 5xx/network responses and
-        // must never log every active user out.
-        localStorage.removeItem("token");
+      if (!token) {
+        if (background) {
+          return;
+        }
+        setLoading(false);
         setUser(null);
         setPending(false);
         setWhatsappPending(false);
         setDeleted(false);
         setAccountStatus("idle");
         setStatusMessage("");
+        return;
       }
-    } finally {
+
       if (background) {
-        setRefreshing(false);
+        setRefreshing(true);
       } else {
-        setLoading(false);
+        setLoading(true);
       }
-    }
-  }, [checkPendingStatus]);
+
+      // const start = Date.now();
+
+      try {
+        const { data } = await getProfile();
+
+        setUser(data);
+        checkPendingStatus(data);
+      } catch (error) {
+        if (error?.response?.status === 404) {
+          setUser(null);
+          setPending(false);
+          setWhatsappPending(false);
+          setDeleted(true);
+          setAccountStatus("deleted");
+          setStatusMessage("Your account is no longer available.");
+        } else if ([401, 403].includes(error?.response?.status)) {
+          // Only an actual authentication refusal ends the local session.
+          // A backend redeploy can briefly produce 5xx/network responses and
+          // must never log every active user out.
+          localStorage.removeItem("token");
+          setUser(null);
+          setPending(false);
+          setWhatsappPending(false);
+          setDeleted(false);
+          setAccountStatus("idle");
+          setStatusMessage("");
+        }
+      } finally {
+        if (background) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [checkPendingStatus],
+  );
 
   useEffect(() => {
     registerAuthStatusUpdater((status) => {
@@ -150,7 +176,9 @@ export function AuthProvider({ children }) {
         setPending(false);
         setDeleted(false);
         setAccountStatus("whatsappPending");
-        setStatusMessage("Send a WhatsApp message from your registered number to activate your account.");
+        setStatusMessage(
+          "Send a WhatsApp message from your registered number to activate your account.",
+        );
       }
     });
 
@@ -187,6 +215,7 @@ export function AuthProvider({ children }) {
         reloadProfile: loadProfile,
         checkPendingStatus,
         setPending,
+        logout,
       }}
     >
       {children}
