@@ -11,11 +11,11 @@ const defaultStatuses = [
   { value: "completed", label: "Fully completed" },
 ];
 
-function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefresh, refreshing, title = "Projects", subtitle = "Manage all your projects in one place.", searchPlaceholder = "Search by project name...", statusOptions = defaultStatuses, showCreate = true, multipleStatus = true, lockedStatusLabel = "" }) {
+function ProjectsHeader({ query, onQueryChange, status, onStatusChange, onRefresh, refreshing, title = "Projects", subtitle = "Manage all your projects in one place.", searchPlaceholder = "Search by project name...", statusOptions = defaultStatuses, showCreate = true, multipleStatus = true, lockedStatusLabel = "" ,direction = "ltr", text_align="left"}) {
   const { user } = useAuth();
   return (
-    <div className="projects-header">
-      <div>
+    <div className="projects-header" style={{ direction }}>
+      <div style={{ direction , textAlign: text_align }}>
         <h1>{title}</h1>
 
         <p>{subtitle}</p>

@@ -162,7 +162,21 @@ export default function Panels() {
         onStatusChange={setStatus}
         onRefresh={load}
         refreshing={loading}
-        title="Panels"
+        direction={
+          supervisorOnly
+            ? "rtl"
+            : "ltr"
+        }
+        text_align={
+          supervisorOnly
+            ? "right"
+            : "left"
+        }
+        title={
+          supervisorOnly
+            ? "اللوحات"
+            : "panels"
+        }
         subtitle={
           supervisorOnly
             ? `لوحات ${supervisorStageLabels[user?.role]} المتاحة لك فقط`

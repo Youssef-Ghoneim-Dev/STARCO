@@ -382,8 +382,7 @@ html[data-theme="dark"] .project-image::after {
 
     .projects-header>div:first-child {
         width: 100%;
-        direction: rtl;
-        text-align: right;
+        text-align: left;
     }
 }
 
@@ -419,8 +418,7 @@ html[data-theme="dark"] .project-image::after {
 
     .projects-header>div:first-child {
         width: 100%;
-        direction: rtl;
-        text-align: right;
+        text-align: left;
     }
 }
 
