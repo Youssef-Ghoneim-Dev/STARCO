@@ -1,4 +1,5 @@
 const { runProductionWorkflowReminders } = require("../services/productionWorkflowReminders");
+const { removeExpiredProjects } = require("../services/projectRetention");
 
 const runReminders = async (req, res, next) => {
     try {
@@ -14,7 +15,18 @@ const runReminders = async (req, res, next) => {
         if (cairoHour !== 10) {
             return res.status(200).json({ status: "skipped", message: "لم تحن الساعة العاشرة صباحًا بتوقيت القاهرة." });
         }
-        return res.status(200).json({ status: "ok", ...(await runProductionWorkflowReminders()) });
+        const [remindersResult, retentionResult] = await Promise.allSettled([
+            runProductionWorkflowReminders(),
+            removeExpiredProjects(),
+        ]);
+        if (remindersResult.status === "rejected") throw remindersResult.reason;
+        return res.status(200).json({
+            status: "ok",
+            ...remindersResult.value,
+            retention: retentionResult.status === "fulfilled"
+                ? retentionResult.value
+                : { status: "error", message: "تعذر تنفيذ تنظيف الملفات المؤقت." },
+        });
     } catch (error) { next(error); }
 };
 

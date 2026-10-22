@@ -381,7 +381,7 @@ function WhatsappProjectData({ editable = false }) {
             <span className="project-media-summary-actions">
               <button
                 type="button"
-                className="project-media-refresh"
+                className={`project-media-refresh${refreshingMedia ? " is-refreshing" : ""}`}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -393,6 +393,7 @@ function WhatsappProjectData({ editable = false }) {
                 title="تحديث المرفقات"
               >
                 <IoRefresh className={refreshingMedia ? "is-spinning" : ""} />
+                <span>{refreshingMedia ? "جاري التحديث" : "تحديث"}</span>
               </button>
               <b>{images.length}</b>
             </span>
@@ -463,7 +464,7 @@ function WhatsappProjectData({ editable = false }) {
             disabled={uploading}
             aria-busy={uploading}
           >
-            {uploading ? "جاري رفع المرفقات..." : "إضافة صور أو فيديو أو تسجيلات صوتية"}
+            {uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}
           </button>
           {showUploadChoice && (
             <div

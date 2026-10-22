@@ -36,6 +36,20 @@ const toJpegBytes = (canvas) => {
   return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
 };
 
+// The client preview does not need the full print-resolution bitmap. Keeping
+// it smaller avoids exhausting memory in Samsung Internet and older Android
+// browsers while the downloadable PDF keeps its original resolution.
+const toPreviewImage = (canvas) => {
+  const maxWidth = 1280;
+  if (canvas.width <= maxWidth) return canvas.toDataURL("image/jpeg", 0.88);
+  const scale = maxWidth / canvas.width;
+  const preview = document.createElement("canvas");
+  preview.width = Math.round(canvas.width * scale);
+  preview.height = Math.round(canvas.height * scale);
+  preview.getContext("2d").drawImage(canvas, 0, 0, preview.width, preview.height);
+  return preview.toDataURL("image/jpeg", 0.88);
+};
+
 const textBytes = (value) => new TextEncoder().encode(value);
 
 const joinBytes = (chunks) => {
@@ -383,7 +397,7 @@ export const createProjectPdf = async (options) => {
 
 export const createProjectPreviewImages = async (options) => {
   const pages = await createProjectPageCanvases(options);
-  return pages.map((page) => page.toDataURL("image/jpeg", 0.95));
+  return pages.map(toPreviewImage);
 };
 
 export const getProjectPdfFilename = (project) => {

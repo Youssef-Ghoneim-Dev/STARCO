@@ -4,6 +4,7 @@ const panels = require("../models/panels");
 const counters = require("../models/counters");
 const users = require("../models/users");
 const whatsappMessages = require("../models/whatsappMessages");
+const notifications = require("../models/notifications");
 const clients = require("../models/clients");
 const systemConfiguration = require("../models/systemConfiguration");
 const { compareClientNames } = require("../utils/clientNameSimilarity");
@@ -1238,17 +1239,31 @@ const permanentlyDeleteProject = async (req, res, next) => {
                 .status(404)
                 .json({ status: "error", message: "المشروع المحذوف غير موجود." });
         const projectPanels = await panels.find({ projectId: project._id });
-        const storageIds = projectPanels
-            .flatMap((panel) => [
+        const whatsappMedia = await whatsappMessages.findByProject(project._id);
+        const storageIds = new Set([
+            ...projectPanels
+                .flatMap((panel) => [
                 ...(panel.attachments || []),
                 ...(panel.executionPdf?.files || []),
                 ...(panel.manufacturing?.files || []),
-            ])
-            .map((file) => file.storageFileId)
-            .filter(Boolean);
-        await Promise.allSettled(storageIds.map(deleteStoredFile));
-        await panels.deleteMany({ projectId: project._id });
-        await projects.deleteOne({ _id: project._id });
+                ])
+                .map((file) => file.storageFileId)
+                .filter(Boolean),
+            ...whatsappMedia
+                .filter((message) => message.media?.storageProvider === "r2")
+                .map((message) => message.media?.storageFileId)
+                .filter(Boolean),
+        ]);
+        // Do not erase MongoDB references if R2 did not confirm the deletion.
+        // This leaves the project recoverable for a safe retry instead of
+        // creating an orphaned file that can no longer be reached by the UI.
+        await Promise.all([...storageIds].map(deleteStoredFile));
+        await Promise.all([
+            panels.deleteMany({ projectId: project._id }),
+            whatsappMessages.deleteByProject(project._id),
+            notifications.model().deleteMany({ projectId: project._id }),
+            projects.deleteOne({ _id: project._id }),
+        ]);
         res.json({
             status: "ok",
             message: "تم حذف المشروع ولوحاته وملفاته نهائيًا.",

@@ -317,16 +317,23 @@
 }
 
 .project-media-refresh {
-    display: grid;
+    display: inline-flex;
     place-items: center;
-    width: 30px;
+    align-items: center;
+    gap: 6px;
+    min-width: 30px;
     height: 30px;
     border: 1px solid #c9dce4;
-    border-radius: 8px;
-    padding: 0;
+    border-radius: 999px;
+    padding: 0 9px;
     color: var(--primary);
     background: var(--surface-muted);
     cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    transition: color var(--transition), background var(--transition), border-color var(--transition), min-width var(--transition);
 }
 
 .project-media-refresh:hover:not(:disabled) {
@@ -335,8 +342,15 @@
 }
 
 .project-media-refresh:disabled {
-    opacity: .6;
+    opacity: 1;
     cursor: wait;
+}
+
+.project-media-refresh.is-refreshing {
+    min-width: 112px;
+    color: var(--primary-contrast);
+    border-color: var(--primary);
+    background: var(--primary);
 }
 
 .project-media-refresh svg {

@@ -97,6 +97,18 @@ const toJpegBytes = (canvas) => {
     const base64 = canvas.toDataURL("image/jpeg", 0.96).split(",")[1];
     return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
 };
+// Keep browser previews light enough for Samsung Internet and older Android
+// devices. The generated/downloaded PDF still uses the full-size pages above.
+const toPreviewImage = (canvas) => {
+    const maxWidth = 1280;
+    if (canvas.width <= maxWidth) return canvas.toDataURL("image/jpeg", 0.86);
+    const scale = maxWidth / canvas.width;
+    const preview = document.createElement("canvas");
+    preview.width = Math.round(canvas.width * scale);
+    preview.height = Math.round(canvas.height * scale);
+    preview.getContext("2d").drawImage(canvas, 0, 0, preview.width, preview.height);
+    return preview.toDataURL("image/jpeg", 0.86);
+};
 const textBytes = (value) => new TextEncoder().encode(value);
 const joinBytes = (chunks) => {
     const output = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
@@ -203,5 +215,5 @@ const createExecutionPages = async ({ panelSize, steelThickness, paint, page3Tex
 
 export async function createExecutionPreviewImages(options) {
     const pages = await createExecutionPages(options);
-    return pages.map((page) => page.toDataURL("image/jpeg", 0.92));
+    return pages.map(toPreviewImage);
 }

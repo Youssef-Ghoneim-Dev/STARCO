@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProjectsHeader from "../components/projects/ProjectsHeader";
@@ -93,14 +93,14 @@ export default function Panels() {
     const [year, month, day] = requestedDate.split("-").map(Number);
     return new Date(year, month - 1, day, 23, 59, 59, 999);
   }, [requestedDate]);
-  const sameDate = (value) => {
+  const sameDate = useCallback((value) => {
     if (!requestedDate || !value) return !requestedDate;
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return false;
     const localValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return localValue === requestedDate;
-  };
-  const matchesDashboardView = (panel) => {
+  }, [requestedDate]);
+  const matchesDashboardView = useCallback((panel) => {
     if (searchParams.get("delayed") === "true") {
       if (!isDelayed(panel, requestedDateEnd || new Date())) return false;
     }
@@ -135,7 +135,7 @@ export default function Panels() {
       if (view !== "delayed" && !sameDate(eventValue)) return false;
     }
     return true;
-  };
+  }, [requestedDate, requestedDateEnd, sameDate, searchParams, view]);
   const visible = useMemo(
     () =>
       panels.filter((panel) => {
@@ -148,10 +148,15 @@ export default function Panels() {
           matchesStatus &&
           (!query.trim() || matchesSearchText(searchable, query))
         );
-        // searchParams represents the dashboard filter URL and intentionally refreshes this list.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }),
-    [panels, query, status, searchParams, supervisorOnly, supervisorStatuses],
+    [
+      matchesDashboardView,
+      panels,
+      query,
+      status,
+      supervisorOnly,
+      supervisorStatuses,
+    ],
   );
   return (
     <DashboardLayout notAllowed>
