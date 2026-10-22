@@ -16,7 +16,9 @@ module.exports = new mongoose.Schema({
         mimeType: { type: String, default: null },
         fileName: { type: String, default: null },
         fileSize: { type: Number, default: null },
-        storageProvider: { type: String, enum: ["google-drive", null], default: null },
+        // Keep google-drive for historical records until they are migrated, while
+        // all new WhatsApp media is stored in Cloudflare R2.
+        storageProvider: { type: String, enum: ["r2", "google-drive", null], default: null },
         storageFileId: { type: String, default: null },
         uploadedAt: { type: Date, default: null },
         uploadError: { type: String, default: null }

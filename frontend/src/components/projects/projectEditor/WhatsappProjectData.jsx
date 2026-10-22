@@ -9,7 +9,7 @@ import { showApiErrorToast } from "../../../utils/errorToast";
 import {
   deleteProjectMedia,
   getProjectMedia,
-  getProjectMediaFile,
+  getProjectMediaUrl,
   getProjectMediaWhatsappLink,
   uploadProjectMedia,
 } from "../../../services/projectsAPI";
@@ -114,6 +114,15 @@ function MediaItem({ item, url, onOpen, audioProps, onDelete }) {
         {removeButton}
       </div>
     );
+  if (item.type === "video")
+    return (
+      <div className="project-media-item project-video-item">
+        <video controls preload="metadata" playsInline src={url}>
+          لا يدعم المتصفح تشغيل الفيديو. يمكنك تنزيله أو فتحه في متصفح أحدث.
+        </video>
+        {removeButton}
+      </div>
+    );
   return <p className="whatsapp-media-loading">نوع المرفق غير مدعوم للعرض.</p>;
 }
 
@@ -133,10 +142,18 @@ function WhatsappProjectData({ editable = false }) {
   const [mediaToDelete, setMediaToDelete] = useState(null);
   const [deletingMedia, setDeletingMedia] = useState(false);
   const uploadInputRef = useRef(null);
+  const panel = project?.panels?.[activePanel] || project?.panels?.[0] || {};
+  const panelMedia = useMemo(
+    () =>
+      media.filter(
+        (item) => String(item.panelId || "") === String(panel.panelId || ""),
+      ),
+    [media, panel.panelId],
+  );
   useEffect(() => {
     if (!project?._id) return;
     let alive = true;
-    getProjectMedia(project._id)
+    getProjectMedia(project._id, panel.panelId)
       .then(({ data }) => {
         if (!alive) return;
         setMedia(Array.isArray(data) ? data : []);
@@ -147,18 +164,15 @@ function WhatsappProjectData({ editable = false }) {
     return () => {
       alive = false;
     };
-  }, [project?._id, uploadRefresh]);
+  }, [panel.panelId, project?._id, uploadRefresh]);
   useEffect(() => {
     let alive = true;
-    const createdUrls = [];
     const loadFiles = async () => {
       const entries = await Promise.all(
-        media.map(async (item) => {
+        panelMedia.map(async (item) => {
           try {
-            const { data } = await getProjectMediaFile(project._id, item.id);
-            const url = URL.createObjectURL(data);
-            createdUrls.push(url);
-            return [item.id, url];
+            const { data } = await getProjectMediaUrl(project._id, item.id);
+            return [item.id, data?.url || ""];
           } catch {
             return [item.id, ""];
           }
@@ -166,22 +180,12 @@ function WhatsappProjectData({ editable = false }) {
       );
       if (alive) setUrls(Object.fromEntries(entries));
     };
-    if (project?._id && media.length) loadFiles();
+    if (project?._id && panelMedia.length) loadFiles();
     else setUrls({});
     return () => {
       alive = false;
-      createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [media, project?._id]);
-
-  const panel = project?.panels?.[activePanel] || project?.panels?.[0] || {};
-  const panelMedia = useMemo(
-    () =>
-      media.filter(
-        (item) => String(item.panelId || "") === String(panel.panelId || ""),
-      ),
-    [media, panel.panelId],
-  );
+  }, [panelMedia, project?._id]);
   const images = panelMedia.filter((item) => item.type === "image");
   const audio = panelMedia.filter((item) => item.type === "audio");
   const copper = panel.copperDetails || {};
@@ -384,6 +388,7 @@ function WhatsappProjectData({ editable = false }) {
                   refreshMedia();
                 }}
                 disabled={refreshingMedia}
+                aria-busy={refreshingMedia}
                 aria-label="تحديث صور وتسجيلات المشروع"
                 title="تحديث المرفقات"
               >
@@ -446,7 +451,7 @@ function WhatsappProjectData({ editable = false }) {
             ref={uploadInputRef}
             className="marketing-upload-input"
             type="file"
-            accept="image/*,audio/*"
+            accept="image/*,video/*,audio/*"
             multiple
             disabled={uploading}
             onChange={uploadFiles}
@@ -456,8 +461,9 @@ function WhatsappProjectData({ editable = false }) {
             className="marketing-upload-control"
             onClick={() => setShowUploadChoice(true)}
             disabled={uploading}
+            aria-busy={uploading}
           >
-            {uploading ? "جاري رفع المرفقات..." : "إضافة صور أو تسجيلات صوتية"}
+            {uploading ? "جاري رفع المرفقات..." : "إضافة صور أو فيديو أو تسجيلات صوتية"}
           </button>
           {showUploadChoice && (
             <div
@@ -477,6 +483,7 @@ function WhatsappProjectData({ editable = false }) {
                     className="media-choice-whatsapp"
                     onClick={chooseWhatsappUpload}
                     disabled={openingWhatsapp}
+                    aria-busy={openingWhatsapp}
                   >
                     {openingWhatsapp
                       ? "جاري فتح WhatsApp..."
@@ -520,6 +527,7 @@ function WhatsappProjectData({ editable = false }) {
                 className="media-delete-confirm"
                 onClick={removeMedia}
                 disabled={deletingMedia}
+                aria-busy={deletingMedia}
               >
                 {deletingMedia ? "جاري الحذف..." : "حذف"}
               </button>

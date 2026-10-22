@@ -18,6 +18,7 @@ router.put("/:panelId/execution-pdf/design", controller.saveExecutionPdfDesign);
 router.post("/:panelId/execution-pdf/files/sign", controller.signExecutionPdfUpload);
 router.post("/:panelId/execution-pdf/files/complete", controller.completeExecutionPdfUpload);
 router.get("/:panelId/execution-pdf/files/:fileId", controller.downloadExecutionPdf);
+router.get("/:panelId/execution-pdf/files/:fileId/url", controller.getExecutionPdfDownloadUrl);
 router.delete("/:panelId/execution-pdf/files/:fileId", controller.deleteExecutionPdf);
 router.post("/:panelId/execution-pdf/finish", controller.finishExecutionPdf);
 router.post("/:panelId/execution-pdf/skip", controller.skipExecutionPdf);
@@ -28,6 +29,7 @@ router.post("/:panelId/delivery-schedule/respond", controller.respondDeliverySch
 router.post("/:panelId/manufacturing/files/sign", controller.signManufacturingUpload);
 router.post("/:panelId/manufacturing/files/complete", controller.completeManufacturingUpload);
 router.get("/:panelId/manufacturing/files/:fileId", controller.downloadManufacturing);
+router.get("/:panelId/manufacturing/files/:fileId/url", controller.getManufacturingDownloadUrl);
 router.get("/:panelId/manufacturing/archive", controller.downloadManufacturingArchive);
 router.delete("/:panelId/manufacturing/files/:fileId", controller.deleteManufacturing);
 router.post("/:panelId/manufacturing/finish", controller.finishManufacturing);

@@ -41,7 +41,7 @@ import {
   confirmProjectExecution,
   getExecutionPdfFile,
   getManufacturingArchive,
-  getManufacturingFile,
+  getManufacturingFileUrl,
   requestExecutionPdf,
   requestPanelDeliverySchedule,
   respondPanelDeliverySchedule,
@@ -1322,11 +1322,18 @@ function ExecutionPdfWorkspace() {
           successMessage: "تم تجهيز تنزيل ملف التصنيع.",
           errorMessage: "تعذر تنزيل الملف.",
         },
-        () => getManufacturingFile(project._id, panelRecordId, file._id),
+        () => getManufacturingFileUrl(project._id, panelRecordId, file._id),
       );
       if (operation.skipped) return;
       const { data } = operation.value;
-      saveBlob(data, file.fileName || "manufacturing-file");
+      if (!data?.url) throw new Error("تعذر تجهيز رابط تنزيل الملف.");
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.download = file.fileName || "manufacturing-file";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       showApiErrorToast(error, "تعذر تنزيل الملف.");
     }
@@ -2755,7 +2762,7 @@ function ExecutionPdfWorkspace() {
         <section className="manufacturing-files-section">
           <div>
             <span className="execution-phase-label">ملفات التصنيع</span>
-            <h3>رفع صور اختبار مرحلة التصنيع</h3>
+            <h3>رفع ملفات التصنيع</h3>
             <p style={{ marginBottom: "1rem" }}>
               ارفع ملفات التصنيع التي أعدها المهندس المسؤول عن التنفيذ، يمكن رفع
               أكثر من ملف في نفس الوقت. ثم أضف أي ملاحظات يحتاجها مدير التنفيذ

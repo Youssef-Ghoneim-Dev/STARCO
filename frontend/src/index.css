@@ -118,6 +118,27 @@
     box-sizing: border-box;
 }
 
+button[aria-busy="true"] {
+    cursor: wait;
+}
+
+button[aria-busy="true"]::after {
+    width: .9em;
+    height: .9em;
+    margin-inline-start: .55em;
+    display: inline-block;
+    border: 2px solid currentColor;
+    border-left-color: transparent;
+    border-radius: 50%;
+    content: "";
+    vertical-align: -.12em;
+    animation: starco-button-spin .7s linear infinite;
+}
+
+@keyframes starco-button-spin {
+    to { transform: rotate(360deg); }
+}
+
 html,
 body,
 #root {

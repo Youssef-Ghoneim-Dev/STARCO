@@ -320,7 +320,7 @@ export default function ProjectFolder() {
     load();
   }, [load]);
   useEffect(() => {
-    if (id) readProject(id);
+    if (id && hasUnreadProjectNotification) readProject(id);
   }, [hasUnreadProjectNotification, id, readProject]);
   useEffect(() => () => window.clearTimeout(submitErrorTimer.current), []);
   if (loading || !project)

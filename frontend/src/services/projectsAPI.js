@@ -21,6 +21,10 @@ export const getClientExecutionPdfFile = (key, panelId, fileId) => api.get(
     { responseType: "blob" },
 );
 
+export const getClientExecutionPdfFileUrl = (key, panelId, fileId) => api.get(
+    `/projects/client-preview/${encodeURIComponent(key)}/panels/${panelId}/execution-pdf/files/${fileId}/url`,
+);
+
 export const deleteProject = (id) => {
     return api.delete(`/projects/${id}`);
 };
@@ -62,16 +66,28 @@ export const cancelPanelEdits = (projectId, panelId) => api.post(`/projects/${pr
 export const acquireProjectSetupLock = (projectId) => api.post(`/projects/${projectId}/setup-lock`);
 export const completeProjectSetup = (projectId, data) => api.post(`/projects/${projectId}/setup-complete`, data);
 
-const uploadToR2 = async (signPath, completePath, file, purpose = "") => {
+const mediaMimeType = (file) => {
+    if (file.type) return file.type;
+    const extension = String(file.name || "").split(".").pop()?.toLowerCase();
+    return ({
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+        mp3: "audio/mpeg", m4a: "audio/mp4", wav: "audio/wav", ogg: "audio/ogg",
+        mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+    })[extension] || "application/octet-stream";
+};
+
+const uploadToR2 = async (signPath, completePath, file, purpose = "", metadata = {}) => {
+    const mimeType = metadata.mimeType || mediaMimeType(file);
     const { data: signed } = await api.post(signPath, {
         fileName: file.name,
-        mimeType: file.type || "application/octet-stream",
+        mimeType,
         fileSize: file.size,
-        ...(purpose ? { purpose } : {})
+        ...(purpose ? { purpose } : {}),
+        ...metadata,
     });
     const uploadResponse = await fetch(signed.uploadUrl, {
         method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        headers: { "Content-Type": mimeType },
         body: file
     });
     if (!uploadResponse.ok) {
@@ -79,7 +95,7 @@ const uploadToR2 = async (signPath, completePath, file, purpose = "") => {
         error.status = uploadResponse.status;
         throw error;
     }
-    return api.post(completePath, { uploadToken: signed.uploadToken });
+    return api.post(completePath, { uploadToken: signed.uploadToken, ...metadata });
 };
 
 export const uploadExecutionPdfFile = (projectId, panelId, file, purpose = "") => uploadToR2(
@@ -137,6 +153,10 @@ export const getManufacturingFile = (projectId, panelId, fileId) => api.get(
     { responseType: "blob" },
 );
 
+export const getManufacturingFileUrl = (projectId, panelId, fileId) => api.get(
+    `/projects/${projectId}/panels/${panelId}/manufacturing/files/${fileId}/url`,
+);
+
 export const getManufacturingArchive = (projectId, panelId) => api.get(
     `/projects/${projectId}/panels/${panelId}/manufacturing/archive`,
     { responseType: "blob" },
@@ -157,7 +177,9 @@ export const updateManufacturingStage = (projectId, payload) => api.post(
     payload,
 );
 
-export const getProjectMedia = (id) => api.get(`/projects/${id}/media`);
+export const getProjectMedia = (id, panelId = "") => api.get(`/projects/${id}/media`, {
+    params: panelId ? { panelId } : undefined,
+});
 
 export const getProjectMediaWhatsappLink = (id, panelId) => api.get(
     `/projects/${id}/media/whatsapp-link`,
@@ -169,12 +191,17 @@ export const getProjectMediaFile = (projectId, mediaId) => api.get(
     { responseType: "blob" }
 );
 
-export const uploadProjectMedia = (projectId, panelId, file) => {
-    const formData = new FormData();
-    formData.append("panelId", panelId);
-    formData.append("file", file);
-    return api.post(`/projects/${projectId}/media`, formData);
-};
+export const getProjectMediaUrl = (projectId, mediaId) => api.get(
+    `/projects/${projectId}/media/${mediaId}/url`,
+);
+
+export const uploadProjectMedia = (projectId, panelId, file) => uploadToR2(
+    `/projects/${projectId}/media/sign`,
+    `/projects/${projectId}/media/complete`,
+    file,
+    "",
+    { panelId, mimeType: mediaMimeType(file) },
+).then((response) => response);
 
 export const deleteProjectMedia = (projectId, mediaId) => api.delete(
     `/projects/${projectId}/media/${mediaId}`,

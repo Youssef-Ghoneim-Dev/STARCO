@@ -3,6 +3,7 @@ const projects = require("../models/projects");
 const {
     createObjectKey,
     createUploadUrl,
+      createDownloadUrl,
     getVerifiedStoredFile,
     downloadStoredFile,
     deleteStoredFile,
@@ -1943,6 +1944,24 @@ const downloadFile = (bucket) => async (req, res, next) => {
         next(error);
     }
 };
+const getDownloadUrl = (bucket) => async (req, res, next) => {
+    try {
+        const panel = await loadPanel(req.params.projectId, req.params.panelId);
+        const file = panel?.[bucket]?.files?.id(req.params.fileId);
+        if (!file) return res.status(404).json({ status: "error", message: "الملف غير موجود." });
+        const supervisorCanDownloadExecutionPdf =
+            canViewProductionReferences(req.user) &&
+            (!isProductionSupervisor(req.user) || supervisorCanAccessStatus(req.user, panel.status));
+        const canDownload = bucket === "executionPdf"
+            ? isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || supervisorCanDownloadExecutionPdf || ["Marketer", "MarketingManager"].includes(req.user.role)
+            : isOwner(req.user) || isEngineer(req.user) || isProductionController(req.user) || (req.user.role === "LaserSupervisor" && supervisorCanAccessStatus(req.user, panel.status));
+        if (!canDownload) return res.status(403).json({ status: "error", message: "لا تملك صلاحية تنزيل هذا الملف." });
+        const url = await createDownloadUrl(file.storageFileId, file.fileName);
+        res.json({ url, expiresIn: 600 });
+    } catch (error) {
+        next(error);
+    }
+};
 const deleteFile = (bucket) => async (req, res, next) => {
     try {
         const panel = await loadPanel(req.params.projectId, req.params.panelId);
@@ -2621,6 +2640,7 @@ module.exports = {
     signExecutionPdfUpload: signUploadTo("executionPdf"),
     completeExecutionPdfUpload: completeUploadTo("executionPdf"),
     downloadExecutionPdf: downloadFile("executionPdf"),
+      getExecutionPdfDownloadUrl: getDownloadUrl("executionPdf"),
     deleteExecutionPdf: deleteFile("executionPdf"),
     finishExecutionPdf,
     skipExecutionPdf,
@@ -2631,6 +2651,7 @@ module.exports = {
     signManufacturingUpload: signUploadTo("manufacturing"),
     completeManufacturingUpload: completeUploadTo("manufacturing"),
     downloadManufacturing: downloadFile("manufacturing"),
+      getManufacturingDownloadUrl: getDownloadUrl("manufacturing"),
     downloadManufacturingArchive,
     deleteManufacturing: deleteFile("manufacturing"),
     finishManufacturing,

@@ -123,28 +123,41 @@ const preserveMixedDirection = (value) => String(value || "---")
   .replace(/\d+(?:[.,]\d+)?/g, (number) => `\u2066${number}\u2069`);
 
 const drawPanelName = (context, name, x, y, width, height, initialFontSize = 30) => {
-  const text = String(name || "---").replace(/\s+/g, " ").trim();
-  let fontSize = initialFontSize;
+  // New lines are intentional panel-name formatting, not whitespace to discard.
+  // Normalize spaces inside each line while preserving the line boundaries.
+  const lines = String(name || "---")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  if (!lines.length) lines.push("---");
 
+  let fontSize = Math.min(
+    initialFontSize,
+    Math.floor((height - 22) / (lines.length * 1.28)),
+  );
   while (fontSize > 12) {
     context.font = `500 ${fontSize}px Tajawal`;
-    if (context.measureText(text).width <= width - 28) break;
+    if (lines.every((line) => context.measureText(line).width <= width - 28)) break;
     fontSize -= 2;
   }
+  const lineHeight = Math.max(15, Math.round(fontSize * 1.25));
+  const firstY = y + height / 2 - ((lines.length - 1) * lineHeight) / 2;
 
   context.direction = hasArabic(name) ? "rtl" : "ltr";
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = "#111111";
   context.font = `500 ${fontSize}px Tajawal`;
-  // Keep the panel name on one line. Canvas applies a final horizontal scale
-  // only when even the smallest readable font is wider than the cell.
-  context.fillText(
-    preserveMixedDirection(text),
-    x + width / 2,
-    y + height / 2,
-    width - 28,
-  );
+  lines.forEach((line, index) => {
+    context.fillText(
+      preserveMixedDirection(line),
+      x + width / 2,
+      firstY + index * lineHeight,
+      width - 28,
+    );
+  });
 };
 
 const drawPanelTable = (

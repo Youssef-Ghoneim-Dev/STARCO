@@ -211,10 +211,9 @@
 
 @media (max-width: 600px) {
     .activity-center {
-        right: 16px;
-        bottom: 16px;
-        left: 16px;
-        width: auto;
+        /* Mobile actions already show their state on the pressed control.
+           The floating card obscures forms and the bottom navigation. */
+        display: none;
     }
 }
 

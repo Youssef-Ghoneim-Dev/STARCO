@@ -1,54 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   getClientExecutionPdfFile,
   getClientProjectPreview,
   getClientProjectPreviewByKey,
 } from "../services/projectsAPI";
-import { createExecutionPdf } from "../utils/executionPdf";
-import { createProjectPdf } from "../utils/projectPdf";
+import { createExecutionPreviewImages } from "../utils/executionPdf";
+import { createProjectPreviewImages } from "../utils/projectPdf";
 import { getPanelNameDirection } from "../utils/panelNameDirection";
 import "../styles/ClientProjectPreview.css";
-
-GlobalWorkerOptions.workerSrc = pdfWorker;
-
-const safeDestroyPdf = (document) => {
-  if (typeof document?.destroy !== "function") return;
-  const result = document.destroy();
-  if (typeof result?.catch === "function") result.catch(() => {});
-};
-
-function PdfPage({ pdfDocument, pageNumber, title }) {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    let cancelled = false;
-    let renderTask;
-    const renderPage = async () => {
-      const page = await pdfDocument.getPage(pageNumber);
-      if (cancelled || !canvasRef.current) return;
-      const viewport = page.getViewport({ scale: 1 });
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d", { alpha: false });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      renderTask = page.render({ canvasContext: context, viewport });
-      await renderTask.promise;
-    };
-    renderPage().catch((error) => {
-      if (!cancelled && error?.name !== "RenderingCancelledException")
-        console.error("Could not render PDF page:", error);
-    });
-    return () => {
-      cancelled = true;
-      renderTask?.cancel();
-    };
-  }, [pageNumber, pdfDocument]);
-  return (
-    <canvas ref={canvasRef} aria-label={`صفحة ${pageNumber} من ${title}`} />
-  );
-}
 
 const executionReadyStatuses = new Set(["ready", "confirmed"]);
 const panelKey = (panel) => String(panel?.panelId || panel?._id || "");
@@ -64,8 +24,7 @@ const executionLoadErrorMessage = async (error) => {
   }
   if (payload?.message) return payload.message;
   if (error?.response?.status === 503)
-    if (error?.response?.status === 503)
-      return "تعذر الوصول إلى ملفات PDF التنفيذ مؤقتًا. يرجى المحاولة مرة أخرى لاحقًا.";
+    return "تعذر الوصول إلى ملفات PDF التنفيذ مؤقتًا. يرجى المحاولة مرة أخرى لاحقًا.";
   if (error?.response?.status === 404)
     return "أحد ملفات PDF التنفيذ غير موجود في مساحة التخزين.";
   return error?.message || "تعذر تجهيز PDF التنفيذ.";
@@ -75,8 +34,8 @@ function ClientProjectPreview() {
   const { id, previewKey } = useParams();
   const [searchParams] = useSearchParams();
   const [project, setProject] = useState(null);
-  const [quoteDocument, setQuoteDocument] = useState(null);
-  const [executionDocuments, setExecutionDocuments] = useState({});
+  const [quoteImages, setQuoteImages] = useState([]);
+  const [executionImages, setExecutionImages] = useState({});
   const [activeDocument, setActiveDocument] = useState("quote");
   const [selectedPanelId, setSelectedPanelId] = useState("");
   const [executionNotice, setExecutionNotice] = useState("");
@@ -86,7 +45,6 @@ function ClientProjectPreview() {
     error: "",
     executionError: "",
   });
-  const documentsRef = useRef({ quote: null, executions: {} });
   const executionLoadKeyRef = useRef("");
   const executionNoticeTimerRef = useRef(null);
   const key = previewKey || searchParams.get("key") || "";
@@ -105,10 +63,8 @@ function ClientProjectPreview() {
     allPanels.find((panel) => panelKey(panel) === String(selectedPanelId)) ||
     executionPanels[0] ||
     allPanels[0];
-  const selectedExecutionDocument =
-    executionDocuments[panelKey(selectedPanel)] || null;
-  const displayedDocument =
-    activeDocument === "execution" ? selectedExecutionDocument : quoteDocument;
+  const selectedExecutionImages = executionImages[panelKey(selectedPanel)] || [];
+  const displayedImages = activeDocument === "execution" ? selectedExecutionImages : quoteImages;
   const selectedExecutionWasRequested = Boolean(
     selectedPanel?.executionPdf?.status &&
     selectedPanel.executionPdf.status !== "notRequested",
@@ -132,7 +88,7 @@ function ClientProjectPreview() {
   const openExecutionDocument = () => {
     setExecutionNotice("");
     setActiveDocument("execution");
-    if (!selectedExecutionDocument) {
+    if (!selectedExecutionImages.length) {
       showExecutionNotice(
         state.executionError || selectedExecutionStatusMessage,
       );
@@ -141,8 +97,6 @@ function ClientProjectPreview() {
 
   useEffect(() => {
     let active = true;
-    let loadingTask;
-    let loadedDocument;
     const loadPreview = async () => {
       if (!key)
         return (
@@ -160,19 +114,14 @@ function ClientProjectPreview() {
           : await getClientProjectPreview(id, key);
         const { project: loadedProject, copperConfiguration } =
           response.data || {};
-        const pdf = await createProjectPdf({
+        const images = await createProjectPreviewImages({
           project: loadedProject,
           prices: loadedProject?.prices || {},
           copperConfiguration,
         });
-        loadingTask = getDocument({
-          data: new Uint8Array(await pdf.arrayBuffer()),
-        });
-        loadedDocument = await loadingTask.promise;
-        if (!active) return safeDestroyPdf(loadedDocument);
-        documentsRef.current.quote = loadedDocument;
+        if (!active) return;
         setProject(loadedProject);
-        setQuoteDocument(loadedDocument);
+        setQuoteImages(images);
         setState({
           loading: false,
           executionLoading: false,
@@ -193,8 +142,6 @@ function ClientProjectPreview() {
     loadPreview();
     return () => {
       active = false;
-      if (!loadedDocument && typeof loadingTask?.destroy === "function")
-        loadingTask.destroy();
     };
   }, [id, key, previewKey]);
 
@@ -204,8 +151,11 @@ function ClientProjectPreview() {
   }, [allPanels, executionPanels, selectedPanelId]);
 
   useEffect(() => {
-    if (!key || !executionPanels.length) return undefined;
-    const loadKey = `${key}:${executionPanels.map((panel) => panelKey(panel)).join(",")}`;
+    if (!key || activeDocument !== "execution" || !executionPanels.length) return undefined;
+    const targetPanel = executionPanels.find(
+      (panel) => panelKey(panel) === String(selectedPanelId),
+    ) || executionPanels[0];
+    const loadKey = `${key}:${panelKey(targetPanel)}`;
     if (executionLoadKeyRef.current === loadKey) return undefined;
     executionLoadKeyRef.current = loadKey;
     let active = true;
@@ -218,7 +168,7 @@ function ClientProjectPreview() {
     const preloadExecutionPdfs = async () => {
       try {
         const results = await Promise.allSettled(
-          executionPanels.map(async (panel) => {
+          [targetPanel].map(async (panel) => {
             const design = panel.executionPdf.design;
             const assignments = design.assignments || {};
             const fileIds = [
@@ -247,14 +197,11 @@ function ClientProjectPreview() {
                   return [fileId, objectUrl];
                 }),
               );
-              const pdf = await createExecutionPdf({
+              const images = await createExecutionPreviewImages({
                 ...design,
                 images: Object.fromEntries(imageEntries),
               });
-              const loadedDocument = await getDocument({
-                data: new Uint8Array(await pdf.arrayBuffer()),
-              }).promise;
-              return [panelKey(panel), loadedDocument];
+              return [panelKey(panel), images];
             } finally {
               objectUrls.forEach((url) => URL.revokeObjectURL(url));
             }
@@ -263,11 +210,9 @@ function ClientProjectPreview() {
         const loadedEntries = results
           .filter((result) => result.status === "fulfilled")
           .map((result) => result.value);
-        const loadedDocuments = Object.fromEntries(loadedEntries);
-        if (!active)
-          return Object.values(loadedDocuments).forEach(safeDestroyPdf);
-        documentsRef.current.executions = loadedDocuments;
-        setExecutionDocuments(loadedDocuments);
+        const loadedImages = Object.fromEntries(loadedEntries);
+        if (!active) return;
+        setExecutionImages(loadedImages);
         const firstLoadedPanelId = loadedEntries[0]?.[0] || "";
         if (firstLoadedPanelId)
           setSelectedPanelId((current) => current || firstLoadedPanelId);
@@ -290,16 +235,9 @@ function ClientProjectPreview() {
     return () => {
       active = false;
     };
-  }, [executionPanels, key]);
+  }, [activeDocument, executionPanels, key, selectedPanelId]);
 
-  useEffect(
-    () => () => {
-      window.clearTimeout(executionNoticeTimerRef.current);
-      safeDestroyPdf(documentsRef.current.quote);
-      Object.values(documentsRef.current.executions).forEach(safeDestroyPdf);
-    },
-    [],
-  );
+  useEffect(() => () => window.clearTimeout(executionNoticeTimerRef.current), []);
 
   if (state.loading)
     return (
@@ -311,7 +249,7 @@ function ClientProjectPreview() {
         </div>
       </main>
     );
-  if (state.error && !quoteDocument)
+  if (state.error && !quoteImages.length)
     return (
       <main className="client-preview-state client-preview-error" dir="rtl">
         <div>
@@ -355,7 +293,7 @@ function ClientProjectPreview() {
         </button>
         <button
           type="button"
-          className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionDocument ? " unavailable" : ""}`}
+          className={`${activeDocument === "execution" ? "active" : ""}${!selectedExecutionImages.length ? " unavailable" : ""}`}
           onClick={openExecutionDocument}
           aria-disabled={!allPanels.length}
         >
@@ -365,7 +303,7 @@ function ClientProjectPreview() {
               : "رؤية PDF التنفيذ"}
           </strong>
           <span>
-            {selectedExecutionDocument
+            {selectedExecutionImages.length
               ? "جاهز للعرض الفوري"
               : state.executionError
                 ? "تعذر تحميله مؤقتًا"
@@ -400,7 +338,7 @@ function ClientProjectPreview() {
               {allPanels.map((panel, index) => {
                 const id = panelKey(panel);
                 const selected = id === String(selectedPanelId);
-                const documentReady = Boolean(executionDocuments[id]);
+                const documentReady = Boolean(executionImages[id]?.length);
                 const requested = Boolean(
                   panel.executionPdf?.status &&
                   panel.executionPdf.status !== "notRequested",
@@ -453,7 +391,7 @@ function ClientProjectPreview() {
         </p>
       )}
       {activeDocument === "execution" &&
-        !selectedExecutionDocument &&
+        !selectedExecutionImages.length &&
         !executionNotice && (
           <p className="client-preview-document-notice" role="status">
             {state.executionError || selectedExecutionStatusMessage}
@@ -470,19 +408,14 @@ function ClientProjectPreview() {
             : "معاينة ملف عرض السعر STARCO"
         }
       >
-        {Array.from(
-          { length: displayedDocument?.numPages || 0 },
-          (_, index) => (
-            <PdfPage
-              key={`${activeDocument}-${selectedPanelId}-${index + 1}`}
-              pdfDocument={displayedDocument}
-              pageNumber={index + 1}
-              title={
-                activeDocument === "execution" ? "PDF التنفيذ" : "عرض السعر"
-              }
-            />
-          ),
-        )}
+        {displayedImages.map((source, index) => (
+          <img
+            key={`${activeDocument}-${selectedPanelId}-${index + 1}`}
+            src={source}
+            alt={`صفحة ${index + 1} من ${activeDocument === "execution" ? "PDF التنفيذ" : "عرض السعر"}`}
+            loading={index > 0 ? "lazy" : "eager"}
+          />
+        ))}
       </section>
     </main>
   );

@@ -150,6 +150,11 @@ const galleryLayouts = {
 const MAIN_EXECUTION_IMAGE = { x: 850, y: 65, height: 950 };
 
 export async function createExecutionPdf({ panelSize, steelThickness, paint, page3Text, page4Lines, assignments, transforms, images }) {
+    const pages = await createExecutionPages({ panelSize, steelThickness, paint, page3Text, page4Lines, assignments, transforms, images });
+    return createPdfBlob(pages.map(toJpegBytes));
+}
+
+const createExecutionPages = async ({ panelSize, steelThickness, paint, page3Text, page4Lines, assignments, transforms, images }) => {
     await document.fonts?.ready;
     const [pageOne, contentPage, galleryPage, closingPage] = await Promise.all([
         loadImage(pageOneTemplate), loadImage(contentPageTemplate), loadImage(galleryPageTemplate), loadImage(closingPageTemplate),
@@ -159,19 +164,19 @@ export async function createExecutionPdf({ panelSize, steelThickness, paint, pag
     const assignedImage = (slot) => sourceImages[assignments?.[slot]];
     const assignedTransform = (fileId) => transforms?.[fileId] || {};
     const pages = [];
-    pages.push(toJpegBytes(createCanvas(pageOne).canvas));
+    pages.push(createCanvas(pageOne).canvas);
 
     const second = createCanvas(contentPage);
     if (assignedImage("page2")) drawCroppedImage(second.context, assignedImage("page2"), MAIN_EXECUTION_IMAGE.x, MAIN_EXECUTION_IMAGE.y, MAIN_EXECUTION_IMAGE.height, assignedTransform(assignments.page2), 28);
     drawLabelValue(second.context, "Panel size :", panelSize || "—", 480, 350);
     drawLabelValue(second.context, "Steel thickness :", `${steelThickness || "—"} mm`, 545, 470);
     drawLabelValue(second.context, "Paint :", paint || "Electrostatic paint", 610, 260);
-    pages.push(toJpegBytes(second.canvas));
+    pages.push(second.canvas);
 
     const third = createCanvas(contentPage);
     if (assignedImage("page3")) drawCroppedImage(third.context, assignedImage("page3"), MAIN_EXECUTION_IMAGE.x, MAIN_EXECUTION_IMAGE.y, MAIN_EXECUTION_IMAGE.height, assignedTransform(assignments.page3), 28);
     drawPage3Text(third.context, page3Text);
-    pages.push(toJpegBytes(third.canvas));
+    pages.push(third.canvas);
 
     const fourth = createCanvas(contentPage);
     if (assignedImage("page4")) drawCroppedImage(fourth.context, assignedImage("page4"), MAIN_EXECUTION_IMAGE.x, MAIN_EXECUTION_IMAGE.y, MAIN_EXECUTION_IMAGE.height, assignedTransform(assignments.page4), 28);
@@ -181,7 +186,7 @@ export async function createExecutionPdf({ panelSize, steelThickness, paint, pag
     fourth.context.textAlign = "left";
     fourth.context.direction = "ltr";
     specificationLines.forEach((line, index) => fourth.context.fillText(line, 100, 500 + index * 72, 700));
-    pages.push(toJpegBytes(fourth.canvas));
+    pages.push(fourth.canvas);
 
     const fifth = createCanvas(galleryPage);
     const galleryIds = (assignments?.gallery || []).slice(0, 3);
@@ -191,7 +196,12 @@ export async function createExecutionPdf({ panelSize, steelThickness, paint, pag
         const position = layout[index];
         drawCroppedImage(fifth.context, image, position.x, position.y, position.height, assignedTransform(galleryIds[index]), 22);
     });
-    pages.push(toJpegBytes(fifth.canvas));
-    pages.push(toJpegBytes(createCanvas(closingPage).canvas));
-    return createPdfBlob(pages);
+    pages.push(fifth.canvas);
+    pages.push(createCanvas(closingPage).canvas);
+    return pages;
+}
+
+export async function createExecutionPreviewImages(options) {
+    const pages = await createExecutionPages(options);
+    return pages.map((page) => page.toDataURL("image/jpeg", 0.92));
 }

@@ -82,10 +82,10 @@ export function NotificationProvider({ children }) {
       return undefined;
     }
     refresh();
-    // Keep workflow changes visible while users are working in different
-    // browsers. Push messages remain immediate; this short poll is the safe
-    // fallback when a browser delays service-worker delivery.
-    const interval = window.setInterval(() => refresh({ quiet: true }), 2500);
+    // Push messages and returning to the tab refresh immediately. Keep a
+    // light fallback for browsers that defer service-worker delivery without
+    // continuously competing with R2 uploads, previews, or downloads.
+    const interval = window.setInterval(() => refresh({ quiet: true }), 30000);
     const onRefresh = () => refresh({ quiet: true });
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") refresh({ quiet: true });

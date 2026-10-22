@@ -12,10 +12,15 @@ const {
     sendProjectCompletedPreview,
 } = require("../services/projectWhatsappNotifications");
 const {
-    uploadFile,
     downloadStoredFile,
     deleteStoredFile,
+    createObjectKey,
+    createUploadUrl,
+    createDownloadUrl,
+    getVerifiedStoredFile,
+    MAX_SINGLE_PART_UPLOAD_BYTES,
 } = require("../services/r2Storage");
+const jwt = require("jsonwebtoken");
 const {
     createInternalNotifications,
 } = require("../services/internalNotifications");
@@ -1125,6 +1130,26 @@ const getPreviewExecutionPdfFile = async (req, res, next) => {
         next(error);
     }
 };
+const getPreviewExecutionPdfUrl = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ clientPreviewToken: req.params.key, isDeleted: false });
+        if (!project) return res.status(404).json({ status: "error", message: "رابط المعاينة غير صالح." });
+        const panel = await panels.findOne({ _id: req.params.panelId, projectId: project._id, isDeleted: false });
+        const executionIsVisible = panel && [
+            "executionPdfReady", "executionConfirmed", "manufacturingFilesPending",
+            "manufacturingFilesReady", "pendingLaserDownload", "laser", "manufacturing",
+            "painting", "assembly", "completed",
+        ].includes(panel.status) && !panel.executionPdf?.skipped;
+        const file = executionIsVisible ? panel.executionPdf?.files?.id(req.params.fileId) : null;
+        if (!file || file.purpose === "generatedPdf" || !String(file.mimeType || "").startsWith("image/")) {
+            return res.status(404).json({ status: "error", message: "صورة PDF التنفيذ غير موجودة." });
+        }
+        const url = await createDownloadUrl(file.storageFileId);
+        res.json({ url, expiresIn: 600 });
+    } catch (error) {
+        next(error);
+    }
+};
 const removeProject = async (req, res, next) => {
     try {
         const project = await projects.findOne({
@@ -1256,9 +1281,11 @@ const getProjectMedia = async (req, res, next) => {
         const allowedStatuses = isProductionRestrictedViewer(req.user)
             ? productionStatusesFor(req.user)
             : null;
+        const requestedPanelId = String(req.query?.panelId || "").trim();
         const projectPanels = await panels.find({
             projectId: project._id,
             isDeleted: false,
+            ...(requestedPanelId ? { _id: requestedPanelId } : {}),
             ...(allowedStatuses ? { status: { $in: allowedStatuses } } : {}),
         });
         res.json(
@@ -1268,7 +1295,9 @@ const getProjectMedia = async (req, res, next) => {
                     panelId: panel._id,
                     type: String(file.mimeType || "").startsWith("audio/")
                         ? "audio"
-                        : "image",
+                        : String(file.mimeType || "").startsWith("video/")
+                            ? "video"
+                            : "image",
                     mimeType: file.mimeType,
                     fileName: file.fileName,
                     fileSize: file.fileSize,
@@ -1319,62 +1348,94 @@ const getProjectMediaFile = async (req, res, next) => {
         next(error);
     }
 };
-const uploadProjectMedia = async (req, res, next) => {
+const canEditProjectMedia = (project, panel, user) => {
+    const ownsPanelEditSession =
+        panel.marketingEditSession?.active &&
+        sameId(panel.marketingEditSession?.openedBy, user._id);
+    return (isOwner(user) && (panel.status === "draft" || ownsPanelEditSession)) ||
+        (isMarketer(user) &&
+            sameId(project.marketingId, user._id) &&
+            (panel.status === "draft" || ownsPanelEditSession));
+};
+const loadProjectMediaUploadTarget = async (req) => {
+    const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+    const panel = await panels.findOne({
+        _id: req.body?.panelId,
+        projectId: req.params.id,
+        isDeleted: false,
+    });
+    if (!project || !panel) return { error: { status: 400, message: "اختر لوحة صحيحة لإضافة المرفقات." } };
+    if (!canEditProjectMedia(project, panel, req.user)) {
+        return { error: { status: 403, message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية." } };
+    }
+    return { project, panel };
+};
+const validateProjectMediaUpload = (body = {}) => {
+    const fileName = String(body.fileName || "").trim();
+    const mimeType = String(body.mimeType || "").trim().toLowerCase();
+    const fileSize = Number(body.fileSize);
+    if (!fileName || (!mimeType.startsWith("image/") && !mimeType.startsWith("audio/") && !mimeType.startsWith("video/"))) {
+        return { error: { status: 400, message: "اختر صورة أو فيديو أو تسجيلًا صوتيًا أولًا." } };
+    }
+    if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > MAX_SINGLE_PART_UPLOAD_BYTES) {
+        return { error: { status: 413, message: "حجم المرفق غير صالح أو أكبر من الحد المسموح." } };
+    }
+    return { fileName, mimeType, fileSize };
+};
+const signProjectMediaUpload = async (req, res, next) => {
     try {
-        const project = await projects.findOne({
-            _id: req.params.id,
-            isDeleted: false,
+        const target = await loadProjectMediaUploadTarget(req);
+        if (target.error) return res.status(target.error.status).json({ status: "error", message: target.error.message });
+        const details = validateProjectMediaUpload(req.body);
+        if (details.error) return res.status(details.error.status).json({ status: "error", message: details.error.message });
+        const storageFileId = createObjectKey({
+            prefix: `projects/${target.project._id}/panels/${target.panel._id}/attachments`,
+            fileName: details.fileName,
         });
-        const panel = await panels.findOne({
-            _id: req.body?.panelId,
-            projectId: req.params.id,
-            isDeleted: false,
-        });
-        if (!project || !panel)
-            return res
-                .status(400)
-                .json({ status: "error", message: "اختر لوحة صحيحة لإضافة المرفقات." });
-        const ownsPanelEditSession =
-            panel.marketingEditSession?.active &&
-            sameId(panel.marketingEditSession?.openedBy, req.user._id);
-        const canEdit =
-            (isOwner(req.user) &&
-                (panel.status === "draft" || ownsPanelEditSession)) ||
-            (isMarketer(req.user) &&
-                sameId(project.marketingId, req.user._id) &&
-                (panel.status === "draft" || ownsPanelEditSession));
-        if (!canEdit)
-            return res
-                .status(403)
-                .json({
-                    status: "error",
-                    message: "إضافة المرفقات غير متاحة في حالة اللوحة الحالية.",
-                });
-        if (
-            !req.file ||
-            (!req.file.mimetype.startsWith("image/") &&
-                !req.file.mimetype.startsWith("audio/"))
-        )
-            return res
-                .status(400)
-                .json({
-                    status: "error",
-                    message: "اختر صورة أو تسجيلًا صوتيًا أولًا.",
-                });
-        const stored = await uploadFile({
-            buffer: req.file.buffer,
-            fileName: `panel-${panel.panelCode}-${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`,
-            mimeType: req.file.mimetype,
-        });
+        const signed = await createUploadUrl({ key: storageFileId, mimeType: details.mimeType });
+        const tokenKey = process.env.TOKEN_KEY || process.env.JWT_SECRET || process.env.SECRET_KEY;
+        if (!tokenKey) throw new Error("JWT secret is not configured.");
+        const uploadToken = jwt.sign({
+            purpose: "r2-project-media-upload",
+            projectId: String(target.project._id),
+            panelId: String(target.panel._id),
+            storageFileId,
+            fileName: details.fileName,
+            mimeType: details.mimeType,
+            fileSize: details.fileSize,
+        }, tokenKey, { expiresIn: "15m" });
+        return res.status(201).json({ ...signed, uploadToken });
+    } catch (error) {
+        next(error);
+    }
+};
+const completeProjectMediaUpload = async (req, res, next) => {
+    try {
+        const target = await loadProjectMediaUploadTarget(req);
+        if (target.error) return res.status(target.error.status).json({ status: "error", message: target.error.message });
+        const tokenKey = process.env.TOKEN_KEY || process.env.JWT_SECRET || process.env.SECRET_KEY;
+        let upload;
+        try {
+            upload = jwt.verify(String(req.body?.uploadToken || ""), tokenKey);
+        } catch {
+            return res.status(400).json({ status: "error", message: "رابط رفع المرفق انتهت صلاحيته. أعد المحاولة." });
+        }
+        if (upload.purpose !== "r2-project-media-upload" || upload.projectId !== String(target.project._id) || upload.panelId !== String(target.panel._id)) {
+            return res.status(403).json({ status: "error", message: "بيانات رفع المرفق غير صالحة." });
+        }
+        const stored = await getVerifiedStoredFile(upload.storageFileId);
+        if (!stored.size || stored.size > MAX_SINGLE_PART_UPLOAD_BYTES || (upload.fileSize && stored.size !== Number(upload.fileSize))) {
+            return res.status(400).json({ status: "error", message: "تعذر التحقق من المرفق المرفوع." });
+        }
         const saved = await panels.update(
-            { _id: panel._id },
+            { _id: target.panel._id },
             {
                 $push: {
                     attachments: {
-                        storageFileId: stored.id,
-                        fileName: stored.name || req.file.originalname,
-                        mimeType: req.file.mimetype,
-                        fileSize: Number(stored.size || req.file.size),
+                        storageFileId: upload.storageFileId,
+                        fileName: upload.fileName,
+                        mimeType: upload.mimeType,
+                        fileSize: Number(stored.size),
                         uploadedAt: new Date(),
                         uploadedBy: req.user._id,
                     },
@@ -1386,12 +1447,29 @@ const uploadProjectMedia = async (req, res, next) => {
             .status(201)
             .json({
                 id: file._id,
-                panelId: panel._id,
-                type: req.file.mimetype.startsWith("audio/") ? "audio" : "image",
+                panelId: target.panel._id,
+                type: upload.mimeType.startsWith("audio/")
+                    ? "audio"
+                    : upload.mimeType.startsWith("video/")
+                        ? "video"
+                        : "image",
                 fileName: file.fileName,
                 mimeType: file.mimeType,
                 fileSize: file.fileSize,
             });
+    } catch (error) {
+        next(error);
+    }
+};
+const getProjectMediaUrl = async (req, res, next) => {
+    try {
+        const project = await projects.findOne({ _id: req.params.id, isDeleted: false });
+        if (!project || !canSeeProject(req.user, project)) return res.sendStatus(404);
+        if (isProductionRestrictedViewer(req.user) && !canViewProductionReferences(req.user)) return res.sendStatus(403);
+        const media = await findMedia(project._id, req.params.mediaId, req.user);
+        if (!media) return res.sendStatus(404);
+        const url = await createDownloadUrl(media.file.storageFileId);
+        res.json({ url, expiresIn: 600 });
     } catch (error) {
         next(error);
     }
@@ -1482,13 +1560,16 @@ module.exports = {
     regeneratePreview,
     getPreview,
     getPreviewExecutionPdfFile,
+    getPreviewExecutionPdfUrl,
     removeProject,
     getDeletedProjects,
     restoreProject,
     permanentlyDeleteProject,
     getProjectMedia,
     getProjectMediaFile,
-    uploadProjectMedia,
+    signProjectMediaUpload,
+    completeProjectMediaUpload,
+    getProjectMediaUrl,
     deleteProjectMedia,
     getProjectMediaWhatsappLink,
 };

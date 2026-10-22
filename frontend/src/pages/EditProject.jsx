@@ -560,7 +560,7 @@ function EditProject() {
     (item) => !item.readAt && String(item.projectId) === String(id),
   );
   useEffect(() => {
-    if (id) readProject(id);
+    if (id && hasUnreadProjectNotification) readProject(id);
   }, [hasUnreadProjectNotification, id, readProject]);
   const latestWorkflowNotification = notifications.find(
     (item) => String(item.projectId) === String(id),
